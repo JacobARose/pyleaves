@@ -1,6 +1,9 @@
-import os
 import dataset
+import matplotlib.pyplot as plt
+import numpy as np
+import os
 from stuf import stuf
+import toolz
 
 '''HELPER FUNCTIONS'''
 
@@ -63,3 +66,40 @@ def summarize_db(db):
     print('Database column keys:\n', db['dataset'].columns)
     print('Number of distinct families:\n', __get_num_families_per_dataset(db))
     print(f"Number of rows in db:\n {len(db['dataset'])}")
+
+
+def get_class_frequencies(labels):
+	'''
+	get_class_frequencies(labels=train_data['label'])
+	'''
+	class_frequencies = toolz.frequencies(labels)
+
+	keys=[]
+	values=[]
+	for k, v in class_frequencies.items():
+		keys.append(k)
+		values.append(v)
+	keys = np.array(keys)
+	values = np.array(values)
+	
+	class_label, class_frequencies = keys, values
+	
+	return class_label, class_frequencies
+
+def plot_class_frequencies(labels, ylim=(0,900)):
+
+	keys, values = get_class_frequencies(labels)
+	
+	fig, axes = plt.subplots(1,2,figsize=(15,15))
+
+	ik = np.argsort(keys)[::-1]
+	axes[0].bar(keys[ik], values[ik])
+	axes[0].set_ylim(*ylim)
+	axes[0].set_title('frequency vs labels in integer order')
+
+	ix = np.argsort(values)[::-1]
+	axes[1].bar(range(len(ix)),values[ix])
+	axes[1].set_ylim(*ylim)
+	axes[1].set_title('frequency vs labels ordered by decreasing frequency')
+
+	return keys, values
