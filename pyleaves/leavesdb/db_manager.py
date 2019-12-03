@@ -1,4 +1,4 @@
-import pandas
+import pandas as pd 
 import dataset
 from .utils import load, flattenit, image_checker
 import cv2 
