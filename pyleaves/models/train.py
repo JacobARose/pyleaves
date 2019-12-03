@@ -291,7 +291,7 @@ def train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch
         callbacks_list = get_callbacks(weights_best,logs_dir)
         if True:
             History=model.fit_generator(train_gen,callbacks=
-            callbacks_list, epochs=epochs,steps_per_epoch=len(y_train)/50)
+            callbacks_list, epochs=epochs,steps_per_epoch=len(y_train))
         
         else:
             train_data = get_tf_dataset(filenames = X_train, labels = y_train)
