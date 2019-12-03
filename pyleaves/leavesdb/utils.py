@@ -1,9 +1,8 @@
-import dataset
-import matplotlib.pyplot as plt
-import numpy as np
 import os
+import dataset
 from stuf import stuf
-import toolz
+import json 
+import cv2 
 
 '''HELPER FUNCTIONS'''
 
@@ -67,39 +66,61 @@ def summarize_db(db):
     print('Number of distinct families:\n', __get_num_families_per_dataset(db))
     print(f"Number of rows in db:\n {len(db['dataset'])}")
 
+def load(file):
+    '''
+    Helper function to load a json file. 
 
-def get_class_frequencies(labels):
-	'''
-	get_class_frequencies(labels=train_data['label'])
-	'''
-	class_frequencies = toolz.frequencies(labels)
+    Arguments: 
+        - file : Path to the json file
+    Return:
+        - dictionary with the json
+    '''
+    with open(file,encoding='utf-8') as infile:
+        inside=json.load(infile)
+    return inside
 
-	keys=[]
-	values=[]
-	for k, v in class_frequencies.items():
-		keys.append(k)
-		values.append(v)
-	keys = np.array(keys)
-	values = np.array(values)
-	
-	class_label, class_frequencies = keys, values
-	
-	return class_label, class_frequencies
+def save(file,obj):
+    '''
+    Helper function to save a json file. 
 
-def plot_class_frequencies(labels, ylim=(0,900)):
+    Arguments: 
+        - file : Path to the json file
+        - obj : python object to save in json format.
+    Return:
+        - dictionary with the json
+    '''
+    with open(file, 'w') as outfile:
+        json.dump(obj, outfile)
+        
+def image_checker(p):
+    try: 
+        img = cv2.imread(p)
+        return True
+    except:
+        print(f'Problem with image path {P}, not valid.')
+        return False
+    
 
-	keys, values = get_class_frequencies(labels)
-	
-	fig, axes = plt.subplots(1,2,figsize=(15,15))
+def flattenit(pyobj, keystring =''): 
+    '''
+    Function to flatten a dictionary
 
-	ik = np.argsort(keys)[::-1]
-	axes[0].bar(keys[ik], values[ik])
-	axes[0].set_ylim(*ylim)
-	axes[0].set_title('frequency vs labels in integer order')
+    Arguments: 
+        -pyobj python object
+        -keystring : String that is being looked for
+    
+    Returns : 
+        - flattened structure 
+    '''
 
-	ix = np.argsort(values)[::-1]
-	axes[1].bar(range(len(ix)),values[ix])
-	axes[1].set_ylim(*ylim)
-	axes[1].set_title('frequency vs labels ordered by decreasing frequency')
-
-	return keys, values
+    if type(pyobj) is dict: 
+        if (type(pyobj) is dict): 
+            keystring = keystring + "_" if keystring else keystring 
+            for k in pyobj: 
+                yield from flattenit(pyobj[k], keystring + k) 
+  
+        elif (type(pyobj) is list): 
+            for lelm in pyobj: 
+                yield from flatten(lelm, keystring) 
+    else: 
+        yield keystring, pyobj 
