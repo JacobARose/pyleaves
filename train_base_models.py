@@ -1,0 +1,91 @@
+import tensorflow as tf 
+from pyleaves.models.keras_models import *
+from pyleaves.models.train import *
+import logging
+import argparse
+import dataset 
+from stuf import stuf
+
+if __name__ == '__main__':
+    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    logging.basicConfig(level=logging.INFO, format=log_fmt)
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--path', type=str, default ='/media/data_cifs/irodri15/data/processed/full_dataset_processed.csv', help='input file with names')
+    parser.add_argument('--output_folder', type=str, default='SAVING', help='how to save this training')
+    parser.add_argument('--gpu',default =1, help= 'what gpu to use, if "all" try to allocate on every gpu'  )
+    parser.add_argument('--gpu_fraction', type=float, default =0.9, help= 'how much memory of the gpu to use' )
+    parser.add_argument('--pre_trained_weights',type=str,default= None,help='Pre_trained weights ')
+    parser.add_argument('--resolution',default=768,help='resolution if "all" will use all the resolutions available')
+    parser.add_argument('--splits',type=int,default=10,help='how many splits use for evaluation')
+    parser.add_argument('--base', type=str,default='resnet101',choices=['resnet101','restnet50','xception','vgg','shallow'])
+    parser.add_argument('--batchsize', type=int,default=50)
+    parser.add_argument('--epochs', type=int,default=100)
+    args = parser.parse_args()
+    fraction = float(args.gpu_fraction)
+    gpu = int(args.gpu)
+    path= args.path
+    output = args.output_folder
+    output_folder =args.output_folder
+    weights = args.pre_trained_weights 
+    splits = args.splits 
+    base = args.base
+    resolution = args.resolution
+    batch_size = args.batchsize
+    epochs = args.epochs
+
+    configure(gpu)
+    
+    #Data=LeafData(path)
+    #if resolution == 'all':
+    #    Data.multiple_resolution()    
+    #else:
+    #    Data.single_resolution(resolution)
+    #X,y, lu = Data.X, Data.Y,Data.lookup_table  
+
+    db = dataset.connect('sqlite:////home/irodri15/Code/leavesdb/leavesdb.db',row_type=stuf) 
+    datasets=db['dataset']
+    data= load_data(db,x_col='path', y_col='family', dataset='PNAS')
+    data_df = encode_labels(data)
+    
+    X,y = data_df['path'].values,data_df['label'].values
+    
+    classes = len(np.unique(y))
+    print(classes)
+    if 'resnet101'==base:
+        base_model = resnet_101_v2_base(classes=classes,frozen_layers=(0,-2))
+         
+    elif 'resnet50'==base:
+        base_model = resnet_50_v2_base(classes=classes,frozen_layers=(0,-2))
+    elif 'xception'==base:
+        base_model = xception_base(classes=classes,frozen_layers=(0,-2))
+    elif 'vgg'==base:
+        base_model = vgg16_base()
+    elif 'shallow' ==base:
+        base_model = shallow()    
+    output_folder = os.path.join(output_folder,base)
+    global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
+    if base != 'shallow':
+        conv1 = tf.keras.layers.Dense(2048,activation='relu')
+        conv2 = tf.keras.layers.Dense(512,activation='relu')
+        prediction_layer = tf.keras.layers.Dense(classes,activation='softmax')
+        model = tf.keras.Sequential([
+            base_model,
+            global_average_layer,conv1,conv2,
+            prediction_layer
+            ])
+    else:
+        prediction_layer = tf.keras.layers.Dense(classes,activation='softmax')
+        model = tf.keras.Sequential([
+            base_model,
+            prediction_layer
+            ])
+
+    base_learning_rate = 0.0001
+    model.compile(optimizer=tf.keras.optimizers.Adam(lr=base_learning_rate),
+              loss='categorical_crossentropy',
+              metrics=['accuracy',top3_acc,top5_acc])
+    
+  
+   
+    train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch_size,epochs)
