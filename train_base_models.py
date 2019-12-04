@@ -47,9 +47,9 @@ if __name__ == '__main__':
     #X,y, lu = Data.X, Data.Y,Data.lookup_table  
 
 
-    local_db = leavesdb.init_local_db()
-    db = dataset.connect(f'sqlite:///{local_db}', row_type=stuf)
-    #db = dataset.connect('sqlite:////home/irodri15/Code/leavesdb/leavesdb.db',row_type=stuf) 
+    #local_db = leavesdb.init_local_db()
+    #db = dataset.connect(f'sqlite:///{local_db}', row_type=stuf)
+    db = dataset.connect('sqlite:////home/irodri15/Code/leavesdb/leavesdb.db',row_type=stuf) 
     datasets=db['dataset']
     data= load_data(db,x_col='path', y_col='family', dataset=dataset_name)
     data_df = encode_labels(data)

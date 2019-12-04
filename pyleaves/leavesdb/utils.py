@@ -3,7 +3,7 @@ import dataset
 from stuf import stuf
 import json 
 import cv2 
-
+import shutil 
 '''HELPER FUNCTIONS'''
 
 def init_local_db(local_db = os.path.expanduser(r'~/scripts/leavesdb.db'), src_db = r'/media/data_cifs/irodri15/data/db/leavesdb.db'):

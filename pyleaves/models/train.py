@@ -285,25 +285,26 @@ def train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch
       
   
     print(y)
+   
     for train_idx,test_idx in skf.split(X,y):
-        y = to_categorical(y)
+        
         print('Starting Split : %02d'%split)
         X_train, X_test = X[train_idx], X[test_idx]
-        y_train, y_test = y[train_idx],y[test_idx]
+        y_train, y_test = to_categorical(y[train_idx]),to_categorical(y[test_idx])
 
         output_log = os.path.join(output_folder,'split_%03d'%split)
         weights_best ,logs_dir= logging_configuration(output_log)
         save_split(X_train,X_test,y_train,y_test,output_log)
         ds = Dataflow(X_train,y_train,size=(229,229))
-        dsm = MultiProcessRunner(ds,num_prefetch=50, num_proc=15)
-        ds1 = BatchData(dsm, 50)
+        dsm = MultiProcessRunner(ds,num_prefetch=batch_size, num_proc=15)
+        ds1 = BatchData(dsm, batch_size)
         train_gen = gen(ds1)
 
 
         callbacks_list = get_callbacks(weights_best,logs_dir)
         if True:
             History=model.fit_generator(train_gen,callbacks=
-            callbacks_list,epochs=epochs,steps_per_epoch=len(y_train)/10)
+            callbacks_list,epochs=epochs,steps_per_epoch=len(y_train))
         
         else:
             train_data = get_tf_dataset(filenames = X_train, labels = y_train)
@@ -313,12 +314,13 @@ def train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch
         y_pred = model.predict_classes(X_test_img)
         test = np.argmax(y_test,axis=1)
         report = classification_report(test,y_pred)
+        df = pandas.DataFrame(report).transpose()
         print(report)
         Historydf= pd.DataFrame(History.history)
         history_file = os.path.join(output_log,'history.csv')
         Historydf.to_csv(history_file)
-        report_file = os.path.join(output_log,'report.json')
-        save_json(report,report_file)
+        report_file = os.path.join(output_log,'report.csv')
+        df.to_csv(report_file)
         split+=1
 
 
