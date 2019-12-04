@@ -16,9 +16,17 @@ from tensorpack.dataflow import *
 from tensorpack.dataflow.parallel import PrefetchDataZMQ
 from stuf import stuf
 import dataset
-import random 
-to_categorical = tf.keras.utils.to_categorical
+import random
 import subprocess
+
+
+
+to_categorical = tf.keras.utils.to_categorical
+CSVLogger = tf.compat.v1.keras.callbacks.CSVLogger 
+
+
+
+
 sometimes = lambda aug: iaa.Sometimes(0.5, aug)
 fewtimes = lambda aug: iaa.Sometimes(0.1, aug)
 seq = iaa.Sequential([fewtimes(
@@ -105,6 +113,7 @@ class Dataflow(RNGDataFlow):
         self.paths = paths
         self.labels = labels
         self.tuple_label = [[paths[i],labels[i]] for i in range(len(labels))]
+        random.shuffle(self.tuple_label)
         self.size = size
     def __iter__(self):
         j = random.randint(1,200)
@@ -215,9 +224,10 @@ def get_callbacks(weights_best,logs_dir):
     checkpoint = tf.keras.callbacks.ModelCheckpoint(weights_best, monitor='loss', verbose=0, save_best_only=True, save_weights_only=False, mode='min', save_freq=100)
     tfboard = tf.keras.callbacks.TensorBoard(log_dir=logs_dir)
     lrs =  tf.keras.callbacks.LearningRateScheduler(decay)
+    csv = CSVLogger(os.path.join(logs_dir,'training.log.csv'))
     #callback_image = AttentionLogger(logsdir=logs_dir, val_data=val_generator)
     early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=50)
-    return [checkpoint,tfboard,lrs,early]
+    return [checkpoint,tfboard,lrs,early,csv]
 
 def configure(gpu):
 
@@ -288,17 +298,20 @@ def train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch
         dsm = MultiProcessRunner(ds,num_prefetch=50, num_proc=15)
         ds1 = BatchData(dsm, 50)
         train_gen = gen(ds1)
+
+
         callbacks_list = get_callbacks(weights_best,logs_dir)
         if True:
             History=model.fit_generator(train_gen,callbacks=
-            callbacks_list, epochs=epochs,steps_per_epoch=len(y_train))
+            callbacks_list,epochs=epochs,steps_per_epoch=len(y_train)/10)
         
         else:
             train_data = get_tf_dataset(filenames = X_train, labels = y_train)
             validation_data = get_tf_dataset(filenames = X_test, labels = y_test)
-            History=model.fit(train_data,callbacks=callbacks_list, epochs=epochs,steps_per_epoch=len(y)/50)
+            History=model.fit(train_data,callbacks=callbacks_list, epochs=epochs,steps_per_epoch=len(y)/100)
         X_test_img = np.array([cv2.resize(cv2.imread(im),(224,224)) for im in X_test],dtype=np.float16)
         y_pred = model.predict_classes(X_test_img)
+        test = np.argmax(y_test,axis=1)
         report = classification_report(y_test,y_pred)
         print(report)
         Historydf= pd.DataFrame(History.history)
