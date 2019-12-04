@@ -1,4 +1,5 @@
 import tensorflow as tf 
+from pyleaves import leavesdb
 from pyleaves.models.keras_models import *
 from pyleaves.models.train import *
 import logging
@@ -12,19 +13,21 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str, default ='/media/data_cifs/irodri15/data/processed/full_dataset_processed.csv', help='input file with names')
+    parser.add_argument('--dataset_name', type=str, default='PNAS', help='Name of dataset to load from database', choices=['PNAS','Fossil','Leaves','plant_village'])
     parser.add_argument('--output_folder', type=str, default='SAVING', help='how to save this training')
     parser.add_argument('--gpu',default =1, help= 'what gpu to use, if "all" try to allocate on every gpu'  )
     parser.add_argument('--gpu_fraction', type=float, default =0.9, help= 'how much memory of the gpu to use' )
     parser.add_argument('--pre_trained_weights',type=str,default= None,help='Pre_trained weights ')
     parser.add_argument('--resolution',default=768,help='resolution if "all" will use all the resolutions available')
     parser.add_argument('--splits',type=int,default=10,help='how many splits use for evaluation')
-    parser.add_argument('--base', type=str,default='resnet101',choices=['resnet101','restnet50','xception','vgg','shallow'])
+    parser.add_argument('--base', type=str,default='resnet101',choices=['resnet101','resnet50','xception','vgg','shallow'])
     parser.add_argument('--batchsize', type=int,default=50)
     parser.add_argument('--epochs', type=int,default=100)
     args = parser.parse_args()
     fraction = float(args.gpu_fraction)
     gpu = int(args.gpu)
     path= args.path
+    dataset_name = args.dataset_name
     output = args.output_folder
     output_folder =args.output_folder
     weights = args.pre_trained_weights 
@@ -43,9 +46,12 @@ if __name__ == '__main__':
     #    Data.single_resolution(resolution)
     #X,y, lu = Data.X, Data.Y,Data.lookup_table  
 
-    db = dataset.connect('sqlite:////home/irodri15/Code/leavesdb/leavesdb.db',row_type=stuf) 
+
+    local_db = leavesdb.init_local_db()
+    db = dataset.connect(f'sqlite:///{local_db}', row_type=stuf)
+    #db = dataset.connect('sqlite:////home/irodri15/Code/leavesdb/leavesdb.db',row_type=stuf) 
     datasets=db['dataset']
-    data= load_data(db,x_col='path', y_col='family', dataset='PNAS')
+    data= load_data(db,x_col='path', y_col='family', dataset=dataset_name)
     data_df = encode_labels(data)
     
     X,y = data_df['path'].values,data_df['label'].values
