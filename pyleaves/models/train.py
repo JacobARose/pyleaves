@@ -112,19 +112,20 @@ class Dataflow(RNGDataFlow):
     def __init__(self,paths,labels,size=(229,229)):
         self.paths = paths
         self.labels = labels
-        self.tuple_label = [[paths[i],labels[i]] for i in range(len(labels))]
+        self.tuple_label= [[paths[i],labels[i],np.argmax(labels[i])] for i in range(len(labels))]
         random.shuffle(self.tuple_label)
+        #print(self.tuple_label)
         self.size = size
     def __iter__(self):
-        j = random.randint(1,200)
+        b = random.randint(1,100)
+        j = random.randint(b,500)
         for i   in range(len(self.labels)):
             idx = (i+j)%len(self.labels)
             p,l = self.tuple_label[idx][0],self.tuple_label[idx][1]
-            #print(p)
+            #print(self.tuple_label[idx][2])
             try:
                 image = cv2.resize(cv2.imread(p),(229,229))
-                
-                #print(p)
+                #print(p, '====', p.split('/')[-2], l )
                 #image = image.astype(np.float64)/255.0
                 #cv2.normalize(image,image,0,255,cv.NORM_MINMAX)
                 #image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
@@ -226,7 +227,7 @@ def get_callbacks(weights_best,logs_dir):
     lrs =  tf.keras.callbacks.LearningRateScheduler(decay)
     csv = CSVLogger(os.path.join(logs_dir,'training.log.csv'))
     #callback_image = AttentionLogger(logsdir=logs_dir, val_data=val_generator)
-    early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=50)
+    early = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
     return [checkpoint,tfboard,lrs,early,csv]
 
 def configure(gpu):
@@ -296,7 +297,7 @@ def train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch
         weights_best ,logs_dir= logging_configuration(output_log)
         save_split(X_train,X_test,y_train,y_test,output_log)
         ds = Dataflow(X_train,y_train,size=(229,229))
-        dsm = MultiProcessRunner(ds,num_prefetch=batch_size, num_proc=15)
+        dsm = MultiProcessRunner(ds,num_prefetch=batch_size, num_proc=5)
         ds1 = BatchData(dsm, batch_size)
         train_gen = gen(ds1)
 
@@ -314,7 +315,7 @@ def train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch
         y_pred = model.predict_classes(X_test_img)
         test = np.argmax(y_test,axis=1)
         report = classification_report(test,y_pred)
-        df = pandas.DataFrame(report).transpose()
+        df = pd.DataFrame(report).transpose()
         print(report)
         Historydf= pd.DataFrame(History.history)
         history_file = os.path.join(output_log,'history.csv')
