@@ -314,7 +314,7 @@ def train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch
         X_test_img = np.array([cv2.resize(cv2.imread(im),(224,224)) for im in X_test],dtype=np.float16)
         y_pred = model.predict_classes(X_test_img)
         test = np.argmax(y_test,axis=1)
-        report = classification_report(test,y_pred)
+        report = classification_report(test,y_pred,output_dict=True)
         df = pd.DataFrame(report).transpose()
         print(report)
         Historydf= pd.DataFrame(History.history)
