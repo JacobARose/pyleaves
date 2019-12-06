@@ -23,6 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--base', type=str,default='resnet101',choices=['resnet101','resnet50','xception','vgg','shallow'])
     parser.add_argument('--batchsize', type=int,default=50)
     parser.add_argument('--epochs', type=int,default=100)
+
     args = parser.parse_args()
     fraction = float(args.gpu_fraction)
     gpu = int(args.gpu)
@@ -54,34 +55,36 @@ if __name__ == '__main__':
     data= load_data(db,x_col='path', y_col='family', dataset=dataset_name)
     data_df = encode_labels(data)
     
-    X,y = data_df['path'].values,data_df['label'].values
+    X = data_df['path'].values
+    y = data_df['label'].values
     
-    classes = len(np.unique(y))
+    num_classes = len(np.unique(y))
     print(classes)
     if 'resnet101'==base:
-        base_model = resnet_101_v2_base(classes=classes,frozen_layers=(0,-2))
-         
+        base_model = resnet_101_v2_base(classes=num_classes,frozen_layers=(0,-2)) 
     elif 'resnet50'==base:
-        base_model = resnet_50_v2_base(classes=classes,frozen_layers=(0,-2))
+        base_model = resnet_50_v2_base(classes=num_classes,frozen_layers=(0,-2))
     elif 'xception'==base:
-        base_model = xception_base(classes=classes,frozen_layers=(0,-2))
+        base_model = xception_base(classes=num_classes,frozen_layers=(0,-2))
     elif 'vgg'==base:
         base_model = vgg16_base()
     elif 'shallow' ==base:
-        base_model = shallow()    
+        base_model = shallow()
+        
     output_folder = os.path.join(output_folder,base)
+    
     global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
     if base != 'shallow':
         conv1 = tf.keras.layers.Dense(2048,activation='relu')
         conv2 = tf.keras.layers.Dense(512,activation='relu')
-        prediction_layer = tf.keras.layers.Dense(classes,activation='softmax')
+        prediction_layer = tf.keras.layers.Dense(num_classes,activation='softmax')
         model = tf.keras.Sequential([
             base_model,
             global_average_layer,conv1,conv2,
             prediction_layer
             ])
     else:
-        prediction_layer = tf.keras.layers.Dense(classes,activation='softmax')
+        prediction_layer = tf.keras.layers.Dense(num_classes,activation='softmax')
         model = tf.keras.Sequential([
             base_model,
             prediction_layer
