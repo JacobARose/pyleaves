@@ -23,6 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--base', type=str,default='resnet101',choices=['resnet101','resnet50','xception','vgg','shallow'])
     parser.add_argument('--batchsize', type=int,default=50)
     parser.add_argument('--epochs', type=int,default=100)
+    parser.add_argument('--base_learning_rate', type=float, default=0.0001, help= 'initial learning rate to decay from' )
 
     args = parser.parse_args()
     fraction = float(args.gpu_fraction)
@@ -30,13 +31,14 @@ if __name__ == '__main__':
     path= args.path
     dataset_name = args.dataset_name
     output = args.output_folder
-    output_folder =args.output_folder
+    output_folder = args.output_folder
     weights = args.pre_trained_weights 
     splits = args.splits 
     base = args.base
     resolution = args.resolution
     batch_size = args.batchsize
     epochs = args.epochs
+    base_learning_rate = args.base_learning_rate
 
     configure(gpu)
     
@@ -90,7 +92,7 @@ if __name__ == '__main__':
             prediction_layer
             ])
 
-    base_learning_rate = 0.0001
+#     base_learning_rate = 0.0001
     model.compile(optimizer=tf.keras.optimizers.Adam(lr=base_learning_rate),
               loss='categorical_crossentropy',
               metrics=['accuracy',top3_acc,top5_acc])
