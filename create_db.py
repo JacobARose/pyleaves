@@ -1,4 +1,4 @@
-from  pyleaves.leavesdb.db_manager import create_db
+from pyleaves.leavesdb.db_manager import create_db
 import argparse
 import os 
 if __name__ == '__main__':

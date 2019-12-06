@@ -21,7 +21,7 @@ def build_model(num_classes, learning_rate):
 	predictions = Activation('softmax',name='predictions')(logits)
 	model = Model(inputs=base_model.input, outputs=predictions)
 	
-	opt = SGD(lr=learning_rate)#,momentum=SGDmomentum)
+	opt = SGD(lr=learning_rate)
 	model.compile(optimizer=opt,
 					loss='categorical_crossentropy',
 					metrics=['accuracy'])
