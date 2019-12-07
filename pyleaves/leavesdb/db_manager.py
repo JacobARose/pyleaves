@@ -25,7 +25,7 @@ def create_db(jsonpath=PATH,folder= 'Resources'):
                                   'family2':{},.. , ...}}
     Returns
     '''
-    file =load(jsonpath)
+    file = load(jsonpath)
     db_path = os.path.join(folder,'leavesdb.db')
     print(db_path)
     output = f'sqlite:///{db_path}'
