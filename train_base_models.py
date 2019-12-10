@@ -5,7 +5,7 @@ Example cmd line args:
 
 '''
 
-import tensorflow as tf 
+import tensorflow as tf
 from pyleaves import leavesdb
 from pyleaves.models.keras_models import *
 from pyleaves.models.train import *
@@ -18,7 +18,7 @@ from stuf import stuf
 if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(level=logging.INFO, format=log_fmt)
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str, default='/media/data_cifs/irodri15/data/processed/full_dataset_processed.csv', help='input file with names')
     parser.add_argument('--dataset_name', type=str, default='PNAS', help='Name of dataset to load from database', choices=['PNAS','Fossil','Leaves','plant_village'])
@@ -32,7 +32,7 @@ if __name__ == '__main__':
     parser.add_argument('--batchsize', type=int,default=50)
     parser.add_argument('--epochs', type=int,default=100)
     parser.add_argument('--base_learning_rate', type=float, default=0.0001, help= 'initial learning rate to decay from' )
-
+    parser.add_argument('-l','--low_class_count_threshold',type=int, default=10, help='Minimum number of samples to allow per class')
     args = parser.parse_args()
     fraction = float(args.gpu_fraction)
     gpu = int(args.gpu)
@@ -40,8 +40,8 @@ if __name__ == '__main__':
     dataset_name = args.dataset_name
     output = args.output_folder
     output_folder = args.output_folder
-    weights = args.pre_trained_weights 
-    splits = args.splits 
+    weights = args.pre_trained_weights
+    splits = args.splits
     base = args.base
     resolution = args.resolution
     batch_size = args.batchsize
@@ -49,29 +49,32 @@ if __name__ == '__main__':
     base_learning_rate = args.base_learning_rate
 
     configure(gpu)
-    
+
     #Data=LeafData(path)
     #if resolution == 'all':
-    #    Data.multiple_resolution()    
+    #    Data.multiple_resolution()
     #else:
     #    Data.single_resolution(resolution)
-    #X,y, lu = Data.X, Data.Y,Data.lookup_table  
+    #X,y, lu = Data.X, Data.Y,Data.lookup_table
 
 
     local_db = os.path.expanduser(r'~/pyleaves/pyleaves/leavesdb/resources/leavesdb.db')#leavesdb.init_local_db()
     db = dataset.connect(f'sqlite:///{local_db}', row_type=stuf)
-#     db = dataset.connect('sqlite:////home/irodri15/Code/leavesdb/leavesdb.db',row_type=stuf) 
+#     db = dataset.connect('sqlite:////home/irodri15/Code/leavesdb/leavesdb.db',row_type=stuf)
     datasets=db['dataset']
     data= load_data(db,x_col='path', y_col='family', dataset=dataset_name)
+
+    data = filter_low_count_labels(data, threshold=splits, verbose = True)
+
     data_df = encode_labels(data)
-    
+
     X = data_df['path'].values
     y = data_df['label'].values
-    
+
     num_classes = len(np.unique(y))
     print('num_classes =', num_classes)
     if 'resnet101'==base:
-        base_model = resnet_101_v2_base(num_classes=num_classes,frozen_layers=(0,-2)) 
+        base_model = resnet_101_v2_base(num_classes=num_classes,frozen_layers=(0,-2))
     elif 'resnet50'==base:
         base_model = resnet_50_v2_base(num_classes=num_classes,frozen_layers=(0,-2))
     elif 'xception'==base:
@@ -80,9 +83,9 @@ if __name__ == '__main__':
         base_model = vgg16_base()
     elif 'shallow' ==base:
         base_model = shallow()
-        
+
     output_folder = os.path.join(output_folder,base)
-    
+
     global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
     if base != 'shallow':
         conv1 = tf.keras.layers.Dense(2048,activation='relu')
@@ -104,7 +107,7 @@ if __name__ == '__main__':
     model.compile(optimizer=tf.keras.optimizers.Adam(lr=base_learning_rate),
               loss='categorical_crossentropy',
               metrics=['accuracy',top3_acc,top5_acc])
-    
-  
-   
+
+
+
     train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch_size,epochs)
