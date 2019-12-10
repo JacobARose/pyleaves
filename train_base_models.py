@@ -1,7 +1,7 @@
 '''
 Example cmd line args:
 
->> python train_base_models.py --dataset_name Fossil --base resnet50 --output_folder ~/experiment_data/Fossil --gpu 0 --batchsize 64
+>> python train_base_models.py --dataset_name Fossil --base resnet50 --output_folder ~/experiment_data/Fossil --gpu 1 --batchsize 32
 
 '''
 
