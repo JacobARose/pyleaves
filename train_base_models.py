@@ -1,11 +1,12 @@
 '''
 Example cmd line args:
 
->> python train_base_models.py --dataset_name Fossil --base resnet50 --output_folder ~/experiment_data/Fossil --gpu 1 --batchsize 32
+>> python train_base_models.py --dataset_name Fossil --base resnet50 --output_folder ~/experiment_data/Fossil --gpu 1 --batchsize 128 -l 10
 
 '''
 
 import tensorflow as tf
+from pyleaves.data_pipeline.preprocessing import filter_low_count_labels, one_hot_encode_labels, one_hot_decode_labels
 from pyleaves import leavesdb
 from pyleaves.models.keras_models import *
 from pyleaves.models.train import *
@@ -47,7 +48,8 @@ if __name__ == '__main__':
     batch_size = args.batchsize
     epochs = args.epochs
     base_learning_rate = args.base_learning_rate
-
+    low_class_count_thresh = args.low_class_count_threshold
+    
     configure(gpu)
 
     #Data=LeafData(path)
@@ -63,10 +65,11 @@ if __name__ == '__main__':
 #     db = dataset.connect('sqlite:////home/irodri15/Code/leavesdb/leavesdb.db',row_type=stuf)
     datasets=db['dataset']
     data= load_data(db,x_col='path', y_col='family', dataset=dataset_name)
-
-    data = filter_low_count_labels(data, threshold=splits, verbose = True)
-
+    
     data_df = encode_labels(data)
+    data_df = filter_low_count_labels(data_df, threshold=low_class_count_thresh, verbose = True)
+    data_df = encode_labels(data_df)
+    
 
     X = data_df['path'].values
     y = data_df['label'].values
