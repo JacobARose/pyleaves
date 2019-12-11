@@ -99,10 +99,10 @@ def save(file,obj):
         
 def image_checker(p):
     try: 
-        img = cv2.imread(p)
+        image = cv2.resize(cv2.imread(p),(229,229))
         return True
     except:
-        print(f'Problem with image path {P}, not valid.')
+        print(f'Problem with image path {p}, not valid.')
         return False
     
 
