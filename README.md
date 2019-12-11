@@ -29,9 +29,9 @@ The folder resources contains the latest .db file for the paths, and the source 
 
 To create db, there is a hihglevel script: create_db.py. You can: 
 
-'''python
+
     python create_db.py --json_path  'PATHTONEWJSON' --output_folder 'PATHTORESOURCES'
-'''
+
 
 
 
