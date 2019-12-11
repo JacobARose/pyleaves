@@ -6,7 +6,8 @@ import cv2
 import shutil 
 '''HELPER FUNCTIONS'''
 
-def init_local_db(local_db = os.path.expanduser(r'~/scripts/leavesdb.db'), src_db = r'/media/data_cifs/irodri15/data/db/leavesdb.db'):
+
+def init_local_db(local_db = os.path.expanduser(r'~/scripts/leavesdb.db'), src_db = r'/media/data_cifs/irodri15/leavesdb.db'):
 	'''
 	Whenever working on a new machine, run this function in order to make sure the main leavesdb.db file is stored locally to avoid CIFS permissions issues.
 	
@@ -20,7 +21,8 @@ def init_local_db(local_db = os.path.expanduser(r'~/scripts/leavesdb.db'), src_d
 	
 	return local_db
 
-
+###############################################################################################################
+###############################################################################################################
 
 def __get_family_names_per_dataset(db):
     '''
@@ -57,6 +59,9 @@ def __get_num_families_per_dataset(db):
         num_families_per_dataset.append((dataset[0], len(dataset[1])))
     return num_families_per_dataset
 
+
+###############################################################################################################
+###############################################################################################################
 
 def summarize_db(db):
     '''

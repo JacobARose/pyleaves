@@ -106,38 +106,63 @@ def get_tf_dataset(filenames, labels,batch_size=50):
     data = data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
     return data
 
-
-
-class Dataflow(RNGDataFlow):
-    def __init__(self,paths,labels,size=(229,229)):
+class PathDataFlow(RNGDataFlow):
+    def __init__(self,paths,labels):
         self.paths = paths
         self.labels = labels
-        self.tuple_label= [[paths[i],labels[i],np.argmax(labels[i])] for i in range(len(labels))]
+        self.num_samples = len(labels)
+        self.tuple_label= [[paths[i],labels[i],np.argmax(labels[i])] for i in range(self.num_samples)]
+        
         random.shuffle(self.tuple_label)
-        #print(self.tuple_label)
+    def __iter__(self):
+        for i in range(self.num_samples):
+            yield self.tuple_label[i]
+            
+class ImageDataFlow(PathDataFlow):
+    
+    def __init__(self, paths, labels, size=(299,299)):
+        super().__init__(paths, labels)
         self.size = size
     def __iter__(self):
-        b = random.randint(1,100)
-        j = random.randint(b,500)
-        for i   in range(len(self.labels)):
-            idx = (i+j)%len(self.labels)
-            p,l = self.tuple_label[idx][0],self.tuple_label[idx][1]
-            #print(self.tuple_label[idx][2])
-            try:
-                image = cv2.resize(cv2.imread(p),(229,229))
-                #print(p, '====', p.split('/')[-2], l )
-                #image = image.astype(np.float64)/255.0
-                #cv2.normalize(image,image,0,255,cv.NORM_MINMAX)
-                #image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-                #image = image[:,:,np.newaxis]
-                rn = random.randint(1,200)
-                if rn%21==0:
-                    cv2.imwrite('randomimg_PNAS.jpeg',image)
-                yield [image,l]
+        sample = next(super().__iter__())
+        
+        yield [cv2.resize(cv2.imread(sample[0]),self.size), sample[1]]
 
-            except:
-                print('problem with image %s'%p)
-                continue 
+
+
+
+
+# class Dataflow(RNGDataFlow):
+#     def __init__(self,paths,labels,size=(229,229)):
+#         self.paths = paths
+#         self.labels = labels
+#         self.tuple_label= [[paths[i],labels[i],np.argmax(labels[i])] for i in range(len(labels))]
+#         random.shuffle(self.tuple_label)
+#         #print(self.tuple_label)
+#         self.size = size
+#     def __iter__(self):
+#         b = random.randint(1,100)
+#         j = random.randint(b,500)
+#         for i   in range(len(self.labels)):
+#             idx = (i+j)%len(self.labels)
+#             p,l = self.tuple_label[idx][0],self.tuple_label[idx][1]
+#             #print(self.tuple_label[idx][2])
+#             try:
+#                 image = cv2.resize(cv2.imread(p),(229,229))
+#                 #print(p, '====', p.split('/')[-2], l )
+#                 #image = image.astype(np.float64)/255.0
+#                 #cv2.normalize(image,image,0,255,cv.NORM_MINMAX)
+#                 #image = cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+#                 #image = image[:,:,np.newaxis]
+#                 #Writing every few epochs slows performance - JR
+# #                 rn = random.randint(1,200)
+# #                 if rn%21==0:
+# #                     cv2.imwrite('randomimg_PNAS.jpeg',image)
+#                 yield [image,l]
+
+#             except:
+#                 print('problem with image %s'%p)
+#                 continue 
 
 
 # class AttentionLogger(tf.keras.callbacks.Callback):
@@ -222,12 +247,12 @@ def decay(epoch):
 
 
 def get_callbacks(weights_best,logs_dir):
-    checkpoint = tf.keras.callbacks.ModelCheckpoint(weights_best, monitor='loss', verbose=0, save_best_only=True, save_weights_only=False, mode='min', save_freq=100)
+    checkpoint = tf.keras.callbacks.ModelCheckpoint(weights_best, monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='min', save_freq=100)
     tfboard = tf.keras.callbacks.TensorBoard(log_dir=logs_dir)
     lrs =  tf.keras.callbacks.LearningRateScheduler(decay)
     csv = CSVLogger(os.path.join(logs_dir,'training.log.csv'))
     #callback_image = AttentionLogger(logsdir=logs_dir, val_data=val_generator)
-    early = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
+    early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
     return [checkpoint,tfboard,lrs,early,csv]
 
 def configure(gpu):
@@ -273,6 +298,8 @@ def save_split(X_train,X_test,y_train,y_test,output_folder):
     return
 
 
+
+Dataflow = ImageDataFlow
 
 def train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch_size=20,epochs=50):
     
