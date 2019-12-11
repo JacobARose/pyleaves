@@ -16,7 +16,8 @@ from stuf import stuf
 import sys
 
 import tensorflow as tf
-tf.enable_eager_execution()
+# tf.enable_eager_execution()
+tf.compat.v1.enable_eager_execution()
 
 
 def _bytes_feature(value):
@@ -43,26 +44,61 @@ def _int64_feature(value):
 def encode_example(img, label_int):
     
     shape = img.shape
+    img = encode_image(img)
     
     features = {
         'image/height': _int64_feature(shape[0]),
         'image/width': _int64_feature(shape[1]),
         'image/channels': _int64_feature(shape[2]),
-        'image/bytes': _bytes_feature(img.tostring()),
+        'image/bytes': _bytes_feature(img),#.tostring()),#.encode('utf-8')),
         'label': _int64_feature(int(label_int))
     }
     
     example_proto = tf.train.Example(features=tf.train.Features(feature=features))
     return example_proto.SerializeToString()
 
+feature_description = {
+    'image/height': tf.io.FixedLenFeature([], tf.int64, default_value=0),
+    'image/width': tf.io.FixedLenFeature([], tf.int64, default_value=0),
+    'image/channels': tf.io.FixedLenFeature([], tf.int64, default_value=0),
+    'image/bytes': tf.io.FixedLenFeature([], tf.string),
+    'label': tf.io.FixedLenFeature([], tf.int64, default_value=0),
+}
+
 def decode_example(serialized_example):
-    return tf.train.Example.FromString(serialized_example)
+#     example = tf.train.Example.FromString(serialized_example)
+    features = tf.io.parse_single_example(serialized_example,features=feature_description)
+
+#     for k, v in features.items():
+#         print(k, v)
+#         print(dir(v))
+    
+#     img = tf.decode_raw(features['image/bytes'], tf.uint8)
+    height = tf.cast(features['image/height'], tf.int32)#.numpy()
+    width = tf.cast(features['image/width'], tf.int32)#.numpy()
+    channels = tf.cast(features['image/channels'], tf.int32)#.numpy()
+    
+    img = tf.image.decode_jpeg(features['image/bytes'], channels=channels)
+    label = tf.cast(features['label'], tf.int32)
+    
+#     img = tf.reshape(img, tf.pack([height,width,channels]))
+    return img, label
 
 def encode_image(img):
     '''
     Encode image array as jpg prior to constructing Examples for TFRecords for compressed file size.
     '''
-    return cv2.imencode('.jpg', img)[1]
+    return cv2.imencode('.jpg', img)[1].tostring()
+
+def decode_image(img_string, channels=3):
+    
+    return tf.io.decode_image(img_string,channels=channels)
+
+# def decode_image(img_string):
+    
+#     return img_string.numpy()
+
+
 
 def _check_image(img):
     if type(img) != type(None):
@@ -70,6 +106,17 @@ def _check_image(img):
     else:
         return False
 
+def load_and_encode_example(path, label, target_size = (224,224)):
+
+    img = load_image(path, target_size=target_size)
+    
+    if not _check_image(img):
+        #Store path and label of images that returned None from load_image, cotninue to next example
+        failed_images.append((img_filepaths[i],label))
+        return None
+            
+    return encode_example(img,label)
+    
 def create_tfrecord_shard(shard_filepath, 
                           img_filepaths,
                           labels,
@@ -85,24 +132,17 @@ def create_tfrecord_shard(shard_filepath,
     labels = list(labels)
     
     num_samples = len(labels)
-    
-    failed_images = []
     for i in range(num_samples):
-        
-        if verbose & (not i % 10):
-            print(img_filepaths[i],f'-> {i}/{num_samples}')
-            sys.stdout.flush()
 
-        img = load_image(img_filepaths[i], target_size=target_size)
-        label = labels[i]
-    
-        if not _check_image(img):
-            #Store path and label of images that returned None from load_image, cotninue to next example
-            failed_images.append((img_filepaths[i],label))
-            continue
+        path, label = img_filepaths[i], labels[i]
+        
+        if verbose & (not i % 50):
+            print(img_filepaths[i],f'-> {i}/{num_samples}',end='')
+            sys.stdout.flush()
             
-        example = encode_example(img,label)
-        writer.write(example)
+        example = load_and_encode_example(img,label,target_size)
+        if example is not None:
+            writer.write(example)
     writer.close()
     
     print('Finished saving TFRecord at: ', shard_filepath)
@@ -125,7 +165,7 @@ def create_tfrecord_shards(img_filepaths,
     
     num_finished_samples = 0
     for shard_i, shard in enumerate(sharded_data):
-        shard_fname = f'{output_base_name}-{shard_i:.5d}-of-{num_shards:.5d}.tfrecord'
+        shard_fname = f'{output_base_name}-{str(shard_i).zfill(5)}-of-{str(num_shards).zfill(5)}.tfrecord'
         shard_filepath = os.path.join(output_dir,shard_fname)
 
         shard_img_filepaths, shard_labels = unzip(shard)
@@ -137,11 +177,15 @@ def create_tfrecord_shards(img_filepaths,
         
     return os.listdir(output_dir)
         
-def train_val_test_split(image_paths, one_hot_labels, data_df, test_size=0.7, val_size=0.7, random_seed=2376):
+def train_val_test_split(image_paths, one_hot_labels, data_df, test_size=0.3, val_size=0.3, random_seed=2376):
 
     train_paths, test_paths, train_labels, test_labels  = train_test_split(image_paths, one_hot_labels, test_size=test_size, random_state=random_seed, shuffle=True, stratify=data_df['label'])
     train_paths, val_paths, train_labels, val_labels = train_test_split(train_paths, train_labels, test_size=val_size, random_state=random_seed, shuffle=True, stratify=train_labels)
 
+    
+    print(f'train samples: {len(train_labels)}')
+    print(f'val samples: {len(val_labels)}')
+    print(f'test samples: {len(test_labels)}')
 
     train_data = {'path': train_paths, 'label': train_labels}
     val_data = {'path': val_paths, 'label': val_labels}
@@ -152,7 +196,7 @@ def train_val_test_split(image_paths, one_hot_labels, data_df, test_size=0.7, va
                   'test': test_data}
     return data_splits
     
-def load_and_format_dataset_from_db(dataset_name='PNAS', low_count_threshold=10, val_size=0.7, test_size=0.7):
+def load_and_format_dataset_from_db(dataset_name='PNAS', low_count_threshold=10, val_size=0.3, test_size=0.3):
 
     local_db = leavesdb.init_local_db()
     print(local_db)
@@ -175,8 +219,8 @@ def demo_save_tfrecords(dataset_name='PNAS',
                         output_dir = os.path.expanduser(r'~/data'), 
                         target_size=(224,224),
                         low_count_threshold=10,
-                        val_size=0.7, 
-                        test_size=0.7,
+                        val_size=0.3, 
+                        test_size=0.3,
                         num_shards=10):
     
     data_splits = load_and_format_dataset_from_db(dataset_name=dataset_name, low_count_threshold=low_count_threshold, val_size=val_size, test_size=test_size)
@@ -206,27 +250,18 @@ def demo_save_tfrecords(dataset_name='PNAS',
 # filename_log = demo_save_tfrecords()
 
 
-feature_description = {
-    'image/height': tf.io.FixedLenFeature([], tf.int64, default_value=0),
-    'image/width': tf.io.FixedLenFeature([], tf.int64, default_value=0),
-    'image/channels': tf.io.FixedLenFeature([], tf.int64, default_value=0),
-    'image/bytes': tf.io.FixedLenFeature([], tf.string, default_value=0),
-    'label': tf.io.FixedLenFeature([], tf.int64, default_value=0),
-}
-
 def _parse_function(example_proto):
-    example = tf.parse_single_example(example_proto, feature_description)
-    img = example['image/bytes']
-    return 
+    img, label = decode_example(example_proto)
+    return img, label
 
-filenames = filename_log['train']
+# filenames = filename_log['train']
 
 def build_TFRecordDataset(filenames):
-#     dataset = tf.data.TFRecordDataset(filenames)
-    dataset = tf.data.Dataset.from_tensor_slices(filenames)
-    dataset - dataset.shuffle(buffer_size=len(filenames))
+    dataset = tf.data.TFRecordDataset(filenames)
+#     dataset = tf.data.Dataset.from_tensor_slices(filenames)
+    dataset = dataset.shuffle(buffer_size=len(filenames))
     dataset = dataset.interleave(lambda x: tf.data.TFRecordDataset(x), cycle_length=1,block_length=1)
-    dataset = dataset.map(_parse_function, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.map(_parse_function, num_parallel_calls=1)#tf.data.experimental.AUTOTUNE)
     return dataset
 
 
@@ -236,10 +271,15 @@ def build_TFRecordDataset(filenames):
 
 
 
+dummy_sample = {'path':r'/media/data_cifs/sven2/leaves/sorted/Fossils_DataSource/New_Fossil_Dataset/I. Approved families/Adoxaceae/Sambucus newtoni/CU_0141 Sambucus newtoni.tif',
+               'label':0}
 
 
+# serialized_example = load_and_encode_example(**dummy_sample)
 
-
+# img, label = decode_example(serialized_example)
+# import matplotlib.pyplot as plt
+# plt.imshow(img)
 # import numpy as np
 # a = np.random.randn(2,2)
 # b = _bytes_feature(tf.io.serialize_tensor(a))
@@ -250,11 +290,41 @@ def build_TFRecordDataset(filenames):
 # print('b',b)
 # print('c',c)
 
+def check_if_tfrecords_exist(output_dir):
+    '''if tfrecords already exist, return dictionary with mappings to their paths. Otherwise return None.'''
+    tfrecords = None
+    subset_dirs = os.listdir(output_dir)
+    if len(subset_dirs) > 0:
+        tfrecords = {}
+        for subset in subset_dirs:
+            subset_path = os.path.join(output_dir,
+                                      subset)
+            subset_filenames = os.listdir(subset_path)
+            tfrecords[subset] = sorted([os.path.join(subset_path,filename) for filename in subset_filenames])
+    return tfrecords
+
 def main():
     
-    filename_log = demo_save_tfrecords()
+    dataset_name = 'PNAS'
+    output_dir = f'/media/data/jacob/{dataset_name}'
+#     output_dir = os.path.expanduser(r'~/data')
     
+    filename_log = check_if_tfrecords_exist(output_dir)
+    
+    if filename_log == None:
+        filename_log = demo_save_tfrecords(dataset_name=dataset_name,
+                                           output_dir=output_dir)
+        for key, records in filename_log.items():
+            filename_log[key] = [os.path.join(output_dir,key,record_fname) for record_fname in sorted(records)]
+    else:
+        print(f'Found {len(filename_log.keys())} subsets of tfrecords already saved, skipping creation process.')
+        
     train_dataset = build_TFRecordDataset(sorted(filename_log['train']))
-    val_dataset = build_TFRecordDataset(filename_log['val'])
-    test_dataset = build_TFRecordDataset(filename_log['test'])
+    val_dataset = build_TFRecordDataset(sorted(filename_log['val']))
+    test_dataset = build_TFRecordDataset(sorted(filename_log['test']))
     
+    for example in train_dataset.take(1):
+        print(example)
+    for img, label in train_dataset.take(1):
+        
+        plt.imshow(img)
