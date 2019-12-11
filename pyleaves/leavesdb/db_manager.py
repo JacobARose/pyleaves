@@ -1,6 +1,6 @@
 import pandas as pd 
 import dataset
-from .utils import load, flattenit, image_checker
+from .db_utils import load, flattenit, image_checker
 import cv2 
 import os
 

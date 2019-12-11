@@ -1,5 +1,6 @@
-from .utils import (summarize_db,
+from .db_utils import (summarize_db,
 					init_local_db
 				   )
 from . import db_query
-from . import utils
+from . import tf_utils
+from . import db_utils

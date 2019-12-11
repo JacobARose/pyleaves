@@ -3,7 +3,6 @@ from tensorflow.keras import backend as K
 
 def reset_keras_session():
     
-    
     K.clear_session()
     K.get_session().close()
     tf.reset_default_graph()

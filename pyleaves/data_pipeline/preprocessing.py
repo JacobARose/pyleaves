@@ -8,7 +8,7 @@ import dataset
 
 
 
-def encode_labels(data, y_col='family'):
+def encode_labels_str2int(data, y_col='family'):
 	'''
 	Create 'label' column in data_df that features integer values corresponding to text labels contained in y_col.
 	
@@ -22,6 +22,10 @@ def encode_labels(data, y_col='family'):
 	data['label'] = pd.Categorical(data[y_col])
 	data['label'] = data['label'].cat.codes
 	return data
+
+encode_labels = encode_labels_str2int #For backwards compatibility
+
+
 
 def one_hot_encode_labels(labels):
 	'''
