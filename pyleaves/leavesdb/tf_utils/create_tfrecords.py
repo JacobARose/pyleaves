@@ -3,22 +3,37 @@ TBD
 
 '''
 import cv2
-import dataset
+# import dataset
 from more_itertools import chunked, collapse, unzip
 import os
-from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, one_hot_encode_labels, one_hot_decode_labels
-from pyleaves.analysis.img_utils import load_image
-from pyleaves import leavesdb
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+# from sklearn.model_selection import train_test_split
 from stuf import stuf
 import sys
-
 import tensorflow as tf
 # tf.enable_eager_execution()
-tf.compat.v1.enable_eager_execution()
+i = 0
+if not tf.executing_eagerly():
+    tf.compat.v1.enable_eager_execution()
+    print('ready')
 
+if tf.executing_eagerly():
+    i+=1
+    print('executing eagerly: ',tf.executing_eagerly())
+    print('i = ',i)
+    print(__name__)
+
+    
+from tensorflow.data.experimental import AUTOTUNE
+    
+# from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, one_hot_encode_labels, one_hot_decode_labels
+from pyleaves.analysis.img_utils import load_image
+from pyleaves import leavesdb
+from pyleaves.leavesdb.tf_utils.tf_utils import train_val_test_split, load_and_format_dataset_from_db
+from pyleaves.utils import ensure_dir_exists
+
+from pyleaves.tests.test_utils import timelined_benchmark, draw_timeline, map_decorator
 
 def _bytes_feature(value):
     """Returns a bytes_list from a string / byte."""
@@ -40,50 +55,45 @@ def _int64_feature(value):
     if not isinstance(value, list):
         value = [value]
     return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
+##################################################################
 
-def encode_example(img, label_int):
-    
+def encode_example(img, label_int):    
     shape = img.shape
-    img = encode_image(img)
+    img_buffer = encode_image(img)
     
     features = {
         'image/height': _int64_feature(shape[0]),
         'image/width': _int64_feature(shape[1]),
         'image/channels': _int64_feature(shape[2]),
-        'image/bytes': _bytes_feature(img),#.tostring()),#.encode('utf-8')),
-        'label': _int64_feature(int(label_int))
+        'image/bytes': _bytes_feature(img_buffer),
+        'label': _int64_feature(label_int)
     }
     
     example_proto = tf.train.Example(features=tf.train.Features(feature=features))
     return example_proto.SerializeToString()
 
-feature_description = {
+
+def decode_example(serialized_example):
+    feature_description = {
     'image/height': tf.io.FixedLenFeature([], tf.int64, default_value=0),
     'image/width': tf.io.FixedLenFeature([], tf.int64, default_value=0),
     'image/channels': tf.io.FixedLenFeature([], tf.int64, default_value=0),
     'image/bytes': tf.io.FixedLenFeature([], tf.string),
-    'label': tf.io.FixedLenFeature([], tf.int64, default_value=0),
-}
-
-def decode_example(serialized_example):
-#     example = tf.train.Example.FromString(serialized_example)
+    'label': tf.io.FixedLenFeature([], tf.int64, default_value=-1)
+                            }
     features = tf.io.parse_single_example(serialized_example,features=feature_description)
 
-#     for k, v in features.items():
-#         print(k, v)
-#         print(dir(v))
+#     height = tf.cast(features['image/height'], tf.int32)
+#     width = tf.cast(features['image/width'], tf.int32)
+#     channels = tf.cast(features['image/channels'], tf.int32)
     
-#     img = tf.decode_raw(features['image/bytes'], tf.uint8)
-    height = tf.cast(features['image/height'], tf.int32)#.numpy()
-    width = tf.cast(features['image/width'], tf.int32)#.numpy()
-    channels = tf.cast(features['image/channels'], tf.int32)#.numpy()
-    
-    img = tf.image.decode_jpeg(features['image/bytes'], channels=channels)
+    img = tf.image.decode_jpeg(features['image/bytes'], channels=3)#channels.eval(session=tf.Session()))
+    img = tf.image.convert_image_dtype(img, dtype=tf.float32)
     label = tf.cast(features['label'], tf.int32)
     
-#     img = tf.reshape(img, tf.pack([height,width,channels]))
     return img, label
 
+##################################################################
 def encode_image(img):
     '''
     Encode image array as jpg prior to constructing Examples for TFRecords for compressed file size.
@@ -94,29 +104,14 @@ def decode_image(img_string, channels=3):
     
     return tf.io.decode_image(img_string,channels=channels)
 
-# def decode_image(img_string):
-    
-#     return img_string.numpy()
-
-
-
-def _check_image(img):
-    if type(img) != type(None):
-        return True
-    else:
-        return False
+##################################################################
 
 def load_and_encode_example(path, label, target_size = (224,224)):
+    img = load_image(path, target_size=target_size)  
 
-    img = load_image(path, target_size=target_size)
-    
-    if not _check_image(img):
-        #Store path and label of images that returned None from load_image, cotninue to next example
-        failed_images.append((img_filepaths[i],label))
-        return None
-            
     return encode_example(img,label)
-    
+##################################################################
+
 def create_tfrecord_shard(shard_filepath, 
                           img_filepaths,
                           labels,
@@ -140,13 +135,12 @@ def create_tfrecord_shard(shard_filepath,
             print(img_filepaths[i],f'-> {i}/{num_samples}',end='')
             sys.stdout.flush()
             
-        example = load_and_encode_example(img,label,target_size)
+        example = load_and_encode_example(path,label,target_size)
         if example is not None:
             writer.write(example)
     writer.close()
     
     print('Finished saving TFRecord at: ', shard_filepath)
-
 
     
 def create_tfrecord_shards(img_filepaths,
@@ -176,43 +170,45 @@ def create_tfrecord_shards(img_filepaths,
         print(f'Finished: {num_finished_samples}/{total_samples} samples, {shard_i}/{num_shards} shards')
         
     return os.listdir(output_dir)
-        
-def train_val_test_split(image_paths, one_hot_labels, data_df, test_size=0.3, val_size=0.3, random_seed=2376):
+##################################################################
 
-    train_paths, test_paths, train_labels, test_labels  = train_test_split(image_paths, one_hot_labels, test_size=test_size, random_state=random_seed, shuffle=True, stratify=data_df['label'])
-    train_paths, val_paths, train_labels, val_labels = train_test_split(train_paths, train_labels, test_size=val_size, random_state=random_seed, shuffle=True, stratify=train_labels)
+# def train_val_test_split(image_paths, one_hot_labels, data_df, test_size=0.3, val_size=0.3, random_seed=2376):
+
+#     train_paths, test_paths, train_labels, test_labels  = train_test_split(image_paths, one_hot_labels, test_size=test_size, random_state=random_seed, shuffle=True, stratify=data_df['label'])
+#     train_paths, val_paths, train_labels, val_labels = train_test_split(train_paths, train_labels, test_size=val_size, random_state=random_seed, shuffle=True, stratify=train_labels)
 
     
-    print(f'train samples: {len(train_labels)}')
-    print(f'val samples: {len(val_labels)}')
-    print(f'test samples: {len(test_labels)}')
+#     print(f'train samples: {len(train_labels)}')
+#     print(f'val samples: {len(val_labels)}')
+#     print(f'test samples: {len(test_labels)}')
 
-    train_data = {'path': train_paths, 'label': train_labels}
-    val_data = {'path': val_paths, 'label': val_labels}
-    test_data = {'path': test_paths, 'label': test_labels}
+#     train_data = {'path': train_paths, 'label': train_labels}
+#     val_data = {'path': val_paths, 'label': val_labels}
+#     test_data = {'path': test_paths, 'label': test_labels}
 
-    data_splits = {'train': train_data,
-                  'val': val_data,
-                  'test': test_data}
-    return data_splits
+#     data_splits = {'train': train_data,
+#                   'val': val_data,
+#                   'test': test_data}
+#     return data_splits
     
-def load_and_format_dataset_from_db(dataset_name='PNAS', low_count_threshold=10, val_size=0.3, test_size=0.3):
 
-    local_db = leavesdb.init_local_db()
-    print(local_db)
-    db = dataset.connect(f'sqlite:///{local_db}', row_type=stuf)
-    data = leavesdb.db_query.load_data(db, dataset=dataset_name)
-    
-    data_df = encode_labels(data)
-    
-    data_df = filter_low_count_labels(data_df, threshold=low_count_threshold, verbose = True)
-    data_df = encode_labels(data_df) #Re-encode numeric labels after removing sub-threshold classes so that max(labels) == len(labels)
-    image_paths = data_df['path'].values.reshape((-1,1))
-    labels = data_df['label'].values
-#     one_hot_labels = one_hot_encode_labels(data_df['label'].values)
-    data_splits = train_val_test_split(image_paths, labels, data_df, val_size=val_size, test_size=test_size)
+# def load_and_format_dataset_from_db(dataset_name='PNAS', low_count_threshold=10, val_size=0.3, test_size=0.3):
 
-    return data_splits
+#     local_db = leavesdb.init_local_db()
+#     print(local_db)
+#     db = dataset.connect(f'sqlite:///{local_db}', row_type=stuf)
+#     data = leavesdb.db_query.load_data(db, dataset=dataset_name)
+    
+#     data_df = encode_labels(data)
+    
+#     data_df = filter_low_count_labels(data_df, threshold=low_count_threshold, verbose = True)
+#     data_df = encode_labels(data_df) #Re-encode numeric labels after removing sub-threshold classes so that max(labels) == len(labels)
+#     image_paths = data_df['path'].values.reshape((-1,1))
+#     labels = data_df['label'].values
+# #     one_hot_labels = one_hot_encode_labels(data_df['label'].values)
+#     data_splits = train_val_test_split(image_paths, labels, data_df, val_size=val_size, test_size=test_size)
+
+#     return data_splits
 
     
 def demo_save_tfrecords(dataset_name='PNAS',
@@ -247,52 +243,45 @@ def demo_save_tfrecords(dataset_name='PNAS',
     return filename_log
 
 
-# filename_log = demo_save_tfrecords()
+def preprocessing(img):
+    '''TBD'''
+    return img
+
+# def map_decorator(func):
+#     '''
+#     Use wrappers for mapped function
+#     - To run mapped function in an eager context, you have to wrap them inside a tf.py_function call.
+#         '''
+#     def wrapper(steps, times, values):
+#         # Use a tf.py_function to prevent auto-graph from compiling the method
+#         return tf.py_function(
+#             func,
+#             inp=(steps, times, values),
+#             Tout=(steps.dtype, times.dtype, values.dtype)
+#         )
+#     return wrapper
+
 
 
 def _parse_function(example_proto):
     img, label = decode_example(example_proto)
     return img, label
 
-# filenames = filename_log['train']
 
-def build_TFRecordDataset(filenames):
-    dataset = tf.data.TFRecordDataset(filenames)
-#     dataset = tf.data.Dataset.from_tensor_slices(filenames)
-    dataset = dataset.shuffle(buffer_size=len(filenames))
-    dataset = dataset.interleave(lambda x: tf.data.TFRecordDataset(x), cycle_length=1,block_length=1)
-    dataset = dataset.map(_parse_function, num_parallel_calls=1)#tf.data.experimental.AUTOTUNE)
-    return dataset
+def test_load_and_encode_example():
+    dummy_sample = {'path':r'/media/data_cifs/sven2/leaves/sorted/Fossils_DataSource/New_Fossil_Dataset/I. Approved families/Adoxaceae/Sambucus newtoni/CU_0141 Sambucus newtoni.tif',
+                   'label':0}
+    serialized_example = load_and_encode_example(**dummy_sample)
+    img, label = decode_example(serialized_example)
+    return img, label
 
-
-# def _parse_function(example_proto):
-#   # Parse the input `tf.Example` proto using the dictionary above.
-#   return tf.io.parse_single_example(example_proto, feature_description)
-
-
-
-dummy_sample = {'path':r'/media/data_cifs/sven2/leaves/sorted/Fossils_DataSource/New_Fossil_Dataset/I. Approved families/Adoxaceae/Sambucus newtoni/CU_0141 Sambucus newtoni.tif',
-               'label':0}
-
-
-# serialized_example = load_and_encode_example(**dummy_sample)
-
-# img, label = decode_example(serialized_example)
-# import matplotlib.pyplot as plt
-# plt.imshow(img)
-# import numpy as np
-# a = np.random.randn(2,2)
-# b = _bytes_feature(tf.io.serialize_tensor(a))
-
-# c = tf.io.parse_tensor(b,np.float64)
-
-# print('a',a)
-# print('b',b)
-# print('c',c)
 
 def check_if_tfrecords_exist(output_dir):
-    '''if tfrecords already exist, return dictionary with mappings to their paths. Otherwise return None.'''
+    '''if tfrecords already exist, return dictionary with mappings to their paths. Otherwise return None.'''    
     tfrecords = None
+    if not ensure_dir_exists(output_dir):
+        return tfrecords
+    
     subset_dirs = os.listdir(output_dir)
     if len(subset_dirs) > 0:
         tfrecords = {}
@@ -303,11 +292,61 @@ def check_if_tfrecords_exist(output_dir):
             tfrecords[subset] = sorted([os.path.join(subset_path,filename) for filename in subset_filenames])
     return tfrecords
 
+
+# def build_TFRecordDataset(filenames):
+
+#     tfrecord_files = tf.data.Dataset.from_tensor_slices(filenames)
+#     tfrecord_files = tfrecord_files.shuffle(buffer_size=len(filenames))
+#     dataset = tf.data.TFRecordDataset(tfrecord_files, num_parallel_reads=4)
+# #     dataset = dataset.shuffle(buffer_size=len(filenames))
+#     dataset = dataset.map(_parse_function, num_parallel_calls=16)
+# #     dataset = dataset.interleave(lambda x: tf.Print(x,[x]))
+#     return dataset
+
+
+def build_TFRecordDataset(filenames):
+    dataset_generator_fun = lambda x: tf.data.TFRecordDataset(x)
+    _batch_map_num_items = 1#2
+    time_consuming_map = _parse_function
+    AUTOTUNE = 1
+    optimized_dataset = tf.data.Dataset.from_tensor_slices(filenames) \
+        .apply(dataset_generator_fun) \
+        .map(time_consuming_map,num_parallel_calls=AUTOTUNE) \
+        .batch(_batch_map_num_items,drop_remainder=True) \
+        .prefetch(AUTOTUNE) \
+#         .unbatch()
+    return optimized_dataset
+
+
+#     optimized_dataset = tf.data.Dataset.from_tensor_slices(filenames) \
+#         .interleave(dataset_generator_fun,num_parallel_calls=AUTOTUNE) \
+#         .map(time_consuming_map,num_parallel_calls=AUTOTUNE) \
+#         .batch(_batch_map_num_items,drop_remainder=True) \
+#         .prefetch(AUTOTUNE) \
+# #         .unbatch()
+#     return optimized_dataset
+
+
+
+
+
+#     dataset = dataset.interleave(lambda x:
+#                                 tf.data.TFRecordDataset(x))#.map(
+# #                                     _parse_function, num_parallel_calls=1))#,
+# #                                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
+#     dataset = dataset.map(_parse_function, num_parallel_calls=1)
+#     dataset = dataset.repeat()
+#     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+
+    
+#     dataset = dataset.interleave(lambda x: tf.data.TFRecordDataset(x), cycle_length=1,block_length=1)
+#     dataset = dataset.map(_parse_function, num_parallel_calls=1)#tf.data.experimental.AUTOTUNE)
+#     return dataset
+
 def main():
     
     dataset_name = 'PNAS'
     output_dir = f'/media/data/jacob/{dataset_name}'
-#     output_dir = os.path.expanduser(r'~/data')
     
     filename_log = check_if_tfrecords_exist(output_dir)
     
@@ -319,12 +358,27 @@ def main():
     else:
         print(f'Found {len(filename_log.keys())} subsets of tfrecords already saved, skipping creation process.')
         
-    train_dataset = build_TFRecordDataset(sorted(filename_log['train']))
-    val_dataset = build_TFRecordDataset(sorted(filename_log['val']))
-    test_dataset = build_TFRecordDataset(sorted(filename_log['test']))
+#     train_dataset = build_TFRecordDataset(sorted(filename_log['train']))
+#     val_dataset = build_TFRecordDataset(sorted(filename_log['val']))
+#     test_dataset = build_TFRecordDataset(sorted(filename_log['test']))
     
-    for example in train_dataset.take(1):
-        print(example)
-    for img, label in train_dataset.take(1):
+#     for example in train_dataset.take(1):
+#         img, label = example
+#         print(img.numpy().shape, label.numpy())
         
-        plt.imshow(img)
+    
+#     import matplotlib.pyplot as plt
+#     for img, label in train_dataset.take(1):        
+#         plt.imshow(img)
+#         plt.title(label.numpy())
+        
+        
+        
+
+    
+    
+    filenames = filename_log['train']    
+    TFRecord_timeline = timelined_benchmark(build_TFRecordDataset(filenames))
+    
+    
+    draw_timeline(TFRecord_timeline, "TFRecord", 15)
