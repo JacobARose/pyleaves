@@ -18,7 +18,7 @@ def plot_image_grid(imgs, labels = np.array([]), x_plots = 4, y_plots = 4, figsi
 		ax.axes.get_yaxis().set_visible(False)
 
 		ax.imshow(imgs[i,...])
-		if labels.shape[0] >= i:
+		if len(labels) >= i:
 			ax.set_title(labels[i])
 	plt.tight_layout()
     

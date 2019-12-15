@@ -27,13 +27,15 @@ if tf.executing_eagerly():
     
 from tensorflow.data.experimental import AUTOTUNE
     
-# from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, one_hot_encode_labels, one_hot_decode_labels
+# from pyleaves.data_pipeline.preprocessing import generate_encoding_map #encode_labels, filter_low_count_labels, one_hot_encode_labels, one_hot_decode_labels
 from pyleaves.analysis.img_utils import load_image
 from pyleaves import leavesdb
-from pyleaves.leavesdb.tf_utils.tf_utils import train_val_test_split, load_and_format_dataset_from_db
+from pyleaves.leavesdb.tf_utils.tf_utils import (train_val_test_split,
+                                                load_and_format_dataset_from_db,
+                                                check_if_tfrecords_exist)
 from pyleaves.utils import ensure_dir_exists
 
-from pyleaves.tests.test_utils import timelined_benchmark, draw_timeline, map_decorator
+from pyleaves.tests.test_utils import timeit, timelined_benchmark, draw_timeline, map_decorator
 
 def _bytes_feature(value):
     """Returns a bytes_list from a string / byte."""
@@ -56,7 +58,6 @@ def _int64_feature(value):
         value = [value]
     return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
 ##################################################################
-
 def encode_example(img, label_int):    
     shape = img.shape
     img_buffer = encode_image(img)
@@ -68,10 +69,8 @@ def encode_example(img, label_int):
         'image/bytes': _bytes_feature(img_buffer),
         'label': _int64_feature(label_int)
     }
-    
     example_proto = tf.train.Example(features=tf.train.Features(feature=features))
     return example_proto.SerializeToString()
-
 
 def decode_example(serialized_example):
     feature_description = {
@@ -92,7 +91,6 @@ def decode_example(serialized_example):
     label = tf.cast(features['label'], tf.int32)
     
     return img, label
-
 ##################################################################
 def encode_image(img):
     '''
@@ -101,17 +99,15 @@ def encode_image(img):
     return cv2.imencode('.jpg', img)[1].tostring()
 
 def decode_image(img_string, channels=3):
-    
     return tf.io.decode_image(img_string,channels=channels)
-
 ##################################################################
-
 def load_and_encode_example(path, label, target_size = (224,224)):
     img = load_image(path, target_size=target_size)  
-
     return encode_example(img,label)
 ##################################################################
-
+def save_labels_int2text_tfrecords(labels):
+    '''TBD: Save dict mapping of int2text labels in separate tfrecord to reduce size of records'''
+    
 def create_tfrecord_shard(shard_filepath, 
                           img_filepaths,
                           labels,
@@ -133,15 +129,13 @@ def create_tfrecord_shard(shard_filepath,
         
         if verbose & (not i % 50):
             print(img_filepaths[i],f'-> {i}/{num_samples}',end='\r')
-            sys.stdout.flush()
-            
+#             sys.stdout.flush()            
         example = load_and_encode_example(path,label,target_size)
         if example is not None:
             writer.write(example)
     writer.close()
     
     print('Finished saving TFRecord at: ', shard_filepath)
-
     
 def create_tfrecord_shards(img_filepaths,
                            labels,
@@ -150,13 +144,14 @@ def create_tfrecord_shards(img_filepaths,
                            target_size=(224,224),
                            num_shards=10):
     
+    
+    
     total_samples = len(labels)
     
     zipped_data = zip(img_filepaths, labels)
     sharded_data = chunked(zipped_data, total_samples//num_shards)
         
     os.makedirs(output_dir, exist_ok=True)
-    
     num_finished_samples = 0
     for shard_i, shard in enumerate(sharded_data):
         shard_fname = f'{output_base_name}-{str(shard_i).zfill(5)}-of-{str(num_shards).zfill(5)}.tfrecord'
@@ -171,46 +166,6 @@ def create_tfrecord_shards(img_filepaths,
         
     return os.listdir(output_dir)
 ##################################################################
-
-# def train_val_test_split(image_paths, one_hot_labels, data_df, test_size=0.3, val_size=0.3, random_seed=2376):
-
-#     train_paths, test_paths, train_labels, test_labels  = train_test_split(image_paths, one_hot_labels, test_size=test_size, random_state=random_seed, shuffle=True, stratify=data_df['label'])
-#     train_paths, val_paths, train_labels, val_labels = train_test_split(train_paths, train_labels, test_size=val_size, random_state=random_seed, shuffle=True, stratify=train_labels)
-
-    
-#     print(f'train samples: {len(train_labels)}')
-#     print(f'val samples: {len(val_labels)}')
-#     print(f'test samples: {len(test_labels)}')
-
-#     train_data = {'path': train_paths, 'label': train_labels}
-#     val_data = {'path': val_paths, 'label': val_labels}
-#     test_data = {'path': test_paths, 'label': test_labels}
-
-#     data_splits = {'train': train_data,
-#                   'val': val_data,
-#                   'test': test_data}
-#     return data_splits
-    
-
-# def load_and_format_dataset_from_db(dataset_name='PNAS', low_count_threshold=10, val_size=0.3, test_size=0.3):
-
-#     local_db = leavesdb.init_local_db()
-#     print(local_db)
-#     db = dataset.connect(f'sqlite:///{local_db}', row_type=stuf)
-#     data = leavesdb.db_query.load_data(db, dataset=dataset_name)
-    
-#     data_df = encode_labels(data)
-    
-#     data_df = filter_low_count_labels(data_df, threshold=low_count_threshold, verbose = True)
-#     data_df = encode_labels(data_df) #Re-encode numeric labels after removing sub-threshold classes so that max(labels) == len(labels)
-#     image_paths = data_df['path'].values.reshape((-1,1))
-#     labels = data_df['label'].values
-# #     one_hot_labels = one_hot_encode_labels(data_df['label'].values)
-#     data_splits = train_val_test_split(image_paths, labels, data_df, val_size=val_size, test_size=test_size)
-
-#     return data_splits
-
-    
 def demo_save_tfrecords(dataset_name='PNAS',
                         output_dir = os.path.expanduser(r'~/data'), 
                         target_size=(224,224),
@@ -225,12 +180,15 @@ def demo_save_tfrecords(dataset_name='PNAS',
     filename_log = {} 
     for split_name, split_data in data_splits.items():
         
+        if split_name == 'label_map':
+            filename_log[split_name] = split_data
+            continue
+        
         split_filepaths = list(collapse(split_data['path']))
         split_labels = split_data['label']
         
         num_samples = len(split_labels)
         print('Starting ',split_name, f' with {num_samples} samples')
-        
         
         saved_tfrecord_files = create_tfrecord_shards(split_filepaths, 
                                                       split_labels,
@@ -242,82 +200,39 @@ def demo_save_tfrecords(dataset_name='PNAS',
         filename_log.update({split_name:saved_tfrecord_files})
     return filename_log
 
-
 def preprocessing(img):
     '''TBD'''
     return img
-
-# def map_decorator(func):
-#     '''
-#     Use wrappers for mapped function
-#     - To run mapped function in an eager context, you have to wrap them inside a tf.py_function call.
-#         '''
-#     def wrapper(steps, times, values):
-#         # Use a tf.py_function to prevent auto-graph from compiling the method
-#         return tf.py_function(
-#             func,
-#             inp=(steps, times, values),
-#             Tout=(steps.dtype, times.dtype, values.dtype)
-#         )
-#     return wrapper
-
-
 
 def _parse_function(example_proto):
     img, label = decode_example(example_proto)
     return img, label
 
 
-def test_load_and_encode_example():
-    dummy_sample = {'path':r'/media/data_cifs/sven2/leaves/sorted/Fossils_DataSource/New_Fossil_Dataset/I. Approved families/Adoxaceae/Sambucus newtoni/CU_0141 Sambucus newtoni.tif',
-                   'label':0}
-    serialized_example = load_and_encode_example(**dummy_sample)
-    img, label = decode_example(serialized_example)
-    return img, label
-
-
-def check_if_tfrecords_exist(output_dir):
-    '''if tfrecords already exist, return dictionary with mappings to their paths. Otherwise return None.'''    
-    tfrecords = None
-    if not ensure_dir_exists(output_dir):
-        return tfrecords
-    
-    subset_dirs = os.listdir(output_dir)
-    if len(subset_dirs) > 0:
-        tfrecords = {}
-        for subset in subset_dirs:
-            subset_path = os.path.join(output_dir,
-                                      subset)
-            subset_filenames = os.listdir(subset_path)
-            tfrecords[subset] = sorted([os.path.join(subset_path,filename) for filename in subset_filenames])
-    return tfrecords
-
-
-# def build_TFRecordDataset(filenames):
-
-#     tfrecord_files = tf.data.Dataset.from_tensor_slices(filenames)
-#     tfrecord_files = tfrecord_files.shuffle(buffer_size=len(filenames))
-#     dataset = tf.data.TFRecordDataset(tfrecord_files, num_parallel_reads=4)
-# #     dataset = dataset.shuffle(buffer_size=len(filenames))
-#     dataset = dataset.map(_parse_function, num_parallel_calls=16)
-# #     dataset = dataset.interleave(lambda x: tf.Print(x,[x]))
-#     return dataset
-
-
-def build_TFRecordDataset(filenames):
+def build_TFRecordDataset(filenames, batch_size=32):
     dataset_generator_fun = lambda x: tf.data.TFRecordDataset(x)
-    _batch_map_num_items = 1#2
     time_consuming_map = _parse_function
-    AUTOTUNE = 1
+
     optimized_dataset = tf.data.Dataset.from_tensor_slices(filenames) \
         .apply(dataset_generator_fun) \
         .map(time_consuming_map,num_parallel_calls=AUTOTUNE) \
-        .batch(_batch_map_num_items,drop_remainder=True) \
+        .repeat() \
+        .batch(batch_size,drop_remainder=True) \
         .prefetch(AUTOTUNE) \
-#         .unbatch()
+
     return optimized_dataset
 
-
+def build_naive_TFRecordDataset(filenames, batch_size=32):
+    dataset_generator_fun = lambda x: tf.data.TFRecordDataset(x)
+    naive_map = _parse_function
+    
+    naive_dataset = tf.data.Dataset.from_tensor_slices(filenames) \
+                    .flat_map(dataset_generator_fun) \
+                    .map(naive_map) \
+                    .repeat() \
+                    .batch(batch_size, drop_remainder=True)
+    return naive_dataset    
+        
 #     optimized_dataset = tf.data.Dataset.from_tensor_slices(filenames) \
 #         .interleave(dataset_generator_fun,num_parallel_calls=AUTOTUNE) \
 #         .map(time_consuming_map,num_parallel_calls=AUTOTUNE) \
@@ -327,59 +242,64 @@ def build_TFRecordDataset(filenames):
 #     return optimized_dataset
 
 
-
-
-
-#     dataset = dataset.interleave(lambda x:
-#                                 tf.data.TFRecordDataset(x))#.map(
-# #                                     _parse_function, num_parallel_calls=1))#,
-# #                                 num_parallel_calls=tf.data.experimental.AUTOTUNE)
-#     dataset = dataset.map(_parse_function, num_parallel_calls=1)
-#     dataset = dataset.repeat()
-#     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
-
-    
-#     dataset = dataset.interleave(lambda x: tf.data.TFRecordDataset(x), cycle_length=1,block_length=1)
-#     dataset = dataset.map(_parse_function, num_parallel_calls=1)#tf.data.experimental.AUTOTUNE)
-#     return dataset
-
 def main():
     
     dataset_name = 'PNAS'
 #     output_dir = f'/media/data/jacob/{dataset_name}'
     output_dir = f'/home/jacob/data/{dataset_name}'
     
+    low_count_threshold = 10
+    val_size = 0.3
+    test_size = 0.3
+    
     filename_log = check_if_tfrecords_exist(output_dir)
     
     if filename_log == None:
         filename_log = demo_save_tfrecords(dataset_name=dataset_name,
                                            output_dir=output_dir)
+        label_map = filename_log.pop('label_map', None)
+        
         for key, records in filename_log.items():
             filename_log[key] = [os.path.join(output_dir,key,record_fname) for record_fname in sorted(records)]
     else:
         print(f'Found {len(filename_log.keys())} subsets of tfrecords already saved, skipping creation process.')
+        label_map = load_and_format_dataset_from_db(dataset_name=dataset_name,
+                                                    low_count_threshold=low_count_threshold, 
+                                                    val_size=val_size,
+                                                    test_size=test_size,
+                                                    verbose=False)['label_map']
         
-#     train_dataset = build_TFRecordDataset(sorted(filename_log['train']))
+    train_dataset = build_TFRecordDataset(sorted(filename_log['train']))
 #     val_dataset = build_TFRecordDataset(sorted(filename_log['val']))
 #     test_dataset = build_TFRecordDataset(sorted(filename_log['test']))
     
-#     for example in train_dataset.take(1):
-#         img, label = example
-#         print(img.numpy().shape, label.numpy())
-        
     
-#     import matplotlib.pyplot as plt
-#     for img, label in train_dataset.take(1):        
-#         plt.imshow(img)
-#         plt.title(label.numpy())
+    ##PLOT 1 BATCH OF IMAGES WITH TEXT LABELS
+    
+    from pyleaves.analysis.img_utils import plot_image_grid
+    
+    for imgs, labels in train_dataset.take(1):
+        labels = [label_map[label] for label in labels.numpy()]
+        plot_image_grid(imgs, labels, 4, 8)
         
         
-        
+    ##TEST ITERATION TIME
+    
+    filenames = filename_log['train']
+    TFRecord_timeline = timeit(build_TFRecordDataset(filenames))
+    
+    
+    naive_TFRecord_timeline = timeit(build_naive_TFRecordDataset(filenames, batch_size=32))
+    
+#     draw_timeline(TFRecord_timeline, "TFRecord", 15)
 
+
+if __name__ == "__main__":
     
+    '''
+    Instructions:
     
-    filenames = filename_log['train']    
-    TFRecord_timeline = timelined_benchmark(build_TFRecordDataset(filenames))
+    Open a jupyter console and type "%run create_tfrecords.py"
+    '''
     
-    
-    draw_timeline(TFRecord_timeline, "TFRecord", 15)
+    main()

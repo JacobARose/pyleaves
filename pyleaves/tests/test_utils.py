@@ -18,6 +18,30 @@ tf.executing_eagerly()
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
+def timeit(ds, batch_size=None, steps=1000):
+    print(f'Initiating timing run for {steps} steps:')
+    start = time.time()
+    it = iter(ds)
+    if batch_size==None:
+        batch_size=next(it)[0].numpy().shape[0]
+    for i in range(steps):
+        batch = next(it)
+        if i%10 == 0:
+            print(f'{100*i//steps:d}% : ','.'*(i//10),end='\r')
+    print('\n')
+    end = time.time()
+    duration = end-start
+    
+    result = {'image_rate':batch_size*steps/duration,
+              'batch_size':batch_size,
+             'num_batches':steps,
+             'total_time':duration}
+    
+    print('Completed timing run.')
+    print(f"{steps} batches: {duration:0.2f} s, batch_size: {batch_size}")
+    print(f"{result['image_rate']:0.2f} Images/s")
+
+    return result
 
 def benchmark(dataset, num_epochs=2):
     '''Wrapper for benchmarking tf.data.Dataset performance.'''
@@ -98,9 +122,6 @@ class ArtificialDataset(tf.data.Dataset):
             output_shapes=(1,),
             args=(num_samples,)
             )
-
-    
-    
     
 class TimeMeasuredDataset(tf.data.Dataset):
     # OUTPUT: (steps, timings, counters)

@@ -25,6 +25,18 @@ def encode_labels_str2int(data, y_col='family'):
 
 encode_labels = encode_labels_str2int #For backwards compatibility
 
+def generate_encoding_map(data, text_label_col='family', int_label_col='label'):
+    '''
+    Returns a dictionary mapping integer labels to their corresponding text label
+    {0:'Annonaceae',
+    ...
+    19:'Passifloraceae'}
+    '''
+    int_labels, label_indices = np.unique(data[int_label_col], return_index=True)
+    text_labels = data[text_label_col].iloc[label_indices].values
+    
+    return {int_label:text_label for int_label, text_label in zip(int_labels, text_labels)}
+
 
 
 def one_hot_encode_labels(labels):
