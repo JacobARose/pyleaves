@@ -166,7 +166,8 @@ def create_tfrecord_shards(img_filepaths,
         create_tfrecord_shard(shard_filepath, shard_img_filepaths, shard_labels, target_size = target_size, verbose=True)
         
         num_finished_samples += len(list(shard))
-        print(f'Finished: {num_finished_samples}/{total_samples} total samples, {shard_i}/{num_shards} total shards', end='\r')
+        print('\n')
+        print(f'Finished: {num_finished_samples}/{total_samples} total samples, {shard_i}/{num_shards} total shards', end='\n')
         
     return os.listdir(output_dir)
 ##################################################################
@@ -192,7 +193,7 @@ def demo_save_tfrecords(dataset_name='PNAS',
         split_labels = split_data['label']
         
         num_samples = len(split_labels)
-        print('Starting ',split_name, f' with {num_samples} samples')
+        print('Starting to split ',split_name, f' with {num_samples} total samples into {num_shards} shards')
         
         saved_tfrecord_files = create_tfrecord_shards(split_filepaths, 
                                                       split_labels,
