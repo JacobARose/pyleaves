@@ -2,6 +2,7 @@
 TBD
 
 '''
+import argparse
 import cv2
 # import dataset
 from more_itertools import chunked, collapse, unzip
@@ -117,7 +118,8 @@ def create_tfrecord_shard(shard_filepath,
     Function for passing a list of image filpaths and labels to be saved in a single TFRecord file
     located at shard_filepath.
     '''
-    writer = tf.python_io.TFRecordWriter(shard_filepath)
+#     writer = tf.python_io.TFRecordWriter(shard_filepath)
+    writer = tf.io.TFRecordWriter(shard_filepath)
     
     img_filepaths = list(img_filepaths)
     labels = list(labels)
@@ -127,9 +129,11 @@ def create_tfrecord_shard(shard_filepath,
 
         path, label = img_filepaths[i], labels[i]
         
-        if verbose & (not i % 50):
-            print(img_filepaths[i],f'-> {i}/{num_samples}',end='\r')
-#             sys.stdout.flush()            
+        if verbose & (not i % 10):
+            sys.stdout.flush()
+            print(img_filepaths[i],f'-> {i}/{num_samples} samples in shard',end='\r')
+            sys.stdout.flush()
+            
         example = load_and_encode_example(path,label,target_size)
         if example is not None:
             writer.write(example)
@@ -162,7 +166,7 @@ def create_tfrecord_shards(img_filepaths,
         create_tfrecord_shard(shard_filepath, shard_img_filepaths, shard_labels, target_size = target_size, verbose=True)
         
         num_finished_samples += len(list(shard))
-        print(f'Finished: {num_finished_samples}/{total_samples} samples, {shard_i}/{num_shards} shards')
+        print(f'Finished: {num_finished_samples}/{total_samples} total samples, {shard_i}/{num_shards} total shards', end='\r')
         
     return os.listdir(output_dir)
 ##################################################################
@@ -243,14 +247,31 @@ def build_naive_TFRecordDataset(filenames, batch_size=32):
 
 
 def main():
+
+    '''
+    Example Jupyter notebook command:
+        
+        %run create_tfrecords.py -d Fossil -o /home/jacob/data -thresh 3 -val 0.3 -test 0.3
     
-    dataset_name = 'PNAS'
-#     output_dir = f'/media/data/jacob/{dataset_name}'
-    output_dir = f'/home/jacob/data/{dataset_name}'
+    '''
     
-    low_count_threshold = 10
-    val_size = 0.3
-    test_size = 0.3
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--dataset_name', default='PNAS', type=str,help='Name of dataset of images to use for creating TFRecords')
+    parser.add_argument('-o', '--output_dir', default=r'/media/data/jacob', type=str, help=r"Parent dir above the location that's intended for saving the TFRecords for this dataset")
+    parser.add_argument('-thresh', '--low_count_threshold', default=10, type=int, help='Min population of a class below which we will exclude the class entirely.')
+    parser.add_argument('-val', '--val_size', default=0.3, type=float, help='Fraction of train to use as validation set. Calculated after splitting train and test')
+    parser.add_argument('-test', '--test_size', default=0.3, type=float, help='Fraction of full dataset to use as test set. Remaining fraction will be split into train/val sets.')
+    args = parser.parse_args()    
+    
+    
+    
+    dataset_name = args.dataset_name #'PNAS'
+    output_dir = os.path.join(args.output_dir,dataset_name)
+#     output_dir = f'/home/jacob/data/{dataset_name}'
+    
+    low_count_threshold = args.low_count_threshold
+    val_size = args.val_size
+    test_size = args.test_size
     
     filename_log = check_if_tfrecords_exist(output_dir)
     
