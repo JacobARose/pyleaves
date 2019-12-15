@@ -132,7 +132,7 @@ def create_tfrecord_shard(shard_filepath,
         path, label = img_filepaths[i], labels[i]
         
         if verbose & (not i % 50):
-            print(img_filepaths[i],f'-> {i}/{num_samples}',end='')
+            print(img_filepaths[i],f'-> {i}/{num_samples}',end='\r')
             sys.stdout.flush()
             
         example = load_and_encode_example(path,label,target_size)
@@ -166,7 +166,7 @@ def create_tfrecord_shards(img_filepaths,
         
         create_tfrecord_shard(shard_filepath, shard_img_filepaths, shard_labels, target_size = target_size, verbose=True)
         
-        num_finished_samples += len(list(shard_labels))
+        num_finished_samples += len(list(shard))
         print(f'Finished: {num_finished_samples}/{total_samples} samples, {shard_i}/{num_shards} shards')
         
     return os.listdir(output_dir)
@@ -346,7 +346,8 @@ def build_TFRecordDataset(filenames):
 def main():
     
     dataset_name = 'PNAS'
-    output_dir = f'/media/data/jacob/{dataset_name}'
+#     output_dir = f'/media/data/jacob/{dataset_name}'
+    output_dir = f'/home/jacob/data/{dataset_name}'
     
     filename_log = check_if_tfrecords_exist(output_dir)
     

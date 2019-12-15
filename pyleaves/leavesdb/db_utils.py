@@ -5,7 +5,7 @@ import json
 import cv2 
 import shutil 
 '''HELPER FUNCTIONS'''
-
+from pyleaves.utils import ensure_dir_exists
 
 def init_local_db(local_db = os.path.expanduser(r'~/scripts/leavesdb.db'), src_db = r'/media/data_cifs/irodri15/leavesdb.db'):
 	'''
@@ -13,6 +13,7 @@ def init_local_db(local_db = os.path.expanduser(r'~/scripts/leavesdb.db'), src_d
 	
 	usage: init_local_db()
 	'''
+	ensure_dir_exists(os.path.dirname(local_db))
 
 	if not os.path.isfile(local_db):
 		print(f'Copying sql db file from {src_db} to {local_db}')
