@@ -55,7 +55,7 @@ def top5_acc(labels, logits):
     
 def load_data(db, x_col='path', y_col='family', dataset='Fossil'):
 	'''
-	General data loader function with flexibility for all query types.
+	General database data loader function with flexibility for all query types.
 	
 	Arguments:
 		db: dataset.database.Database, Must be an open connection to a database
