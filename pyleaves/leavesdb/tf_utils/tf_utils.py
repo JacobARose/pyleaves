@@ -1,4 +1,5 @@
 import dataset
+import numpy as np
 import os
 from sklearn.model_selection import train_test_split
 from stuf import stuf
@@ -32,19 +33,32 @@ def train_val_test_split(image_paths, labels, test_size=0.3, val_size=0.3, rando
     train_paths, test_paths, train_labels, test_labels  = train_test_split(image_paths, labels, test_size=test_size, random_state=random_seed, shuffle=True, stratify=labels)
     train_paths, val_paths, train_labels, val_labels = train_test_split(train_paths, train_labels, test_size=val_size, random_state=random_seed, shuffle=True, stratify=train_labels)
 
-    if verbose:
-        print(f'train samples: {len(train_labels)}')
-        print(f'val samples: {len(val_labels)}')
-        print(f'test samples: {len(test_labels)}')
-
     train_data = {'path': train_paths, 'label': train_labels}
     val_data = {'path': val_paths, 'label': val_labels}
     test_data = {'path': test_paths, 'label': test_labels}
 
     data_splits = {'train': train_data,
-                  'val': val_data,
-                  'test': test_data}
-    return data_splits
+                   'val': val_data,
+                   'test': test_data}
+
+
+    metadata_splits = {'train': {},
+                        'val': {},
+                        'test': {}}
+
+    for subset, data in data_splits.items():
+        metadata_splits[subset] = {'num_samples':len(data_splits[subset]['label']),
+                                   'num_classes':len(np.unique(data_splits[subset]['label']))}
+
+
+    if verbose:
+        print(f'train samples: {len(train_labels)}')
+        print(f'val samples: {len(val_labels)}')
+        print(f'test samples: {len(test_labels)}')
+
+
+
+    return data_splits, metadata_splits
 
 def load_from_db(dataset_name='PNAS'):
     local_db = leavesdb.init_local_db()
@@ -64,11 +78,11 @@ def load_and_format_dataset_from_db(dataset_name='PNAS', low_count_threshold=10,
     image_paths = data_df['path'].values.reshape((-1,1))
     labels = data_df['label'].values
 #     one_hot_labels = one_hot_encode_labels(data_df['label'].values)
-    data_splits = train_val_test_split(image_paths, labels, val_size=val_size, test_size=test_size, verbose=verbose)
+    data_splits, metadata_splits = train_val_test_split(image_paths, labels, val_size=val_size, test_size=test_size, verbose=verbose)
 
-    data_splits['label_map'] = generate_encoding_map(data_df, text_label_col='family', int_label_col='label')
+    metadata_splits['label_map'] = generate_encoding_map(data_df, text_label_col='family', int_label_col='label')
 
-    return data_splits
+    return data_splits, metadata_splits
 
 
 def check_if_tfrecords_exist(output_dir):

@@ -29,7 +29,7 @@ def get_label_encodings(dataset='Fossil', y_col='family', low_count_thresh=0):
     data, _ = load_from_db(dataset_name=dataset)
 
     data_df = encode_labels(data)
-    data_df = filter_low_count_labels(data_df, threshold=low_count_threshold)
+    data_df = filter_low_count_labels(data_df, threshold=low_count_thresh)
     data_df = encode_labels(data_df) #Re-encode numeric labels after removing sub-threshold classes so that max(labels) == len(labels)
 
     label_maps = generate_encoding_map(data_df, text_label_col=y_col, int_label_col='label')

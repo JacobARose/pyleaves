@@ -12,8 +12,9 @@ import matplotlib.pyplot as plt
 import time
 
 import tensorflow as tf
-tf.compat.v1.enable_eager_execution()
-tf.executing_eagerly()
+if __name__ == '__main__':
+    tf.compat.v1.enable_eager_execution()
+    tf.executing_eagerly()
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 

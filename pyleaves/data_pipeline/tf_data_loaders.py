@@ -1,4 +1,5 @@
 
+from functools import partial
 import os
 import tensorflow as tf
 from tensorflow.data.experimental import AUTOTUNE
@@ -6,33 +7,46 @@ from tensorflow.data.experimental import AUTOTUNE
 from pyleaves.leavesdb.tf_utils.create_tfrecords import decode_example
 from pyleaves.utils import ensure_dir_exists
 
-def _parse_function(example_proto):
+def _parse_function(example_proto, num_classes):
     img, label = decode_example(example_proto)
+    label = tf.one_hot(label, num_classes)
     return img, label
 
 
-def build_train_dataset(filenames, batch_size=32, buffer_size=1000, seed=17):
+def build_train_dataset(filenames, num_classes=None, batch_size=32, buffer_size=1000, seed=17, drop_remainder=True):
+    def _parse_function(example_proto, num_classes):
+        img, label = decode_example(example_proto)
+        label = tf.one_hot(label, num_classes)
+        return img, label
+    
     dataset_generator_fun = lambda x: tf.data.TFRecordDataset(x)
-
+    __parse_function = partial(_parse_function, num_classes=num_classes)
+    
     optimized_dataset = tf.data.Dataset.from_tensor_slices(filenames) \
         .apply(dataset_generator_fun) \
-        .map(_parse_function,num_parallel_calls=AUTOTUNE) \
+        .map(__parse_function,num_parallel_calls=AUTOTUNE) \
         .shuffle(buffer_size=buffer_size, seed=seed) \
         .repeat() \
-        .batch(batch_size,drop_remainder=False) \
+        .batch(batch_size,drop_remainder=drop_remainder) \
         .prefetch(AUTOTUNE) \
 
     return optimized_dataset
 
 
-def build_test_dataset(filenames, batch_size=32, num_parallel_calls=None):
+def build_test_dataset(filenames, num_classes=None, batch_size=32, num_parallel_calls=None, drop_remainder=True):
+    def _parse_function(example_proto, num_classes):
+        img, label = decode_example(example_proto)
+        label = tf.one_hot(label, num_classes)
+        return img, label
+    
     dataset_generator_fun = lambda x: tf.data.TFRecordDataset(x)
+    __parse_function = partial(_parse_function, num_classes=num_classes)
 
     optimized_dataset = tf.data.Dataset.from_tensor_slices(filenames) \
         .apply(dataset_generator_fun) \
-        .map(_parse_function,num_parallel_calls=num_parallel_calls) \
+        .map(__parse_function,num_parallel_calls=num_parallel_calls) \
         .repeat() \
-        .batch(batch_size,drop_remainder=False) \
+        .batch(batch_size,drop_remainder=drop_remainder) \
         .prefetch(AUTOTUNE) \
 
     return optimized_dataset
@@ -52,6 +66,7 @@ class DatasetBuilder:
     def __init__(self,
                  root_dir,
                  subset='train',
+                 num_classes=None,
                  batch_size=32,
                  shuffle_buffer_size=1000,
                  num_parallel_calls_test=None,
@@ -60,8 +75,10 @@ class DatasetBuilder:
 
         self.root_dir = root_dir
         self.subset = subset
+        self.num_classes = num_classes
         self.batch_size = batch_size
         self.buffer_size = shuffle_buffer_size
+        self.num_parallel_calls_test = num_parallel_calls_test
 
         self.name = name
         self.seed = seed
@@ -75,7 +92,7 @@ class DatasetBuilder:
         '''
 
         assert ensure_dir_exists(root_dir)
-        file_list = sorted([filename for filename in os.listdir(root_dir) if '.tfrecord' in filename])
+        file_list = sorted([os.path.join(root_dir,filename) for filename in os.listdir(root_dir) if '.tfrecord' in filename])
 
         return file_list
 
@@ -91,18 +108,26 @@ class DatasetBuilder:
         self.subsets = subsets
         return self.subsets
 
-    def get_dataset(self, subset=None):
+    def get_dataset(self, subset=None, batch_size=None, num_classes=None):
         if subset is None:
             subset = self.subset
+        if batch_size is None:
+            batch_size = self.batch_size
+        if num_classes is None:
+            num_classes = self.num_classes
+            
+            
         if subset == 'train':
             return build_train_dataset(filenames=self.subsets[subset],
-                                       batch_size=self.batch_size,
+                                       num_classes=num_classes,
+                                       batch_size=batch_size,
                                        buffer_size=self.buffer_size,
                                        seed=self.seed)
         elif subset == 'test' or subset == 'val':
             return build_test_dataset(filenames=self.subsets[subset],
-                                      batch_size=self.batch_size,
-                                      num_parallel_calls=self.num_parallel_calls)
+                                      num_classes=num_classes,
+                                      batch_size=batch_size,
+                                      num_parallel_calls=self.num_parallel_calls_test)
 
         else:
             print('Subset type not recognized, returning None.')

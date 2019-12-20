@@ -14,17 +14,23 @@ from stuf import stuf
 import sys
 import tensorflow as tf
 # tf.enable_eager_execution()
-i = 0
-if not tf.executing_eagerly():
-    tf.compat.v1.enable_eager_execution()
-    print('ready')
+# i = 0
 
-if tf.executing_eagerly():
-    i+=1
-    print('executing eagerly: ',tf.executing_eagerly())
-    print('i = ',i)
-    print(__name__)
+# if not tf.executing_eagerly():
+#     tf.compat.v1.enable_eager_execution()
+#     print('ready')
 
+# if tf.executing_eagerly():
+#     i+=1
+#     print('executing eagerly: ',tf.executing_eagerly())
+#     print('i = ',i)
+#     print(__name__)
+
+gpus = tf.config.experimental.get_visible_devices('GPU')
+if gpus:
+    tf.config.experimental.set_visible_devices(gpus[0], 'GPU')
+    logical_gpus = tf.config.experimental.get_visible_devices('GPU')
+    print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPU")
 
 from tensorflow.data.experimental import AUTOTUNE
 
@@ -130,7 +136,7 @@ def create_tfrecord_shard(shard_filepath,
         path, label = img_filepaths[i], labels[i]
 
         if verbose & (not i % 10):
-            sys.stdout.flush()
+#             sys.stdout.flush()
             print(img_filepaths[i],f'-> {i}/{num_samples} samples in shard',end='\r')
             sys.stdout.flush()
 
@@ -139,7 +145,7 @@ def create_tfrecord_shard(shard_filepath,
             writer.write(example)
     writer.close()
 
-    print('Finished saving TFRecord at: ', shard_filepath)
+    print('Finished saving TFRecord at: ', shard_filepath, '\n')
 
 def create_tfrecord_shards(img_filepaths,
                            labels,
@@ -166,8 +172,8 @@ def create_tfrecord_shards(img_filepaths,
         create_tfrecord_shard(shard_filepath, shard_img_filepaths, shard_labels, target_size = target_size, verbose=True)
 
         num_finished_samples += len(list(shard))
-        print('\n')
-        print(f'Finished: {num_finished_samples}/{total_samples} total samples, {shard_i}/{num_shards} total shards', end='\n')
+#         print('\n')
+        print(f'{output_base_name} - Finished: {num_finished_samples}/{total_samples} total samples, {shard_i+1}/{num_shards} total shards', end='\n')
 
     return os.listdir(output_dir)
 ##################################################################
@@ -179,15 +185,15 @@ def demo_save_tfrecords(dataset_name='PNAS',
                         test_size=0.3,
                         num_shards=10):
 
-    data_splits = load_and_format_dataset_from_db(dataset_name=dataset_name, low_count_threshold=low_count_threshold, val_size=val_size, test_size=test_size)
+    data_splits, metadata_splits = load_and_format_dataset_from_db(dataset_name=dataset_name, low_count_threshold=low_count_threshold, val_size=val_size, test_size=test_size)
 
     os.makedirs(output_dir, exist_ok=True)
-    filename_log = {}
+    filename_log = {'label_map':metadata_splits['label_map']}
     for split_name, split_data in data_splits.items():
 
-        if split_name == 'label_map':
-            filename_log[split_name] = split_data
-            continue
+#         if split_name == 'label_map':
+#             filename_log[split_name] = split_data
+#             continue
 
         split_filepaths = list(collapse(split_data['path']))
         split_labels = split_data['label']
@@ -251,9 +257,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dataset_name', default='PNAS', type=str,help='Name of dataset of images to use for creating TFRecords')
     parser.add_argument('-o', '--output_dir', default=r'/media/data/jacob', type=str, help=r"Parent dir above the location that's intended for saving the TFRecords for this dataset")
-    parser.add_argument('-thresh', '--low_count_threshold', default=10, type=int, help='Min population of a class below which we will exclude the class entirely.')
+    parser.add_argument('-thresh', '--low_count_threshold', default=3, type=int, help='Min population of a class below which we will exclude the class entirely.')
     parser.add_argument('-val', '--val_size', default=0.3, type=float, help='Fraction of train to use as validation set. Calculated after splitting train and test')
     parser.add_argument('-test', '--test_size', default=0.3, type=float, help='Fraction of full dataset to use as test set. Remaining fraction will be split into train/val sets.')
+    parser.add_argument('-time', '--timeit', default=False, type=bool, help='If set to True, run speed tests on generated TFRecords with tf.data.Dataset readers.')
     args = parser.parse_args()
 
 
@@ -277,33 +284,33 @@ def main():
             filename_log[key] = [os.path.join(output_dir,key,record_fname) for record_fname in sorted(records)]
     else:
         print(f'Found {len(filename_log.keys())} subsets of tfrecords already saved, skipping creation process.')
-        label_map = load_and_format_dataset_from_db(dataset_name=dataset_name,
-                                                    low_count_threshold=low_count_threshold,
-                                                    val_size=val_size,
-                                                    test_size=test_size,
-                                                    verbose=False)['label_map']
 
-    train_dataset = build_TFRecordDataset(sorted(filename_log['train']))
-#     val_dataset = build_TFRecordDataset(sorted(filename_log['val']))
-#     test_dataset = build_TFRecordDataset(sorted(filename_log['test']))
-
-
-    ##PLOT 1 BATCH OF IMAGES WITH TEXT LABELS
-
-    from pyleaves.analysis.img_utils import plot_image_grid
-
-    for imgs, labels in train_dataset.take(1):
-        labels = [label_map[label] for label in labels.numpy()]
-        plot_image_grid(imgs, labels, 4, 8)
+        
+        if args.timeit == true:
+            label_map = load_and_format_dataset_from_db(dataset_name=dataset_name,
+                                                        low_count_threshold=low_count_threshold,
+                                                        val_size=val_size,
+                                                        test_size=test_size,
+                                                        verbose=False)['label_map']
 
 
-    ##TEST ITERATION TIME
+            ##PLOT 1 BATCH OF IMAGES WITH TEXT LABELS
 
-    filenames = filename_log['train']
-    TFRecord_timeline = timeit(build_TFRecordDataset(filenames))
-    naive_TFRecord_timeline = timeit(build_naive_TFRecordDataset(filenames, batch_size=32))
 
-#     draw_timeline(TFRecord_timeline, "TFRecord", 15)
+            # train_dataset = build_TFRecordDataset(sorted(filename_log['train']))
+            # val_dataset = build_TFRecordDataset(sorted(filename_log['val']))
+            # test_dataset = build_TFRecordDataset(sorted(filename_log['test']))
+            # from pyleaves.analysis.img_utils import plot_image_grid
+            # for imgs, labels in train_dataset.take(1):
+            #     labels = [label_map[label] for label in labels.numpy()]
+            #     plot_image_grid(imgs, labels, 4, 8)
+            ##TEST ITERATION TIME
+
+            filenames = filename_log['train']
+            TFRecord_timeline = timeit(build_TFRecordDataset(filenames))
+            naive_TFRecord_timeline = timeit(build_naive_TFRecordDataset(filenames, batch_size=32))
+
+    #     draw_timeline(TFRecord_timeline, "TFRecord", 15)
 
 
 if __name__ == "__main__":
