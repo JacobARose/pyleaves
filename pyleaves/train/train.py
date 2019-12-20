@@ -208,9 +208,9 @@ class Experiment:
 # def run_experiment():
 if True:
     batch_size=32
-    num_epochs=50
-    model_name='xception'#'shallow',
-    dataset_name='PNAS'
+    num_epochs=100
+    model_name='resnet_50_v2'#'vgg16'#'xception'#'shallow',
+    dataset_name='Fossil'
     experiment_name='_'.join([dataset_name,model_name])
     data_root_dir='/media/data/jacob'
     experiment_root_dir='/media/data/jacob/experiments'
@@ -251,9 +251,9 @@ if True:
              callbacks=callbacks
              )
 
-#     import matplotlib.pyplot as plt
-#     plt.figure(); plt.plot(history.history['loss'],'b.');plt.plot(history.history['val_loss'],'r--')
-    
+# import matplotlib.pyplot as plt
+# plt.figure(); plt.plot(history.history['loss'],'b.');plt.plot(history.history['val_loss'],'r--')
+# plt.legend(['loss','val_loss'])
     
     
     
