@@ -23,10 +23,10 @@ def vgg16_base(input_shape=(224,224,3), frozen_layers=(0,-4)):
     for layer in vgg16_model.layers[frozen_layers[0]:frozen_layers[1]]:
         layer.trainable = False
     return vgg16_model
-def xception_base(classes=10000,frozen_layers=(0,-4)):
+def xception_base(num_classes=10000,frozen_layers=(0,-4)):
     xception = tf.keras.applications.xception.Xception(include_top=False,
                        weights='imagenet', input_tensor=None,
-                       input_shape=None, pooling=None, num_classes=num_classes)
+                       input_shape=None, pooling=None, classes=num_classes)
     for layer in xception.layers[frozen_layers[0]:frozen_layers[1]]:
         layer.trainable = False
     return xception

@@ -111,7 +111,7 @@ class Experiment:
         self.tfrecord_splits = self.dataset_builder.collect_subsets(self.root_dir)
 
 
-        self.callbacks = None#self.get_callbacks()
+        self.callbacks = self.get_callbacks()
 
     def initialize_experiment_paths(self):
         exp_dir = os.path.join(self.experiment_root_dir,self.experiment_name)
@@ -209,20 +209,29 @@ class Experiment:
 if True:
     batch_size=32
     num_epochs=50
+    model_name='xception'#'shallow',
+    dataset_name='PNAS'
+    experiment_name='_'.join([dataset_name,model_name])
+    data_root_dir='/media/data/jacob'
+    experiment_root_dir='/media/data/jacob/experiments'
+    input_shape=(224,224,3)
+    low_class_count_thresh=3
+    frozen_layers=(0,-4)
+    base_learning_rate=0.001
 
-    experiment = Experiment(model_name='shallow',
-                            dataset_name='PNAS',
-                            experiment_name='PNAS_shallow',
-                            data_root_dir='/media/data/jacob',
-                            experiment_root_dir='/media/data/jacob/experiments',
-                            input_shape=(224,224,3),
-                            low_class_count_thresh=3,
-                            frozen_layers=(0,-4),
-                            base_learning_rate=0.001)
+    experiment = Experiment(model_name=model_name,
+                            dataset_name=dataset_name,
+                            experiment_name=experiment_name,
+                            data_root_dir=data_root_dir,
+                            experiment_root_dir=experiment_root_dir,
+                            input_shape=input_shape,
+                            low_class_count_thresh=low_class_count_thresh,
+                            frozen_layers=frozen_layers,
+                            base_learning_rate=base_learning_rate)
 
     model = experiment.build_model()
 
-#     callbacks = experiment.callbacks
+    callbacks = experiment.callbacks
 
 
     print('num_classes = ',experiment.num_classes)
@@ -238,23 +247,12 @@ if True:
              steps_per_epoch = steps_per_epoch,
              epochs=num_epochs,
              validation_data=val_data,
-             validation_steps=validation_steps)#,
-#              callbacks=callbacks
-#              )
+             validation_steps=validation_steps,
+             callbacks=callbacks
+             )
 
-    
-#     history = model.fit(train_data,
-#              steps_per_epoch = steps_per_epoch,
-#              epochs=num_epochs,
-#              validation_data=val_data,
-#              validation_steps=validation_steps,
-#              callbacks=callbacks
-#              )
-    
-    
-    
-    
-    
+#     import matplotlib.pyplot as plt
+#     plt.figure(); plt.plot(history.history['loss'],'b.');plt.plot(history.history['val_loss'],'r--')
     
     
     
@@ -341,57 +339,6 @@ if True:
     
     
 
-
-
-# def train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch_size=20,epochs=50):
-
-#     skf = StratifiedKFold(n_splits=splits,random_state=42,shuffle=True)
-#     params = {
-#           'batch_size': batch_size,
-#           'input_shape':(229,229,3),
-#           'size':(229,229),
-#           'shuffle': True}
-#     split=1
-
-
-#     print(y)
-
-#     for train_idx,test_idx in skf.split(X,y):
-
-#         print('Starting Split : %02d'%split)
-#         X_train, X_test = X[train_idx], X[test_idx]
-#         y_train, y_test = to_categorical(y[train_idx]),to_categorical(y[test_idx])
-
-#         output_log = os.path.join(output_folder,'split_%03d'%split)
-#         weights_best ,logs_dir= logging_configuration(output_log)
-#         save_split(X_train,X_test,y_train,y_test,output_log)
-#         ds = Dataflow(X_train,y_train,size=(229,229))
-#         dsm = MultiProcessRunner(ds,num_prefetch=batch_size, num_proc=5)
-#         ds1 = BatchData(dsm, batch_size)
-#         train_gen = gen(ds1)
-
-
-#         callbacks_list = get_callbacks(weights_best,logs_dir)
-#         if True:
-#             History=model.fit_generator(train_gen,callbacks=
-#             callbacks_list,epochs=epochs,steps_per_epoch=len(y_train))
-
-#         else:
-#             train_data = get_tf_dataset(filenames = X_train, labels = y_train)
-#             validation_data = get_tf_dataset(filenames = X_test, labels = y_test)
-#             History=model.fit(train_data,callbacks=callbacks_list, epochs=epochs,steps_per_epoch=len(y)/100)
-#         X_test_img = np.array([cv2.resize(cv2.imread(im),(224,224)) for im in X_test],dtype=np.float16)
-#         y_pred = model.predict_classes(X_test_img)
-#         test = np.argmax(y_test,axis=1)
-#         report = classification_report(test,y_pred,output_dict=True)
-#         df = pd.DataFrame(report).transpose()
-#         print(report)
-#         Historydf= pd.DataFrame(History.history)
-#         history_file = os.path.join(output_log,'history.csv')
-#         Historydf.to_csv(history_file)
-#         report_file = os.path.join(output_log,'report.csv')
-#         df.to_csv(report_file)
-#         split+=1
 
 
 
