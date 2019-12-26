@@ -5,6 +5,11 @@ Functions for creating, archiving, and reconstructing SQLite database as .db and
 2. .json files are for human data management and curation, convenient format for modifying database with new datasets or metadata
 
 
+CURRENT: source json should be pyleaves/leavesdb/resources/full_dataset_frozen.json
+
+
+
+
 Old format json: 
     Nested categories, single json file
     e.g. 
