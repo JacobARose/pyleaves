@@ -412,10 +412,12 @@ def freeze_db_by_dataset(db_path='resources/leavesdb.db', prefix='resources', fr
     
     
 def main():
+    join = os.path.join
+    cwd = os.getcwd()
 
-    prefix = 'resources'
-    db_path = r'resources/leavesdb.db'
-    SOURCE_full_json = r'resources/full_dataset_frozen.json'
+    prefix = join(cwd,'resources')
+    db_path = join(cwd,r'resources/leavesdb.db')
+    SOURCE_full_json = join(cwd,r'resources/full_dataset_frozen.json')
     run_logs = TimeLogs()
     
     pipeline = [dict(func=build_db_from_json,
