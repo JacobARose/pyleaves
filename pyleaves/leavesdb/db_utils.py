@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import dataset
 from stuf import stuf
@@ -130,3 +131,107 @@ def flattenit(pyobj, keystring =''):
                 yield from flatten(lelm, keystring) 
     else: 
         yield keystring, pyobj 
+        
+        
+        
+        
+        
+        
+from time import perf_counter
+##########################
+
+class TimeLog:
+    
+    def __init__(self,
+                 name='',
+                 start_time=0,
+                 end_time=0,
+                 duration=0,
+                 result=None
+                 ):
+        self.name = ''
+        self.log = {'start_time':start_time,
+                 'end_time':end_time,
+                 'duration':duration}
+    
+        self.result = result
+    
+    def start(self):
+        self.log['start_time'] = perf_counter()
+    def stop(self):
+        self.log['end_time'] = perf_counter()
+        self.log['duration'] = self.log['end_time'] - self.log['start_time']
+
+    def timeit(self, func, name=None, *args, **kwargs):
+        if name:
+            self.name = name
+        # start_time = perf_counter()
+        self.start()
+        self.result = func(*args, **kwargs)
+        # end_time = perf_counter()
+        self.stop()
+        
+        if 'verbose' in kwargs.keys():
+            print(self)
+            
+        return self.__dict__
+    
+    def __repr__(self):
+        return '\n'.join([json.dumps(self.__dict__[key],indent=4) for key in ['names','logs','results']])
+
+
+class TimeLogs(TimeLog):
+    
+    def __init__(self):
+        super().__init__(self)
+        
+        self.names = []
+        self.logs = {'start_time':[],
+                 'end_time':[],
+                 'duration':[]}
+    
+        self.results = []
+        
+        self.__records = []
+        
+            
+    def timeit(self, func, name=None, *args, **kwargs):
+        
+        new_record = super().timeit(func=func, *args, name=name, **kwargs)
+        
+        self.__records.append(new_record)
+        
+        self.__dict__.update(new_record)
+        self.commit_new_log()
+        
+        
+    def commit_new_log(self):
+        '''
+        Run right after executing self.timeit() to commit new individual log values to logs collection.
+
+        Returns
+        -------
+        None.
+
+        '''
+        self.names.append(self.name)
+        for k, v in self.logs.items():
+            v.append(self.log[k])
+        self.results.append(self.result)
+        
+        assert len(self)>0
+        
+        
+    def __len__(self):
+        num_names=len(self.names)
+        
+        _len = [num_names,
+                *(len(_log) for _log in self.logs.values()),
+                len(self.results)
+                ]
+        __all_equal__ = [l==num_names for l in _len]
+        if np.all(__all_equal__):
+            return num_names
+
+        else:
+            raise "[ERROR]: lengths inconsistent"
