@@ -171,7 +171,7 @@ def create_db(jsonpath=PATH, folder= 'resources'):
     df_inv.to_csv(output_csv)
     db.commit()
 
-def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db', exist_ok=True):
+def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db', exist_ok=False):
     '''
     Reconstruct database .db file from collection of individual json records, each of which may contain one or more data samples.
 
@@ -182,8 +182,9 @@ def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db
     db_path : str
         File path in which to create database.
     exist_ok : bool
-        If False, commits no changes. If True and the db exists, create temporary backup json, delete db, then recreate from list 
-        of archived + new JSON archives
+        If False and the db exists, deletes db and constructs solely with data contained in provided json.
+        If True and the db exists, create temporary backup json, delete db, then recreate from list of 
+        archived + new JSON archives
 
     Returns
     -------
@@ -197,30 +198,41 @@ def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db
 #     if not exist_ok:
 #         assert not db_exists
     
+    temp_db_path=''
+    archive_json=''
+    
     if db_exists:
-        assert exist_ok
-        db_dir = ''.join(os.path.split(db_path)[:-1])
-        archive_json = freeze_full_database(db_path, prefix=db_dir, filename='temp_data_frozen_archive.json')
-        frozen_json_filepaths.append(archive_json)
+        if exist_ok:
+            print(f'{db_path} already exists, creating backup in case of failed reconstruction')
+    #         assert exist_ok
+            db_dir = ''.join(os.path.split(db_path)[:-1])
+            archive_json = freeze_full_database(db_path, prefix=db_dir, filename='temp_data_frozen_archive.json')
+            archive_json = archive_json['full_dataset']
+            frozen_json_filepaths.append(archive_json)
         
-        temp_db_path = os.path.join(db_dir,'temp_db.db')
-        os.rename(db_path,temp_db_path)
+            temp_db_path = os.path.join(db_dir,'temp_db.db')
+            os.rename(db_path,temp_db_path)
+        else:
+            print('Deleting previous db and replacing with contents of frozen_json_filepaths')
+            os.remove(db_path)
+        
     db_URI = f'sqlite:///{db_path}'
     db = dataset.connect(db_URI)
     table = db.create_table('dataset', primary_id='id')
-    # db.commit()
     
     count = 0
     for filepath in frozen_json_filepaths:
         try:
             # db.begin()
+            print(f'Loading {filepath}')
             json_file = load(filepath)
             table.insert_many(json_file['results'], ensure=True)
             db.commit()
             file_count = len(json_file['results'])
             count += file_count
             print(f'committed {file_count} row entries for data from {filepath}')
-        except:
+        except Exception as e:
+            print(e)
             db.rollback()
             print('[Error] : Error encountered, rolling back changes')
             os.remove(db_path)
@@ -228,11 +240,15 @@ def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db
             print('restored db in its previous state')
             return {'success_count': 0}
 
+        
     if os.path.isfile(temp_db_path):
         os.remove(temp_db_path)
     if os.path.isfile(archive_json):
         os.remove(archive_json)
 
+        
+    print(f'[SUCCESS]: Database created at {db_path} with {count} added samples')
+    
     return {'success_count':count}
     
     

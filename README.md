@@ -3,7 +3,8 @@ Shared repository for code related to the fossils project in Thomas Serre's lab 
 Full project repo containing sub-packages for database, dataloaders, models, training, and analysis.
 
 
-INSTALLATION: To install, follow procedure below:
+## INSTALLATION: 
+### To install, follow procedure below:
 
     1. git clone https://github.com/JacobARose/pyleaves.git
 
@@ -11,7 +12,8 @@ INSTALLATION: To install, follow procedure below:
 
     3. pip install -e .
 
-ENVIRONMENT SETUP: Note, this is simply a cloning of the conda environment used to create the package, and thus is not a minimum set of requirements. Creating a minimum environment specification is TBD.
+## ENVIRONMENT SETUP:
+### Note, this is simply a cloning of the conda environment used to create the package, and thus is not a minimum set of requirements. Creating a minimum environment specification is TBD.
 
     1. Navigate to the root /pyleaves directory containing environment spec file 'pyleaves.yml'
 
@@ -22,20 +24,24 @@ Note, where it says "-n pyleaves' above, you can replace 'pyleaves" with your pr
 GETTING STARTED: Take a look at pyleaves_demo.ipynb in the root directory for an example of how to interact with the database and query data.
 
 
-Db management
-=============
+## DATABASE MANAGEMENT:
+## =============
 
-The folder resources contains the latest .db file for the paths, and the source json file for the structure. If any change is made to include other datasets, it should be updated in the repo. 
+The most up-to-date json record of datasets should always be found in './pyleaves/leavesdb/resources' under the filename 'full_dataset_frozen.json'. This what's used to create the SQLite database that enables efficient data management on a per-experiment basis. 
 
-To create db, there is a hihglevel script: create_db.py. You can: 
+The format is standardized to allow easy human readability, in addition to flexible modularity for adding new datasets or new metadata related to current entries.
 
+When pulling from the latest repo, one should be sure to recreate the db from the corresponding json. This can be done using the default args in create_db.py, located in the root directory.
 
-    python create_db.py --json_path  'PATHTONEWJSON' --output_folder 'PATHTORESOURCES'
+### *Run from the cmd line with defaults:*
 
+    >> python create_db.py
 
+### Run from the cmd line with custom json location or db location (db file is auto-named leavesdb.db in create_db.py, its parent dir is customizeable):
 
+    >> python create_db.py --json_path  'PATH/TO/SOURCE/FILE.json' --output_folder 'PATH/TO/RESOURCES/DIR'
 
-MODIFICATION: To modify and push changes to git:
+## MODIFICATION: To modify and push changes to git:
 
     1. Navigate to root directory of package (/pyleaves)
 
