@@ -8,20 +8,45 @@ Full project repo containing sub-packages for database, dataloaders, models, tra
 ### INSTALLATION: 
 **To install, follow procedure below:**
 
-    1. git clone https://github.com/JacobARose/pyleaves.git
+    1. Clone git repo:
+        >> git clone https://github.com/JacobARose/pyleaves.git
 
-    2. cd pyleaves
+    2. Navigate to pyleaves root directory:
+        >> cd pyleaves
 
-    3. pip install -e .
+    3. Make sure to create/activate environment:
+        -- Implement "ENVIRONMENT MANAGEMENT" section below
+        
+    4. Install pyleaves with pip, include -e option to make sure it's an editable installation:
+        >> pip install -e .
 
-### ENVIRONMENT SETUP:
-**Note, this is currently broken as of 12/26/2019.** This can be used as a base reference, but individual packages may need to be installed in a largely trial and error fashion atm. Creating a minimum environment specification is TBD.
+### ENVIRONMENT MANAGEMENT:
+This can be used as a base reference, but individual packages may need to be installed in a largely trial and error fashion atm. Creating a minimum environment specification is TBD.
 
-    1. Navigate to the root /pyleaves directory containing environment spec file 'pyleaves.yml'
+    1. Locate up-to-date environment spec file 'pyleaves.yml', usually in root pyleaves directory
 
-    2. conda env create -f pyleaves.yml -n pyleaves
+    2. Create conda environment from spec file:
+        >> conda env create -f pyleaves.yml -n pyleaves
+        
+    3. Activate conda environment:
+        >> conda activate pyleaves
+    
+    4. Install latest version of pyleaves:
+        >> git pull
 
 Note, where it says "-n pyleaves' above, you can replace 'pyleaves" with your preferred choice of env name.
+
+#### (ENVIRONMENT EXTRAS)
+Only relevant when making changes to repo that require additional dependencies
+
+    5a. Export conda environment spec file (Only do this if making major changes to requirements or working on new git branch):
+        >> conda env export > pyleaves.yml
+        
+    5b. Export conda environment spec file using env history rather than list of specific versions
+        >> conda env export --from-history > pyleaves_from_history.yml
+        
+            -- Useful option for when working on new machine and experience compatibility issues
+
 
 GETTING STARTED: Take a look at pyleaves_demo.ipynb in the root directory for an example of how to interact with the database and query data. For further reference, see documentation for SQLAlchemy.
 
