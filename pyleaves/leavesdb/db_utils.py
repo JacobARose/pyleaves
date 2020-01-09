@@ -60,7 +60,59 @@ def __get_num_families_per_dataset(db):
     for dataset in dataset_families:
         num_families_per_dataset.append((dataset[0], len(dataset[1])))
     return num_families_per_dataset
+def __get_datasets_per_family(db):
+    '''
+    Helper function similar to __get_family_names_per_dataset, but instead datasets per family
+    Arguments:
+        db : open connection to database
+        e.g. db = dataset.connect(f'sqlite:///{db_path}', row_type=stuf)
+    Return:
+        datasets_per family : dict{family:set(datasets)})
+        e.g. {'Adoxaceae': {'Fossil', 'Leaves'},...
+    '''
+    dataset_families = __get_family_names_per_dataset(db)
+    datasets_per_family={}
+    for dataset in dataset_families:
+        for family in dataset[1]:
+            if family not in datasets_per_family:
+                datasets_per_family[family]=set()           
+            datasets_per_family[family].add(dataset[0])
+    return datasets_per_family
+def __get_datasets_per_family_thresh(db,at_least=2):
+    '''
+    Helper function similar to __get_family_names_per_dataset, but instead datasets per family
+    Arguments:
+        db : open connection to database
+        at_least: number of datasets that has to be present in the family 
+        e.g. db = dataset.connect(f'sqlite:///{db_path}', row_type=stuf)
+    Return:
+        datasets_per family : dict{family:set(datasets)})
+        e.g. {'Adoxaceae': {'Fossil', 'Leaves'},...
+    '''
 
+    datasets_per_family = __get_datasets_per_family
+    datasets_per_family_thresh={}
+    for family in datasets_per_family:
+        if  len(datasets_per_family[family])>=at_least:
+            datasets_per_family_thresh[family]=datasets_per_family[family]
+    return datasets_per_family_thresh
+
+def __get_datasets_per_family_with(db,with='Fossil'):
+    """ Datasets that share families
+    Arguments:
+        db : open connection to database
+        with: dataset that must be included 
+        e.g. db = dataset.connect(f'sqlite:///{db_path}', row_type=stuf)
+    Return:
+        datasets_per family : dict{family:set(datasets)})
+        e.g. {'Adoxaceae': {'Fossil', 'Leaves'},...
+    """
+    datasets_per_family = __get_datasets_per_family
+    datasets_per_family_with={}
+    for family in datasets_per_family:
+        if  with in datasets_per_family[family]:
+            datasets_per_family_with[family]=datasets_per_family[family]
+    return datasets_per_family_with
 
 ###############################################################################################################
 ###############################################################################################################
