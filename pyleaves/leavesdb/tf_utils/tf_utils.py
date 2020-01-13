@@ -41,25 +41,63 @@ def train_val_test_split(image_paths, labels, test_size=0.3, val_size=0.3, rando
                    'val': val_data,
                    'test': test_data}
 
+    return data_splits
 
-    metadata_splits = {'train': {},
-                        'val': {},
-                        'test': {}}
+#     metadata_splits = {'train': {},
+#                         'val': {},
+#                         'test': {}}
 
+#     for subset, data in data_splits.items():
+#         metadata_splits[subset] = {'num_samples':len(data_splits[subset]['label']),
+#                                    'num_classes':len(np.unique(data_splits[subset]['label']))}
+
+
+#     if verbose:
+#         print(f'train samples: {len(train_labels)}')
+#         print(f'val samples: {len(val_labels)}')
+#         print(f'test samples: {len(test_labels)}')
+
+#     return data_splits, metadata_splits
+
+def get_data_splits_metadata(data_splits, data_df, class_mode='max', verbose=True):
+    '''
+    
+    class_mode, str: {'max', 'min'}
+        if 'max':
+            Set num_classes equal to the total number of unique classes expected to be seen in all splits
+        if 'min':
+            Set num_classes equal to the mininum per split, allowing different values between splits
+            WARNING: Must account for this when performing one_hot_encoding and building models.
+    
+    '''
+    
+    
+    metadata_splits = {}
+    metadata_splits['label_map'] = generate_encoding_map(data_df, text_label_col='family', int_label_col='label')
+    
+    if class_mode == 'max':
+        num_classes=0
+        for subset, data in data_splits.items():
+            nclasses = len(np.unique(data_splits[subset]['label']))
+            num_classes = max(num_classes, nclasses)
+    
     for subset, data in data_splits.items():
-        metadata_splits[subset] = {'num_samples':len(data_splits[subset]['label']),
-                                   'num_classes':len(np.unique(data_splits[subset]['label']))}
+        if class_mode == 'min':
+            num_classes = len(np.unique(data_splits[subset]['label']))
+        
+        metadata_splits.update({
+                                subset:{
+                                        'num_samples':len(data_splits[subset]['label']),
+                                        'num_classes':num_classes
+                                       }
+                               }
+                              )
+        if verbose:
+            print(f'{subset} : {metadata_splits[subset]}')
 
-
-    if verbose:
-        print(f'train samples: {len(train_labels)}')
-        print(f'val samples: {len(val_labels)}')
-        print(f'test samples: {len(test_labels)}')
-
-
-
-    return data_splits, metadata_splits
-
+    return metadata_splits
+            
+            
 def load_from_db(dataset_name='PNAS'):
     local_db = leavesdb.init_local_db()
     print(local_db)
@@ -70,26 +108,23 @@ def load_from_db(dataset_name='PNAS'):
 def load_and_format_dataset_from_db(dataset_name='PNAS', low_count_threshold=10, val_size=0.3, test_size=0.3, verbose=True):
 
     data = load_from_db(dataset_name=dataset_name)
-
     data_df = encode_labels(data)
-
     data_df = filter_low_count_labels(data_df, threshold=low_count_threshold, verbose = verbose)
     data_df = encode_labels(data_df) #Re-encode numeric labels after removing sub-threshold classes so that max(labels) == len(labels)
     image_paths = data_df['path'].values.reshape((-1,1))
     labels = data_df['label'].values
 #     one_hot_labels = one_hot_encode_labels(data_df['label'].values)
-    data_splits, metadata_splits = train_val_test_split(image_paths, labels, val_size=val_size, test_size=test_size, verbose=verbose)
-
-    metadata_splits['label_map'] = generate_encoding_map(data_df, text_label_col='family', int_label_col='label')
-
+    data_splits = train_val_test_split(image_paths, labels, val_size=val_size, test_size=test_size, verbose=verbose)
+            
+    metadata_splits = get_data_splits_metadata(data_splits, data_df, verbose=True)
+    
     return data_splits, metadata_splits
 
 
 def check_if_tfrecords_exist(output_dir):
     '''if tfrecords already exist, return dictionary with mappings to their paths. Otherwise return None.'''
     tfrecords = None
-    if not ensure_dir_exists(output_dir):
-        return tfrecords
+    ensure_dir_exists(output_dir)
 
     subset_dirs = os.listdir(output_dir)
     if len(subset_dirs) > 0:
@@ -100,3 +135,27 @@ def check_if_tfrecords_exist(output_dir):
             subset_filenames = os.listdir(subset_path)
             tfrecords[subset] = sorted([os.path.join(subset_path,filename) for filename in subset_filenames])
     return tfrecords
+
+
+
+
+def bytes_feature(value):
+    """Returns a bytes_list from a string / byte."""
+    # If the value is an eager tensor BytesList won't unpack a string from an EagerTensor.
+    if isinstance(value, type(tf.constant(0))):
+        value = value.numpy()
+    if not isinstance(value, list):
+        value = [value]
+    return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
+
+def float_feature(value):
+    """Returns a float_list from a float / double."""
+    if not isinstance(value, list):
+        value = [value]
+    return tf.train.Feature(float_list=tf.train.FloatList(value=value))
+
+def int64_feature(value):
+    """Returns an int64_list from a bool / enum / int / uint."""
+    if not isinstance(value, list):
+        value = [value]
+    return tf.train.Feature(int64_list=tf.train.Int64List(value=value))

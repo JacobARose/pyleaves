@@ -32,6 +32,8 @@ def generate_encoding_map(data, text_label_col='family', int_label_col='label'):
     ...
     19:'Passifloraceae'}
     '''
+    #Review the below TODO, may be unecessary because similar process is used in encode_labels_str2int
+    #TODO Potentially filter for unique text_label_col values instead, ensures the int representation remains the same in the case of changes. 
     int_labels, label_indices = np.unique(data[int_label_col], return_index=True)
     text_labels = data[text_label_col].iloc[label_indices].values
 
@@ -85,6 +87,7 @@ def filter_low_count_labels(data_df, threshold=2, y_col='family', verbose = True
     filtered_labels = np.where(label_counts >= threshold)[0]
     filtered_data = data_df[data_df['label'].isin(filtered_labels)]
     if verbose:
+        print(f"filter_low_count_labels(data_df, threshold={threshold}, y_col={y_col}, verbose = {verbose})")
         print(f'Selecting only samples that belong to a class with population >= {threshold} samples')
         print(f'Previous num_classes = {len(label_counts)}, new num_classes = {len(filtered_labels)}')
         print(f'Previous data_df.shape = {data_df.shape}, new data_df.shape = {filtered_data.shape}')
