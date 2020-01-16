@@ -1,9 +1,76 @@
 '''
 Functions for managing images
 '''
+
+from concurrent.futures import ThreadPoolExecutor
+
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+
+join = os.path.join
+splitext = os.path.splitext
+basename = os.path.basename
+
+from pyleaves.utils import ensure_dir_exists
+
+def convert_to_png(image_filepaths, labels, dataset_name, target_dir=r'/media/data/jacob/Fossil_Project'):
+    '''
+    Function to load a list of image files, convert to png format if necessary, and save to specified target dir.
+    
+    Arguments:
+        image_filepaths, list(str):
+            List of absolute file paths for images to be copied/converted
+        labels, list(str):
+            Corresponding labels for each filepath in image_filepaths            
+        dataset_name, str:
+            Name of source dataset from which images are sourced, to be name of subdir in target root dir
+        target_dir, str:
+            Root directory for converted images, which will be saved in hierarchy:
+            
+            root/
+                |dataset_1/
+                          |class_1/
+                                  |image_1
+                                  |image_2
+                                  ...
+    
+    
+    Return:
+    
+    '''
+    
+    output_dir = join(target_dir,dataset_name)
+    ensure_dir_exists(output_dir)
+    [ensure_dir_exists(join(output_dir,label)) for label in labels]
+    
+    compression_params = [cv2.IMWRITE_PNG_COMPRESSION, 4] #9] 
+    
+    def parse_function(filepath, label, index):
+        filename, file_ext = splitext(basename(filepath))
+        output_filepath = join(output_dir, label, filename+'.png')
+        
+        img = cv2.imread(filepath, cv2.IMREAD_UNCHANGED)
+        cv2.imwrite(output_filepath, img, compression_params)
+        
+        print(f'Converted image {index} and saved at {output_filepath}')
+        print(os.path.isfile(output_filepath))
+        return output_filepath, label
+
+
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        
+#         data = zip(image_filepaths, labels)
+        indices = list(range(len(labels)))
+        
+        output_paths = executor.map(parse_function, image_filepaths, labels, indices) # data)
+    
+    return output_paths
+    
+    
+
+
 
 def plot_image_grid(imgs, labels = np.array([]), x_plots = 4, y_plots = 4, figsize=(15,15)):
 	fig, axes = plt.subplots(y_plots, x_plots, figsize=figsize)

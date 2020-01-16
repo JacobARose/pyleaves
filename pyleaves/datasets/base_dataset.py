@@ -272,10 +272,10 @@ class BaseTFRecordDataset(BaseDataset):
                                       target_size = target_size)#self.img_size)
                 
                 
-            print('Initiating multiprocessing')
-            with Pool(os.cpu_count()//3) as pool:
-                loaded_samples = pool.map(shard_worker, multiprocess_data)#, chunksize=64)
-            print('Finished multiprocessing')
+#             print('Initiating multiprocessing')
+#             with Pool(os.cpu_count()//3) as pool:
+#                 loaded_samples = pool.map(shard_worker, multiprocess_data)#, chunksize=64)
+#             print('Finished multiprocessing')
                 
 #                 shard_fname = f'{split_name}-{str(i).zfill(5)}-of-{str(num_shards).zfill(5)}.tfrecord'
 #                 print('Creating shard : ', shard_fname)
@@ -324,16 +324,20 @@ class BaseTFRecordDataset(BaseDataset):
     
     
     
+if __name__ == '__main__':
+    '''
     
-test_dataset = BaseTFRecordDataset()
+    
+    '''
+#     test_dataset = BaseTFRecordDataset()
 
-# data = test_dataset.extract(test_dataset.name)
-# a = next(data)
+#     # data = test_dataset.extract(test_dataset.name)
+#     # a = next(data)
 
-data_splits, metadata_splits = test_dataset.load(test_dataset.name,
-                  test_dataset.low_count_threshold,
-                  test_dataset.val_size, 
-                  test_dataset.test_size)
+#     data_splits, metadata_splits = test_dataset.load(test_dataset.name,
+#                       test_dataset.low_count_threshold,
+#                       test_dataset.val_size, 
+#                       test_dataset.test_size)
 
 
-filename_log = test_dataset.export_tfrecords()
+#     filename_log = test_dataset.export_tfrecords()

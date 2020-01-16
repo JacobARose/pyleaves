@@ -36,6 +36,20 @@ def get_label_encodings(dataset='Fossil', y_col='family', low_count_thresh=0):
 
     return label_maps
 
+def load_all_data(db, x_col='path', y_col='family'):
+    '''
+    Function to load x_col and y_col for each row in db from all datasets
+    '''
+#     paths_labels = list(db['dataset'].distinct(x_col, y_col, 'dataset'))
+    data = pd.DataFrame(db['dataset'].distinct(x_col, y_col, 'dataset'))
+    return data
+
+#     data_by_dataset = data.groupby(by='dataset')
+#     data_by_dataset_dict = {k:v for k,v in data_by_dataset}
+    
+    
+    
+
 def load_data(db, x_col='path', y_col='family', dataset='Fossil'):
 	'''
 	General data loader function with flexibility for all query types.

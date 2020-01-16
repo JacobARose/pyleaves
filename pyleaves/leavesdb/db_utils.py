@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import pandas as pd
 import dataset
 from stuf import stuf
 import json 
@@ -97,11 +98,11 @@ def __get_datasets_per_family_thresh(db,at_least=2):
             datasets_per_family_thresh[family]=datasets_per_family[family]
     return datasets_per_family_thresh
 
-def __get_datasets_per_family_with(db,with='Fossil'):
+def __get_datasets_per_family_with(db,include_dataset='Fossil'):
     """ Datasets that share families
     Arguments:
         db : open connection to database
-        with: dataset that must be included 
+        include_dataset: dataset that must be included 
         e.g. db = dataset.connect(f'sqlite:///{db_path}', row_type=stuf)
     Return:
         datasets_per family : dict{family:set(datasets)})
@@ -110,10 +111,73 @@ def __get_datasets_per_family_with(db,with='Fossil'):
     datasets_per_family = __get_datasets_per_family
     datasets_per_family_with={}
     for family in datasets_per_family:
-        if  with in datasets_per_family[family]:
+        if include_dataset in datasets_per_family[family]:
             datasets_per_family_with[family]=datasets_per_family[family]
     return datasets_per_family_with
 
+def __get_file_ext_per_dataset(db, file_ext='all', summarize=False):
+    '''
+    Function to get the number of files in each dataset, grouped by file extension.
+    Can also return full file path lists stored in the same dict format:
+        
+        result[dataset][file_ext] = value
+        
+    Arguments:
+        db : 
+            open connection to database
+        file_ext, str :
+            if file_ext=='all', return all filetypes.
+            Otherwise limit to just the specified extension.
+        summarize, bool :
+            if True: return dict containing a summary of the quantity of files per ext
+            if False: return dict containing full list of paths for each ext
+    '''
+    file_ext_whitelist = ['jpg','tif','tiff', 'png','all']
+    
+    get_file_ext = lambda x : os.path.splitext(x)[-1][1:]
+    filter_by_ext = lambda x, pattern : x.str.match(pattern)
+    
+    dataset_names = [name['dataset'] for name in db['dataset'].distinct('dataset')]
+    file_ext_path_dict = {}        
+        
+    for name in dataset_names:
+        file_ext_path_dict[name] = {}
+        
+        dataset_rows = pd.DataFrame(db['dataset'].distinct('id','path',dataset=name))
+        file_extensions = list(map(get_file_ext,dataset_rows['path'].values))
+        unique_ext = np.unique(file_extensions)    
+        
+        if (file_ext in file_ext_whitelist):
+            if (file_ext!='all'):
+                unique_ext=[file_ext]
+                
+            for ext in unique_ext:
+                pattern = '.*\.' + ext
+                matched_rows = filter_by_ext(dataset_rows['path'], pattern)
+                
+                if summarize:
+                    file_ext_path_dict[name][ext] = len(dataset_rows[matched_rows])
+                    print(name, ext, file_ext_path_dict[name][ext])
+                else:
+                    file_ext_path_dict[name][ext] = dataset_rows[matched_rows]
+    return file_ext_path_dict
+
+
+# for k, v in results.items():
+#     ext_keys = list(v.keys())[0]
+#     cols = [col for col in v[ext_keys].keys()]
+    
+#     num_samples = [v[ext_keys][cols[0]].shape]
+#     print(k, ext_keys, cols, num_samples)
+
+#             import re
+#             re.findall('*.jpg', dataset_rows['path'])
+            
+            
+#         return
+        
+    
+    
 ###############################################################################################################
 ###############################################################################################################
 
@@ -121,9 +185,12 @@ def summarize_db(db):
     '''
     Combines helper functions to summarize key info about the data in opened database, db.
     '''
-    print('Database column keys:\n', db['dataset'].columns)
-    print('Number of distinct families:\n', __get_num_families_per_dataset(db))
-    print(f"Number of rows in db:\n {len(db['dataset'])}")
+    summary = {'Database column keys':db['dataset'].columns,
+               'distinct datasets':[name['dataset'] for name in db['dataset'].distinct('dataset')],
+               'Number of distinct families':__get_num_families_per_dataset(db),
+               'Number of rows in db': len(db['dataset'])}
+    print(summary)
+    return summary
 
 def load(file):
     '''

@@ -87,8 +87,42 @@ from pyleaves.leavesdb.db_utils import load, flattenit, image_checker, TimeLogs
 import cv2 
 import os
 
+
 PATH = r'resources/datasets.json' #/media/data_cifs/irodri15/data/processed/datasets.json'
 # OUTPUT = 'sqlite:///resources/leavesdb.db'
+
+
+def archivedb_to_json(db_path, exist_ok):
+    temp_db_path = None
+    archive_json = None
+    if exist_ok:
+        print(f'{db_path} already exists, creating backup in case of failed reconstruction')
+#        assert exist_ok
+        db_dir = ''.join(os.path.split(db_path)[:-1])
+        archive_json = freeze_full_database(db_path, prefix=db_dir, filename='temp_data_frozen_archive.json')
+        archive_json = archive_json['full_dataset']
+        frozen_json_filepaths.append(archive_json)
+        temp_db_path = os.path.join(db_dir,'temp_db.db')
+        os.rename(db_path,temp_db_path)
+        
+    else:
+        print('Deleting previous db and replacing with contents of frozen_json_filepaths')
+        os.remove(db_path)
+        
+    return archive_json, temp_db_path
+
+
+def insert_files2table(filepath, table, db, )
+    #TODO Batch insert files loaded from json fileparh, add function to create master copy as jpeg on /media/data
+    print(f'Loading {filepath}')
+    json_file = load(filepath)
+    table.insert_many(json_file['results'], ensure=True)
+    db.commit()
+    file_count = len(json_file['results'])
+    count += file_count
+    print(f'committed {file_count} row entries for data from {filepath}')
+
+
 
 
 def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db', exist_ok=False):
@@ -122,19 +156,8 @@ def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db
     archive_json=''
     
     if db_exists:
-        if exist_ok:
-            print(f'{db_path} already exists, creating backup in case of failed reconstruction')
-    #         assert exist_ok
-            db_dir = ''.join(os.path.split(db_path)[:-1])
-            archive_json = freeze_full_database(db_path, prefix=db_dir, filename='temp_data_frozen_archive.json')
-            archive_json = archive_json['full_dataset']
-            frozen_json_filepaths.append(archive_json)
-        
-            temp_db_path = os.path.join(db_dir,'temp_db.db')
-            os.rename(db_path,temp_db_path)
-        else:
-            print('Deleting previous db and replacing with contents of frozen_json_filepaths')
-            os.remove(db_path)
+        #Temporarily store current database as a json archive
+        archive_json, temp_db_path = archivedb_to_json(db_path, exist_ok)
         
     db_URI = f'sqlite:///{db_path}'
     db = dataset.connect(db_URI)
@@ -170,62 +193,39 @@ def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db
     print(f'[SUCCESS]: Database created at {db_path} with {count} added samples')
     
     return {'success_count':count}
-    
-    
-# def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db'):
-#     '''
-#     Reconstruct database .db file from collection of individual json records, each of which may contain one or more data samples.
 
-#     Parameters
-#     ----------
-#     frozen_json_filepaths : list(str)
-#         All significant data should be contained in json files, whose path location is pointed to by each str in list.
-#     db_path : str
-#         File path in which to create database.
 
-#     Returns
-#     -------
-#     db : dataset.database.Database
-#         Open database connection
 
-#     '''
-#     assert type(frozen_json_filepaths)==list
-    
-#     db_URI = f'sqlite:///{db_path}'
-#     db = dataset.connect(db_URI)
-#     table = db.create_table('dataset', primary_id='id')
-    
-#     for filepath in frozen_json_filepaths:
-#         json_file = load(filepath)
-#         table.insert_many(json_file['results'], ensure=True)
-#     return db
+
+
+#
 
 ####
 
-def update_db(json_filepath, db_path):
+# def update_db(json_filepath, db_path):
     
-    TOP_LEVEL_KEYS = ['meta','count','results']
-    json_file = load(json_filepath)
-    ######
-    if not os.path.isfile(db_path):
-        print(f'[ERROR]: {db_path} does not exist. In order to use update_db user must first instantiate db using build_db_from_json()')
-        raise Exception
+#     TOP_LEVEL_KEYS = ['meta','count','results']
+#     json_file = load(json_filepath)
+#     ######
+#     if not os.path.isfile(db_path):
+#         print(f'[ERROR]: {db_path} does not exist. In order to use update_db user must first instantiate db using build_db_from_json()')
+#         raise Exception
     
-    for key in json_file.keys():
-        if key not in TOP_LEVEL_KEYS:
-            print(f'[ERROR]: JSON format invalid, {key} is not in set of admissable top level keys. Must be one of {TOP_LEVEL_KEYS}')
-            raise Exception
+#     for key in json_file.keys():
+#         if key not in TOP_LEVEL_KEYS:
+#             print(f'[ERROR]: JSON format invalid, {key} is not in set of admissable top level keys. Must be one of {TOP_LEVEL_KEYS}')
+#             raise Exception
             
-    if len(json_file['results'])==0:
-        print('[ERROR]: Provided JSON file contains empty list of new entries')
-        raise Exception
-    ######        
+#     if len(json_file['results'])==0:
+#         print('[ERROR]: Provided JSON file contains empty list of new entries')
+#         raise Exception
+#     ######        
     
-    db_URI = f'sqlite:///{db_path}'
-    db = dataset.connect(db_URI)
-    table = db['dataset']
+#     db_URI = f'sqlite:///{db_path}'
+#     db = dataset.connect(db_URI)
+#     table = db['dataset']
     
-    table.upsert()
+#     table.upsert()
 
 
 ########
@@ -266,41 +266,6 @@ def freeze_full_database(db_path, prefix, filename='full_dataset_frozen.json'):
     frozen_json_filepath = {'full_dataset':os.path.join(prefix,filename)}
     
     return frozen_json_filepath
-
-
-# def freeze_full_database(json_filepath='resources/full_dataset_frozen.json', db_path='resources/leavesdb.db'):
-#     '''
-#     Create one frozen json file for all data samples in .db file located at db_path.
-
-#     Saves json as flat list of individual records
-
-
-#     Parameters
-#     ----------
-#     json_filepath : str
-#         DESCRIPTION.
-#     db_path : str
-#         Absolute path to source db file. e.g. /media/data/pyleaves/leavesdb/resources/leavesdb.db
-
-#     Returns
-#     -------
-#     frozen_json_filepaths : dict({str:str})
-
-#     '''
-#     db_URI = f'sqlite:///{db_path}'
-#     db = dataset.connect(db_URI)
-#     table = db['dataset']
-
-#     dataset_rows = list(table.all(order_by='id'))
-    
-#     datafreeze.freeze(dataset_rows, 
-#                       mode='list',
-#                       format='json', 
-#                       filename=filename,
-#                       prefix=prefix)
-#     frozen_json_filepath = {'full_dataset':os.path.join(prefix,filename)}
-    
-#     return frozen_json_filepath
 
 ####
     
@@ -383,6 +348,15 @@ def main():
     print(run_logs)
 #     frozen_json = freeze_db_by_dataset(db_path, prefix, freeze_key='dataset')
 #     print(json.dumps(frozen_json, indent='\t'))
+
+
+
+if __name__=='__main__':
+    
+    main()
+
+
+
 
 
 ############################################################################
@@ -470,8 +444,3 @@ def create_db(jsonpath=PATH, folder= 'resources'):
     
 ####################################################################
     
-    
-    
-if __name__=='__main__':
-    
-    main()
