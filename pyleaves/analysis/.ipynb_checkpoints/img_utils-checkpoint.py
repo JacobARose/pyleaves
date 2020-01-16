@@ -54,17 +54,16 @@ def convert_to_png(image_filepaths, labels, dataset_name, target_dir=r'/media/da
         img = cv2.imread(filepath, cv2.IMREAD_UNCHANGED)
         cv2.imwrite(output_filepath, img, compression_params)
         
-        print(f'Converted image {index} and saved at {output_filepath}')
-        print(os.path.isfile(output_filepath))
+        print(f'Converted image {index} and saved at {output_filepath}', end='\r', flush=True)
+        assert os.path.isfile(output_filepath)
         return output_filepath, label
 
 
-    with ThreadPoolExecutor(max_workers=16) as executor:
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         
-#         data = zip(image_filepaths, labels)
         indices = list(range(len(labels)))
         
-        output_paths = executor.map(parse_function, image_filepaths, labels, indices) # data)
+        output_paths = executor.map(parse_function, image_filepaths, labels, indices)
     
     return output_paths
     
