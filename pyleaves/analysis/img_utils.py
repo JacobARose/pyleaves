@@ -2,18 +2,27 @@
 Functions for managing images
 '''
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 
 import cv2
 import matplotlib.pyplot as plt
+from more_itertools import chunked
 import numpy as np
 import os
+from pathos.multiprocessing import ProcessPool
 
 join = os.path.join
 splitext = os.path.splitext
 basename = os.path.basename
 
 from pyleaves.utils import ensure_dir_exists
+
+# def parse_batch(batch):
+#     print('outside convert function')
+#     print('starting batch')
+#     print(f'batch length {len(batch)}')
+#     return len(batch)
+
 
 def convert_to_png(image_filepaths, labels, dataset_name, target_dir=r'/media/data/jacob/Fossil_Project'):
     '''
@@ -47,25 +56,54 @@ def convert_to_png(image_filepaths, labels, dataset_name, target_dir=r'/media/da
     
     compression_params = [cv2.IMWRITE_PNG_COMPRESSION, 4] #9] 
     
-    def parse_function(filepath, label, index):
+    def parse_function(row):
+        filepath, label, index = row
+        print(index)
         filename, file_ext = splitext(basename(filepath))
         output_filepath = join(output_dir, label, filename+'.png')
         
         img = cv2.imread(filepath, cv2.IMREAD_UNCHANGED)
         cv2.imwrite(output_filepath, img, compression_params)
         
-        print(f'Converted image {index} and saved at {output_filepath}', end='\r', flush=True)
+        print(f'Converted image {index} and saved at {output_filepath}') #, end='\r', flush=True)
         assert os.path.isfile(output_filepath)
         return output_filepath, label
-
-
-    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-        
-        indices = list(range(len(labels)))
-        
-        output_paths = executor.map(parse_function, image_filepaths, labels, indices)
     
-    return output_paths
+    def parse_batch(batch):
+        print('starting batch inside')
+        print(f'batch length {len(batch)}')
+#         print('batch[0] = ',batch[0])
+#         return len(batch)
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            _map = executor.map
+            return list(_map(parse_function, batch))
+    
+    
+    
+    indices = list(range(len(labels)))
+    
+    num_workers = os.cpu_count()//2
+    
+    chunksize = len(indices)//num_workers
+    
+    data = chunked(list(zip(image_filepaths, labels, indices)),chunksize)
+
+    outputs = []
+#     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+#     with ProcessPoolExecutor(max_workers=num_workers) as executor:
+    with ProcessPool(nodes=num_workers) as executor:
+        
+        outputs = list(executor.imap(parse_batch, data))
+        print('done')
+#         outputs.extend(list(executor.imap(parse_batch, data)))
+#         for chunk in data:
+#             outputs.append(executor.map(parse_batch, chunk))
+#             outputs.append(executor.map(parse_function, chunk))
+        
+#         output_paths = executor.map(parse_function, image_filepaths, labels, indices)
+    
+    return outputs
     
     
 
