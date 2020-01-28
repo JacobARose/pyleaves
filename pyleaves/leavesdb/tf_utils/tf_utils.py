@@ -133,6 +133,8 @@ def check_if_tfrecords_exist(output_dir):
             subset_path = os.path.join(output_dir,
                                       subset)
             subset_filenames = os.listdir(subset_path)
+            if len(subset_filenames)==0:
+                return None
             tfrecords[subset] = sorted([os.path.join(subset_path,filename) for filename in subset_filenames])
     return tfrecords
 

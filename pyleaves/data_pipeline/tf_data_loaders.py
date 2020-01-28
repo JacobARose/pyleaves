@@ -83,20 +83,23 @@ class DatasetBuilder:
         self.name = name
         self.seed = seed
 
-    def list_files(self, root_dir):
+    def list_files(self, records_dir):
         '''
         Arguments:
-            root_dir : path to directory containing TFRecord shards
+            records_dir : path to flat directory containing TFRecord shards, usually one level below root_dir and used to indicate 1 specific data split (e.g. train, val, or test)
         Return:
-            self.file_list : Sorted list of TFRecord files contained in flat directory root_dir
+            file_list : Sorted list of TFRecord files contained in flat directory root_dir
         '''
 
-        assert ensure_dir_exists(root_dir)
-        file_list = sorted([os.path.join(root_dir,filename) for filename in os.listdir(root_dir) if '.tfrecord' in filename])
+        assert ensure_dir_exists(records_dir)
+        file_list = sorted([os.path.join(records_dir,filename) for filename in os.listdir(records_dir) if '.tfrecord' in filename])
 
         return file_list
 
     def collect_subsets(self, root_dir):
+        '''
+        Search root_dir for subdirs corresponding to each data split, where each subdir is a flat directory containing tfrecord shards
+        '''
         subsets = {}
 
         subset_dirs = os.listdir(root_dir)
@@ -132,3 +135,6 @@ class DatasetBuilder:
         else:
             print('Subset type not recognized, returning None.')
             return None
+
+        
+        

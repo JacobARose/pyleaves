@@ -92,6 +92,34 @@ PATH = r'resources/datasets.json' #/media/data_cifs/irodri15/data/processed/data
 # OUTPUT = 'sqlite:///resources/leavesdb.db'
 
 
+def dict2json(data, prefix, filename):
+    '''
+    Convert a list of dicts into proper json format for contructing sql db
+    
+    Arguments:
+        data, list(dict):
+            e.g. [{'id':1,'path':...,'family':...}, {'id':2,...}]
+        prefix, str:
+            Directory in which to save file
+        filename, str:
+            Name of file in which to save json
+        
+    Return:
+        
+    '''
+    data_count = len(data)
+    json_output = {"count":data_count,
+                   "results":data,
+                   "meta":[]}
+
+    datafreeze.freeze(data, 
+                      mode='list',
+                      format='json', 
+                      filename=filename,
+                      prefix=prefix)
+    
+    return json_output
+
 def archivedb_to_json(db_path, exist_ok):
     temp_db_path = None
     archive_json = None
@@ -112,7 +140,7 @@ def archivedb_to_json(db_path, exist_ok):
     return archive_json, temp_db_path
 
 
-def insert_files2table(filepath, table, db, )
+def insert_files2table(filepath, table, db):
     #TODO Batch insert files loaded from json fileparh, add function to create master copy as jpeg on /media/data
     print(f'Loading {filepath}')
     json_file = load(filepath)
@@ -179,15 +207,17 @@ def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db
             db.rollback()
             print('[Error] : Error encountered, rolling back changes')
             os.remove(db_path)
-            os.rename(temp_db_path,db_path)
+            if db_exists:
+                print('restoring previous db')
+                os.rename(temp_db_path,db_path)
             print('restored db in its previous state')
             return {'success_count': 0}
 
         
-    if os.path.isfile(temp_db_path):
-        os.remove(temp_db_path)
-    if os.path.isfile(archive_json):
-        os.remove(archive_json)
+#     if os.path.isfile(temp_db_path):
+#         os.remove(temp_db_path)
+#     if os.path.isfile(archive_json):
+#         os.remove(archive_json)
 
         
     print(f'[SUCCESS]: Database created at {db_path} with {count} added samples')

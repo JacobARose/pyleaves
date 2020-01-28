@@ -39,16 +39,18 @@ from tensorflow.data.experimental import AUTOTUNE
 
 # from pyleaves.data_pipeline.preprocessing import generate_encoding_map #encode_labels, filter_low_count_labels, one_hot_encode_labels, one_hot_decode_labels
 from pyleaves.analysis.img_utils import load_image
+# from pyleaves.analysis import img_utils
+# print(img_utils.__file__)
+# print(dir(img_utils))
+# resize = img_utils.resize
+# load_image = img_utils.load_image
+from pyleaves.config import DatasetConfig
 from pyleaves import leavesdb
 from pyleaves.leavesdb.tf_utils.tf_utils import (train_val_test_split,
                                                 load_and_format_dataset_from_db,
                                                 check_if_tfrecords_exist)
 from pyleaves.utils import ensure_dir_exists
 from pyleaves.tests.test_utils import timeit, timelined_benchmark, draw_timeline, map_decorator
-
-
-
-
 
 
 def _bytes_feature(value):
@@ -150,6 +152,24 @@ def create_tfrecord_shard(shard_filepath,
     print('Finished saving TFRecord at: ', shard_filepath, '\n')
 
 
+    
+def create_shard(data_packet):
+
+    shard_id, shard = data_packet['enumerated_shard']
+    output_dir = data_packet['output_dir']
+    output_base_name = data_packet['output_base_name']
+    target_size = data_packet['target_size']
+    num_shards = data_packet['num_shards']
+        
+    print('SHARD_ID : ', shard_id)
+    shard_fname = f'{output_base_name}-{str(shard_id).zfill(5)}-of-{str(num_shards).zfill(5)}.tfrecord'
+    print('Creating shard : ', shard_fname)
+        
+    shard_filepath = os.path.join(output_dir,shard_fname)
+    shard_img_filepaths, shard_labels = unzip(shard)
+    create_tfrecord_shard(shard_filepath, shard_img_filepaths, shard_labels, target_size = target_size) #, verbose=False)
+    return (shard_filepath, list(zip(shard_img_filepaths, shard_labels)))
+    
 def multiprocess_create_tfrecord_shards(img_filepaths,
                            labels,
                            output_dir,
@@ -164,26 +184,27 @@ def multiprocess_create_tfrecord_shards(img_filepaths,
     zipped_data = zip(img_filepaths, labels)
     sharded_data = chunked(zipped_data, total_samples//num_shards)
     os.makedirs(output_dir, exist_ok=True)
-        
-    def create_shard(enumerated_shard):
-#     def create_shard(shard_id, shard):
-        shard_id, shard = enumerated_shard
-        print('SHARD_ID : ', shard_id)
-        shard_fname = f'{output_base_name}-{str(shard_id).zfill(5)}-of-{str(num_shards).zfill(5)}.tfrecord'
-        print('Creating shard : ', shard_fname)
-        
-        shard_filepath = os.path.join(output_dir,shard_fname)
-        shard_img_filepaths, shard_labels = unzip(shard)
-        create_tfrecord_shard(shard_filepath, shard_img_filepaths, shard_labels, target_size = target_size, verbose=verbose)
-        
-        return (shard_filepath, list(zip(shard_img_filepaths, shard_labels)))
 
         
     sharded_data = list(sharded_data)
     shard_ids = list(range(len(sharded_data)))
-    num_processes=1
-    with concurrent.futures.ProcessPoolExecutor(max_workers=len(shard_ids)) as pool:
-        result = list(pool.map(create_shard, zip(shard_ids, sharded_data)))#list(enumerate(sharded_data))))
+    
+    data_packets = []
+#     for shard in range(len(sharded_data)):
+    for enumerated_shard in zip(shard_ids, sharded_data):
+        data_packets.append({'enumerated_shard':enumerated_shard,
+                             'output_dir':output_dir,
+                             'output_base_name':output_base_name,
+                             'target_size':target_size,
+                             'num_shards':num_shards})
+        
+    
+#     num_processes=2
+#     print(f'starting {num_process} process')
+    result = list(map(create_shard, data_packets))
+#     result = []
+#     with concurrent.futures.ProcessPoolExecutor(max_workers=len(shard_ids)) as pool:
+#         result = list(pool.map(create_shard, data_packets))
         
     return os.listdir(output_dir), result
     
@@ -320,44 +341,33 @@ def build_naive_TFRecordDataset(filenames, batch_size=32):
     return naive_dataset
 
 
-def main():
-
+def main(config=None):
     '''
     Example Jupyter notebook command:
 
         %run create_tfrecords.py -d Fossil -o /home/jacob/data -thresh 3 -val 0.3 -test 0.3
 
     '''
+    dataset_name = config.dataset_name
+    target_size = config.target_size
+    low_class_count_thresh = config.low_class_count_thresh
+    val_size = config.data_splits['val_size']
+    test_size = config.data_splits['test_size']
+    tfrecord_root_dir = config.tfrecord_root_dir
+    num_shards = config.num_shards
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--dataset_name', default='PNAS', type=str,help='Name of dataset of images to use for creating TFRecords')
-    parser.add_argument('-o', '--output_dir', default=r'/media/data/jacob', type=str, help=r"Parent dir above the location that's intended for saving the TFRecords for this dataset")
-    parser.add_argument('-thresh', '--low_count_threshold', default=3, type=int, help='Min population of a class below which we will exclude the class entirely.')
-    parser.add_argument('-val', '--val_size', default=0.3, type=float, help='Fraction of train to use as validation set. Calculated after splitting train and test')
-    parser.add_argument('-test', '--test_size', default=0.3, type=float, help='Fraction of full dataset to use as test set. Remaining fraction will be split into train/val sets.')
-    parser.add_argument('-shards', '--num_shards', default=10, type=int, help='Number of shards to split each data subset into')
-    parser.add_argument('-time', '--timeit', default=False, type=bool, help='If set to True, run speed tests on generated TFRecords with tf.data.Dataset readers.')
-    args = parser.parse_args()
-
-
-
-    dataset_name = args.dataset_name #'PNAS'
-    output_dir = os.path.join(args.output_dir,dataset_name)
-#     output_dir = f'/home/jacob/data/{dataset_name}'
-
-    target_size=(224,224)
-    low_count_threshold = args.low_count_threshold
-    val_size = args.val_size
-    test_size = args.test_size
-    num_shards = args.num_shards
-
+    output_dir = os.path.join(tfrecord_root_dir,dataset_name)
+    
+    print('pre filename log')
     filename_log = check_if_tfrecords_exist(output_dir)
-
+    
+    print('filename_log = ', filename_log)
     if filename_log == None:
+        print('Entering save_trainvaltest_tfrecords')
         filename_log = save_trainvaltest_tfrecords(dataset_name=dataset_name,
                                                    output_dir=output_dir,
                                                    target_size=target_size,
-                                                   low_count_threshold=low_count_threshold,
+                                                   low_count_threshold=low_class_count_thresh,
                                                    val_size=val_size,
                                                    test_size=test_size,
                                                    num_shards=num_shards)
@@ -368,13 +378,13 @@ def main():
     else:
         print(f'Found {len(filename_log.keys())} subsets of tfrecords already saved, skipping creation process.')
 
-        
-        if args.timeit == True:
-            label_map = load_and_format_dataset_from_db(dataset_name=dataset_name,
-                                                        low_count_threshold=low_count_threshold,
-                                                        val_size=val_size,
-                                                        test_size=test_size,
-                                                        verbose=False)['label_map']
+    return filename_log
+#         if args.timeit == True:
+#             label_map = load_and_format_dataset_from_db(dataset_name=dataset_name,
+#                                                      low_count_threshold=low_count_threshold,
+#                                                         val_size=val_size,
+#                                                         test_size=test_size,
+#                                                         verbose=False)['label_map']
 
 
             ##PLOT 1 BATCH OF IMAGES WITH TEXT LABELS
@@ -389,9 +399,9 @@ def main():
             #     plot_image_grid(imgs, labels, 4, 8)
             ##TEST ITERATION TIME
 
-            filenames = filename_log['train']
-            TFRecord_timeline = timeit(build_TFRecordDataset(filenames))
-            naive_TFRecord_timeline = timeit(build_naive_TFRecordDataset(filenames, batch_size=32))
+#             filenames = filename_log['train']
+#             TFRecord_timeline = timeit(build_TFRecordDataset(filenames))
+#             naive_TFRecord_timeline = timeit(build_naive_TFRecordDataset(filenames, batch_size=32))
 
     #     draw_timeline(TFRecord_timeline, "TFRecord", 15)
 
@@ -403,5 +413,23 @@ if __name__ == "__main__":
 
     Open a jupyter console and type "%run create_tfrecords.py"
     '''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--dataset_name', default='PNAS', type=str,help='Name of dataset of images to use for creating TFRecords')
+    parser.add_argument('-o', '--output_dir', default=r'/media/data/jacob/Fossil_Project/tfrecord_data', type=str, help=r"Parent dir above the location that's intended for saving the TFRecords for this dataset")
+    parser.add_argument('-thresh', '--low_count_threshold', default=3, type=int, help='Min population of a class below which we will exclude the class entirely.')
+    parser.add_argument('-val', '--val_size', default=0.3, type=float, help='Fraction of train to use as validation set. Calculated after splitting train and test')
+    parser.add_argument('-test', '--test_size', default=0.3, type=float, help='Fraction of full dataset to use as test set. Remaining fraction will be split into train/val sets.')
+    parser.add_argument('-shards', '--num_shards', default=10, type=int, help='Number of shards to split each data subset into')
+    parser.add_argument('-time', '--timeit', default=False, type=bool, help='If set to True, run speed tests on generated TFRecords with tf.data.Dataset readers.')
+    args = parser.parse_args()
+    
+    
+    config = DatasetConfig(dataset_name=args.dataset_name,
+                               target_size=(224,224),
+                               low_class_count_thresh=args.low_count_thresh,
+                               data_splits={'val_size':args.val_size,'test_size':args.test_size},
+                               tfrecord_root_dir=args.output_dir,
+                               num_shards=args.num_shards)
 
-    main()
+
+    main(config)
