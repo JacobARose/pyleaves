@@ -43,12 +43,12 @@ def get_dataset_from_list(sample_list):
     samples = samples.prefetch(1)
     return samples
 
-def filter_tiff(sample_filepaths):
-    filtered_dataset = sample_filepaths.map(lambda x: tf.strings.regex_full_match(x,'(.*?)\.(tif)')) #'*tif'))
+# def filter_tiff(sample_filepaths):
+#     filtered_dataset = sample_filepaths.map(lambda x: tf.strings.regex_full_match(x,'(.*?)\.(tif)')) #'*tif'))
     
-    return filtered_dataset
+#     return filtered_dataset
 
-def create_sample_copy(src_filepath, target_filepath, label):
+def copy_img2png(src_filepath, target_filepath, label):
     
     img = tf.io.read_file(src_filepath)
     img = tf.image.decode_image(img, channels=3)
@@ -56,19 +56,16 @@ def create_sample_copy(src_filepath, target_filepath, label):
     img = tf.image.encode_png(img)
     tf.io.write_file(target_filepath, img)
     return target_filepath, label
-    #     return img, label, target_filepath
-
-def create_tiff_sample_copy(src_filepath, target_filepath, label):
+    
+def copy_tiff2png(src_filepath, target_filepath, label):
     
     compression_params = [cv2.IMWRITE_PNG_COMPRESSION, 4]
-    
     try:
         img = cv2.imread(src_filepath.decode('utf-8'), cv2.IMREAD_UNCHANGED)
     except Exception as e:
         print("Unexpected error:", sys.exc_info())
         print(f'failed reading {src_filepath}, [ERROR] {e}')
         raise
-#         return src_filepath, label
     try:
         cv2.imwrite(target_filepath.decode('utf-8'), img, compression_params)
         return target_filepath, label
@@ -76,7 +73,34 @@ def create_tiff_sample_copy(src_filepath, target_filepath, label):
         print("Unexpected error:", sys.exc_info())
         print(f'failed reading {src_filepath}, [ERROR] {e}')
         raise
-#         return src_filepath, label
+
+##############################################################################
+
+def copy_img2jpg(src_filepath, target_filepath, label):
+    
+    img = tf.io.read_file(src_filepath)
+    img = tf.image.decode_image(img, channels=3)
+    
+    img = tf.image.encode_jpeg(img, optimize_size=True, chroma_downsampling=False)
+    tf.io.write_file(target_filepath, img)
+    return target_filepath, label
+    
+def copy_tiff2jpg(src_filepath, target_filepath, label):
+    
+    try:
+        img = cv2.imread(src_filepath.decode('utf-8'), cv2.IMREAD_UNCHANGED)
+    except Exception as e:
+        print("Unexpected error:", sys.exc_info())
+        print(f'failed reading {src_filepath}, [ERROR] {e}')
+        raise
+    try:
+        cv2.imwrite(target_filepath.decode('utf-8'), img)
+        return target_filepath, label
+    except Exception as e:
+        print("Unexpected error:", sys.exc_info())
+        print(f'failed reading {src_filepath}, [ERROR] {e}')
+        raise
+
 
 ##############################################################################
 def time_ds(ds):
@@ -125,37 +149,186 @@ def time_ds(ds):
 #     print(sample)
 # time_ds(tiff_results)
 ##############################################################################
+##############################################################################
 
-def convert_from_tiff(data_df):
+class Coder:
+    def __init__(self, data, output_dir):
+        '''
+        Class for managing different conversion functions depending on source and target image formats.
+        '''
+        self.output_ext = 'jpg'
+        
+        labels = set(list(data['label']))
+        [ensure_dir_exists(join(output_dir,label)) for label in labels]
+        
+        self.indices = {
+                        'tiff':np.where(data['source_path'].str.endswith('.tif')),
+                        'non_tiff':np.where(~(data['source_path'].str.endswith('.tif')))
+                       }
+        
+        self.data = {
+                    'tiff':data[data['source_path'].str.endswith('.tif')],
+                    'non_tiff':data[~(data['source_path'].str.endswith('.tif'))]
+                    }
+        
+        
+    def stage_dataset(self, data_df):
+        src_paths = get_dataset_from_list(sample_list=list(data_df['source_path']))
+        src_labels = get_dataset_from_list(sample_list=list(data_df['label']))
+        target_paths = get_dataset_from_list(sample_list=list(data_df['path']))
+        mappings_dataset = tf.data.Dataset.zip((src_paths, target_paths, src_labels)).cache()
+        return mappings_dataset
+    
+    def stage_converter(self, data_df, from_tiff=False): #, output_ext='jpg'):
+        '''
+        Arguments:
+            data_df, pd.DataFrame:
+                DataFrame containing columns ['path','sourcepath','label'] for image conversion
+            from_tiff, bool:
+                Indicates whether to use converters for converting from tiff images, or to use generic image converters for converting from jpg or png
+            output_ext, bool:
+                Default='jpg'
+                Must be either 'jpg' or 'png'
+        Return:
+            converted_dataset, tf.data.Dataset:
+                Dataset that, when iterated over, will read and write images referenced in data_df
+        
+        '''
+        print('tiff shape = ', data_df.shape)
+        print(type(data_df))
+        
+        output_ext = self.output_ext
+        mappings_dataset = self.stage_dataset(data_df)
+        
+        if from_tiff:
+            if output_ext=='jpg':
+                img_reader = lambda src, target, label: tf.py_func(copy_tiff2jpg, [src, target, label],[tf.string, tf.string])
+            elif output_ext=='png':
+                img_reader = lambda src, target, label: tf.py_func(copy_tiff2png, [src, target, label],[tf.string, tf.string])        
+        else:
+            if output_ext=='jpg':
+                img_reader = lambda src, target, label: copy_img2jpg(src, target, label)
+            elif output_ext=='png':
+                img_reader = lambda src, target, label: copy_img2png(src, target, label)
+        
+        converted_dataset = mappings_dataset.map(img_reader, num_parallel_calls=AUTOTUNE)
+        return converted_dataset.prefetch(AUTOTUNE)
+
+    def execute_conversion(self, input_dataset):
+        '''
+        Arguments:
+            input_dataset, tf.data.Dataset:
+                Dataset that has been output from the stage_converter() method, but not yet iterated through.
+        Return:
+            output, list:
+                List of whatever information is returned by input_dataset, specified in the specific coding/conversion function
+        '''
+        perf_counter = time.perf_counter
+        output=[]
+        indices = [0]
+        timelog=[perf_counter()]
+        j=0
+        for i, converted_data in enumerate(input_dataset):
+            output.append(converted_data)
+            if i%20==0:
+                indices.append(i+1)
+                timelog.append(perf_counter())
+                idx = (indices[j],indices[j+1])
+                print(f'{i+1} images at rate {((idx[1]-idx[0])/(timelog[j+1] - timelog[j])):.2f} images/second')
+                j+=1
+        return output
+
+    
+class JPGCoder(Coder):
+    
+    def __init__(self, data, output_dir):
+        super().__init__(data, output_dir)
+        
+        self.output_ext='jpg'
+        
+    def batch_convert(self):
+        
+        outputs = []
+                
+        try:
+            if self.data['non_tiff'].shape[0]>0:
+                print(f"converting {self.data['non_tiff'].shape[0]} non-tiff images to jpg")
+                non_tiff_staged = self.stage_converter(data_df=self.data['non_tiff'],from_tiff=False)
+                outputs.extend(self.execute_conversion(non_tiff_staged))
+                
+            if self.data['tiff'].shape[0]>0:
+                print(f"converting {self.data['tiff'].shape[0]} tiff images to jpg")
+                tiff_staged = self.stage_converter(data_df=self.data['tiff'],from_tiff=True)
+                outputs.extend(self.execute_conversion(tiff_staged))
+            return outputs
+
+        except Exception as e:
+            print("Unexpected error:", sys.exc_info())
+            print(f'[ERROR] {e}')
+            raise        
+        
+
+        
+        
+        
+        
+    
+def batch_convert_to_jpg(data_df, output_dir):
     '''
-    data_df must only contain filenames referring to TIFF formatted images in column 'source_path'
+    Function to load a list of image files, convert to jpg format if necessary, and save to specified target dir.
+    
+    Arguments:
+        dataset_name, str:
+            Name of source dataset from which images are sourced, to be name of subdir in target root dir
+        target_dir, str:
+            Root directory for converted images, which will be saved in hierarchy:  
+            root/
+                |dataset_1/
+                          |class_1/
+                                  |image_1
+                                  |image_2
+                                  ...
+    
+    Return:
+    
     '''
-    src_paths = get_dataset_from_list(sample_list=list(data_df['source_path']))
-    src_labels = get_dataset_from_list(sample_list=list(data_df['label']))
-    target_paths = get_dataset_from_list(sample_list=list(data_df['path']))
-    mappings_dataset = tf.data.Dataset.zip((src_paths, target_paths, src_labels))
-
-    tiff_reader = lambda src_filepath, target_filepath, label: tf.py_func(create_tiff_sample_copy, [src_filepath, target_filepath, label],[tf.string, tf.string])
-    converted_dataset = mappings_dataset.map(tiff_reader, num_parallel_calls=AUTOTUNE)
-    perf_counter = time.perf_counter
     
-    output=[]
-    indices = [0]
-    timelog=[perf_counter()]
-    j=0
-    for i, converted_data in enumerate(converted_dataset):
-        output.append(converted_data)
-        if i%20==0:
-            indices.append(i+1)
-            timelog.append(perf_counter())
-            idx = (indices[j],indices[j+1])
-            print(f'{i+1} images at rate {((idx[1]-idx[0])/(timelog[j+1] - timelog[j])):.2f} images/second')
-            j+=1
-    return output    
+    labels = set(list(data_df['label']))
+    [ensure_dir_exists(join(output_dir,label)) for label in labels]
+    indices = list(range(len(data_df)))
     
+    tiff_data = data_df[data_df['source_path'].str.endswith('.tif')]
+    non_tiff_data = data_df[~(data_df['source_path'].str.endswith('.tif'))]
 
     
-def convert_from_non_tiff(data_df):
+    coder = Coder()
+    
+    
+    
+    outputs = []
+    try:
+        if non_tiff_data.shape[0]>0:
+            print(f'converting {non_tiff_data.shape[0]} non-tiff images to jpg')
+            outputs.extend(convert_from_non_tiff2jpg(non_tiff_data))
+        if tiff_data.shape[0]>0:
+            print(f'converting {tiff_data.shape[0]} tiff images to jpg')
+            outputs.extend(convert_from_tiff2jpg(tiff_data))
+        return outputs
+    
+    except Exception as e:
+        print("Unexpected error:", sys.exc_info())
+        print(f'[ERROR] {e}')
+        raise        
+    
+    
+    
+    
+    
+    
+    
+##############################################################################
+    
+def convert_from_nontiff2png(data_df):
     '''
     data_df must only contain filenames referring to non-TIFF formatted images (e.g. PNG, JPG, GIF) in column 'source_path'
     '''
@@ -164,7 +337,7 @@ def convert_from_non_tiff(data_df):
     target_paths = get_dataset_from_list(sample_list=list(data_df['path']))
     mappings_dataset = tf.data.Dataset.zip((src_paths, target_paths, src_labels))
 
-    converted_dataset = mappings_dataset.map(lambda src, target, label: create_sample_copy(src, target, label), num_parallel_calls=AUTOTUNE)
+    converted_dataset = mappings_dataset.map(lambda src, target, label: copy_img2png(src, target, label), num_parallel_calls=AUTOTUNE)
     
     perf_counter = time.perf_counter
     
@@ -184,15 +357,92 @@ def convert_from_non_tiff(data_df):
     return output
     
     
-#     output=[]
-#     for i, converted_data in enumerate(converted_dataset):
-#         output.append(converted_data)
-#         if i%20==0:
-#             print(i)        
-        
-#     return output
+def convert_from_tiff2png(data_df):
+    '''
+    data_df must only contain filenames referring to TIFF formatted images in column 'source_path'
+    '''
+    src_paths = get_dataset_from_list(sample_list=list(data_df['source_path']))
+    src_labels = get_dataset_from_list(sample_list=list(data_df['label']))
+    target_paths = get_dataset_from_list(sample_list=list(data_df['path']))
+    mappings_dataset = tf.data.Dataset.zip((src_paths, target_paths, src_labels))
+
+    tiff_reader = lambda src_filepath, target_filepath, label: tf.py_func(copy_tiff2png, [src_filepath, target_filepath, label],[tf.string, tf.string])
+    converted_dataset = mappings_dataset.map(tiff_reader, num_parallel_calls=AUTOTUNE)
+    perf_counter = time.perf_counter
+    
+    output=[]
+    indices = [0]
+    timelog=[perf_counter()]
+    j=0
+    for i, converted_data in enumerate(converted_dataset):
+        output.append(converted_data)
+        if i%20==0:
+            indices.append(i+1)
+            timelog.append(perf_counter())
+            idx = (indices[j],indices[j+1])
+            print(f'{i+1} images at rate {((idx[1]-idx[0])/(timelog[j+1] - timelog[j])):.2f} images/second')
+            j+=1
+    return output 
 
 
+def convert_from_nontiff2jpg(data_df):
+    '''
+    data_df must only contain filenames referring to non-TIFF formatted images (e.g. PNG, JPG, GIF) in column 'source_path'
+    '''
+    src_paths = get_dataset_from_list(sample_list=list(data_df['source_path']))
+    src_labels = get_dataset_from_list(sample_list=list(data_df['label']))
+    target_paths = get_dataset_from_list(sample_list=list(data_df['path']))
+    mappings_dataset = tf.data.Dataset.zip((src_paths, target_paths, src_labels))
+
+    converted_dataset = mappings_dataset.map(lambda src, target, label: copy_img2jpg(src, target, label), num_parallel_calls=AUTOTUNE)
+    
+    perf_counter = time.perf_counter
+    
+    output=[]
+    indices = [0]
+    timelog=[perf_counter()]
+    j=0
+    for i, converted_data in enumerate(converted_dataset):
+        output.append(converted_data)
+        if i%20==0:
+            indices.append(i+1)
+            timelog.append(perf_counter())
+            idx = (indices[j],indices[j+1])
+            print(f'{i+1} images at rate {((idx[1]-idx[0])/(timelog[j+1] - timelog[j])):.2f} images/second')
+            j+=1
+    
+    return output
+    
+    
+def convert_from_tiff2jpg(data_df):
+    '''
+    data_df must only contain filenames referring to TIFF formatted images in column 'source_path'
+    '''
+    src_paths = get_dataset_from_list(sample_list=list(data_df['source_path']))
+    src_labels = get_dataset_from_list(sample_list=list(data_df['label']))
+    target_paths = get_dataset_from_list(sample_list=list(data_df['path']))
+    mappings_dataset = tf.data.Dataset.zip((src_paths, target_paths, src_labels))
+
+    tiff_reader = lambda src_filepath, target_filepath, label: tf.py_func(copy_tiff2jpg, [src_filepath, target_filepath, label],[tf.string, tf.string])
+    converted_dataset = mappings_dataset.map(tiff_reader, num_parallel_calls=AUTOTUNE)
+    perf_counter = time.perf_counter
+    
+    output=[]
+    indices = [0]
+    timelog=[perf_counter()]
+    j=0
+    for i, converted_data in enumerate(converted_dataset):
+        output.append(converted_data)
+        if i%20==0:
+            indices.append(i+1)
+            timelog.append(perf_counter())
+            idx = (indices[j],indices[j+1])
+            print(f'{i+1} images at rate {((idx[1]-idx[0])/(timelog[j+1] - timelog[j])):.2f} images/second')
+            j+=1
+    return output 
+
+
+##############################################################################
 
 def convert_to_png(data_df, output_dir):
     '''
@@ -214,8 +464,6 @@ def convert_to_png(data_df, output_dir):
     
     '''
     
-#     output_dir = join(target_dir,dataset_name)
-#     ensure_dir_exists(output_dir)
     labels = set(list(data_df['label']))
     [ensure_dir_exists(join(output_dir,label)) for label in labels]
     indices = list(range(len(data_df)))
@@ -227,12 +475,10 @@ def convert_to_png(data_df, output_dir):
     try:
         if non_tiff_data.shape[0]>0:
             print(f'converting {non_tiff_data.shape[0]} non-tiff images to png')
-            outputs.extend(convert_from_non_tiff(non_tiff_data))
-#             non_tiff_outputs = convert_from_non_tiff(non_tiff_data)
+            outputs.extend(convert_from_nontiff2png(non_tiff_data))
         if tiff_data.shape[0]>0:
             print(f'converting {tiff_data.shape[0]} tiff images to png')
-            outputs.extend(convert_from_tiff(tiff_data))
-#             tiff_outputs = convert_from_non_tiff(non_tiff_data)
+            outputs.extend(convert_from_tiff2png(tiff_data))
         return outputs
     
     except Exception as e:
@@ -240,6 +486,63 @@ def convert_to_png(data_df, output_dir):
         print(f'[ERROR] {e}')
         raise
         
+        
+def convert_to_jpg(data_df, output_dir):
+    '''
+    Function to load a list of image files, convert to jpg format if necessary, and save to specified target dir.
+    
+    Arguments:
+        dataset_name, str:
+            Name of source dataset from which images are sourced, to be name of subdir in target root dir
+        target_dir, str:
+            Root directory for converted images, which will be saved in hierarchy:  
+            root/
+                |dataset_1/
+                          |class_1/
+                                  |image_1
+                                  |image_2
+                                  ...
+    
+    Return:
+    
+    '''
+    
+    labels = set(list(data_df['label']))
+    [ensure_dir_exists(join(output_dir,label)) for label in labels]
+    indices = list(range(len(data_df)))
+    
+    tiff_data = data_df[data_df['source_path'].str.endswith('.tif')]
+    non_tiff_data = data_df[~(data_df['source_path'].str.endswith('.tif'))]
+
+    outputs = []
+    try:
+        if non_tiff_data.shape[0]>0:
+            print(f'converting {non_tiff_data.shape[0]} non-tiff images to jpg')
+            outputs.extend(convert_from_non_tiff2jpg(non_tiff_data))
+        if tiff_data.shape[0]>0:
+            print(f'converting {tiff_data.shape[0]} tiff images to jpg')
+            outputs.extend(convert_from_tiff2jpg(tiff_data))
+        return outputs
+    
+    except Exception as e:
+        print("Unexpected error:", sys.exc_info())
+        print(f'[ERROR] {e}')
+        raise        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+
 
 # def convert_to_png(data_df, output_dir):
 #     '''

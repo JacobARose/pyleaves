@@ -13,12 +13,13 @@ import pandas as pd
 import dataset
 from functools import partial
 import os
+import sys
 from stuf import stuf
 import time
 
 from pyleaves.leavesdb.db_manager import dict2json, build_db_from_json
 from pyleaves.utils import ensure_dir_exists
-from pyleaves.analysis.img_utils import convert_to_png
+from pyleaves.analysis.img_utils import convert_to_png, convert_to_jpg, JPGCoder
 from pyleaves import leavesdb
 
 join = os.path.join
@@ -30,38 +31,40 @@ basename = os.path.basename
 def main():
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--target_dir', type=str, default=r'/media/data/jacob/Fossil_Project/src_data', help='Location for saving converted image files')
+    parser.add_argument('-t', '--target_dir', type=str, default=r'/media/data_cifs/jacob/Fossil_Project/opt_data', help='Location for saving converted image files')
+    parser.add_argument('-ext', '--target_ext', type=str, default='jpg', help="Image format to save all image copies as. Must be either 'png' or 'jpg'.")
     parser.add_argument('-prefix', '--json_prefix', type=str, default=r'/home/jacob/pyleaves/pyleaves/leavesdb/resources', help='Location for saving newly created json files containing paths of converted files + all previous data')
     parser.add_argument('-json_fname', '--json_filename', type=str, default='database_json_records_PNG_format.json', help='Location for saving newly created json files containing paths of converted files + all previous data')
 
     args = parser.parse_args()
 
 #     class Args:
-#         target_dir=r'/media/data/jacob/Fossil_Project/src_data'
+#         target_dir=r'/media/data_cifs/jacob/Fossil_Project/opt_data'
+#         target_ext = 'jpg'
 #         json_prefix=r'/home/jacob/pyleaves/pyleaves/leavesdb/resources'
 #         json_filename=r'database_json_records_PNG_format.json'
 #     args = Args()
 
-    def get_converted_image_name(row, output_dir):
+    def get_converted_image_name(row, output_dir, output_format='jpg'):
+        assert output_format in ['jpg','png']
+        
         filepath = row.loc['path']
         label = row.loc['label']
 
         filename, file_ext = splitext(basename(filepath))
-        output_filepath = join(output_dir, label, filename+'.png')
+        output_filepath = join(output_dir, label, filename + '.' + output_format)
         row['source_path'] = filepath
         if filepath != output_filepath:
             row['path'] = output_filepath
         return row
 
     
-    
     local_db = leavesdb.init_local_db()
     db = dataset.connect(f"sqlite:///{local_db}", row_type=stuf)
-#     data = leavesdb.db_query.load_all_data(db)
     data = pd.DataFrame(db['dataset'].all())
 
     data_by_dataset = data.groupby(by='dataset')
-    data_by_dataset_dict = {k:v for k,v in data_by_dataset}
+    data_by_dataset_dict = {k:v for k,v in data_by_dataset if k not in ['Fossil']}
     
     data_records = []
     new_data_location_info = {}
@@ -70,7 +73,7 @@ def main():
         output_dir=join(args.target_dir,dataset_name)
         ensure_dir_exists(output_dir)
         
-        get_converted_image_name = partial(get_converted_image_name, output_dir=output_dir)
+        get_converted_image_name = partial(get_converted_image_name, output_dir=output_dir, output_format=args.target_ext)
         rows['label'] = rows.loc[:,'family']
         data_df = rows.apply(get_converted_image_name,axis=1)
 
@@ -81,7 +84,13 @@ def main():
         print(f'[BEGINNING] copying {num_files} from {dataset_name}')    
         start_time = time.perf_counter()
         try:
-            new_dataset_paths = convert_to_png(data_df, output_dir=output_dir)
+            if args.target_ext == 'jpg':
+                coder = JPGCoder(data_df, output_dir)
+                new_dataset_paths = coder.batch_convert()
+#                 new_dataset_paths = convert_to_jpg(data_df, output_dir=output_dir)
+#             elif args.target_ext == 'png':
+#                 new_dataset_paths = convert_to_png(data_df, output_dir=output_dir)
+                
             new_dataset_paths = list(new_dataset_paths)
             end_time = time.perf_counter()
             total_time = end_time-start_time
@@ -90,12 +99,16 @@ def main():
         except Exception as e:
             print('[EXCEPTION] ', e)
             print('dir(e) = ', dir(e))
+            sys.exit(0)
+#             return 0
 
     db_path = join(args.json_prefix,'leavesdb.db')
     db_json_path = join(args.json_prefix,args.json_filename)
-        
+
+    #Create JSON records file containing previous file info combined with new file paths
     dict2json(data_records, prefix=args.json_prefix, filename=db_json_path)
-        
+    
+    #Create new SQLite .db file from newly created JSON
     build_db_from_json(frozen_json_filepaths=[db_json_path], db_path=db_path)
         
     

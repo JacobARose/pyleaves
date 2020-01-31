@@ -9,7 +9,7 @@ import shutil
 '''HELPER FUNCTIONS'''
 from pyleaves.utils import ensure_dir_exists
 
-def init_local_db(local_db = os.path.expanduser(r'~/scripts/leavesdb.db'), src_db = r'/media/data/jacob/Fossil_Project/resources_archive/leavesdb.db'): #r'/media/data_cifs/irodri15/leavesdb.db'):
+def init_local_db(local_db = os.path.expanduser(r'~/scripts/leavesdb.db'), src_db = r'/media/data_cifs/jacob/Fossil_Project/resources_archive/leavesdb.db'): #r'/media/data_cifs/irodri15/leavesdb.db'):
 	'''
 	Whenever working on a new machine, run this function in order to make sure the main leavesdb.db file is stored locally to avoid CIFS permissions issues.
 	
