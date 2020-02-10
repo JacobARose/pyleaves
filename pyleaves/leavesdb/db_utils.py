@@ -8,12 +8,19 @@ import cv2
 import shutil 
 '''HELPER FUNCTIONS'''
 from pyleaves.utils import ensure_dir_exists
+import pyleaves
 
-def init_local_db(local_db = os.path.expanduser(r'~/scripts/leavesdb.db'), src_db = r'/media/data_cifs/jacob/Fossil_Project/resources_archive/leavesdb.db'): #r'/media/data_cifs/irodri15/leavesdb.db'):
+
+# print(dir(pyleaves))
+
+def init_local_db(local_db = os.path.expanduser(r'~/scripts/leavesdb.db'), src_db = pyleaves.DATABASE_PATH, force_update=True):
 	'''
 	Whenever working on a new machine, run this function in order to make sure the main leavesdb.db file is stored locally to avoid CIFS permissions issues.
 	
 	usage: init_local_db()
+    
+    force_update, bool:
+        default True, if false, then only copy from src_db if local_db doesn't exist.
 	'''
 	ensure_dir_exists(os.path.dirname(local_db))
 
@@ -26,6 +33,10 @@ def init_local_db(local_db = os.path.expanduser(r'~/scripts/leavesdb.db'), src_d
 
 ###############################################################################################################
 ###############################################################################################################
+
+    
+    
+
 
 def __get_family_names_per_dataset(db):
     '''

@@ -17,8 +17,6 @@ if gpus:
     print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPU")
 
 # tf.enable_eager_execution()
-
-
 from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, one_hot_encode_labels #, one_hot_decode_labels
 from pyleaves.data_pipeline.tf_data_loaders import DatasetBuilder
 from pyleaves.leavesdb.db_query import get_label_encodings as _get_label_encodings, load_from_db

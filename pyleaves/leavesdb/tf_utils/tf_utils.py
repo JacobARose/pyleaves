@@ -43,21 +43,6 @@ def train_val_test_split(image_paths, labels, test_size=0.3, val_size=0.3, rando
 
     return data_splits
 
-#     metadata_splits = {'train': {},
-#                         'val': {},
-#                         'test': {}}
-
-#     for subset, data in data_splits.items():
-#         metadata_splits[subset] = {'num_samples':len(data_splits[subset]['label']),
-#                                    'num_classes':len(np.unique(data_splits[subset]['label']))}
-
-
-#     if verbose:
-#         print(f'train samples: {len(train_labels)}')
-#         print(f'val samples: {len(val_labels)}')
-#         print(f'test samples: {len(test_labels)}')
-
-#     return data_splits, metadata_splits
 
 def get_data_splits_metadata(data_splits, data_df, class_mode='max', verbose=True):
     '''
@@ -146,12 +131,15 @@ def bytes_feature(value):
     # If the value is an eager tensor BytesList won't unpack a string from an EagerTensor.
     if isinstance(value, type(tf.constant(0))):
         value = value.numpy()
+    if isinstance(value, np.ndarray):
+        value = value.tostring()
     if not isinstance(value, list):
         value = [value]
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
 
 def float_feature(value):
     """Returns a float_list from a float / double."""
+    
     if not isinstance(value, list):
         value = [value]
     return tf.train.Feature(float_list=tf.train.FloatList(value=value))

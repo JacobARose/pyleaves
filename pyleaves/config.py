@@ -72,7 +72,8 @@ class BaseConfig(dict):
 class DatasetConfig(BaseConfig):
     
     def __init__(self,
-                 dataset_name='Fossil',
+                 dataset_name='PNAS',
+                 label_col='family',
                  target_size=(224,224),
                  low_class_count_thresh=3,
                  data_splits={'val_size':0.2,'test_size':0.2},
@@ -82,6 +83,7 @@ class DatasetConfig(BaseConfig):
         self.init_directories(self.dirs)
         
         super().__init__(dataset_name=dataset_name,
+                         label_col=label_col,
                          target_size=target_size,
                          low_class_count_thresh=low_class_count_thresh,
                          data_splits=data_splits,

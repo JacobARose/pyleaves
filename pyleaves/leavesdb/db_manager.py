@@ -78,17 +78,18 @@ or
 ######################################
 '''
 
-
+import numpy as np
 import pandas as pd 
 import dataset
 import datafreeze
 import json
+from pyleaves import leavesdb
 from pyleaves.leavesdb.db_utils import load, flattenit, image_checker, TimeLogs
 import cv2 
 import os
+from stuf import stuf
 
-
-PATH = r'resources/datasets.json' #/media/data_cifs/irodri15/data/processed/datasets.json'
+PATH = os.path.abspath(os.path.join(os.getcwd(),'..','leavesdb','resources'))#/datasets.json') #/media/data_cifs/irodri15/data/processed/datasets.json'
 # OUTPUT = 'sqlite:///resources/leavesdb.db'
 
 
@@ -120,9 +121,20 @@ def dict2json(data, prefix, filename):
     
     return json_output
 
+
+# def insert_files2table(filepath, table, db):
+#     #TODO Batch insert files loaded from json fileparh, add function to create master copy as jpeg on /media/data
+#     print(f'Loading {filepath}')
+#     json_file = load(filepath)
+#     table.insert_many(json_file['results'], ensure=True)
+#     db.commit()
+#     file_count = len(json_file['results'])
+#     count += file_count
+#     print(f'committed {file_count} row entries for data from {filepath}')
+
 def archivedb_to_json(db_path, exist_ok):
-    temp_db_path = None
-    archive_json = None
+    temp_db_path = ''
+    archive_json = ''
     if exist_ok:
         print(f'{db_path} already exists, creating backup in case of failed reconstruction')
 #        assert exist_ok
@@ -138,19 +150,6 @@ def archivedb_to_json(db_path, exist_ok):
         os.remove(db_path)
         
     return archive_json, temp_db_path
-
-
-def insert_files2table(filepath, table, db):
-    #TODO Batch insert files loaded from json fileparh, add function to create master copy as jpeg on /media/data
-    print(f'Loading {filepath}')
-    json_file = load(filepath)
-    table.insert_many(json_file['results'], ensure=True)
-    db.commit()
-    file_count = len(json_file['results'])
-    count += file_count
-    print(f'committed {file_count} row entries for data from {filepath}')
-
-
 
 
 def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db', exist_ok=False):
@@ -214,21 +213,14 @@ def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db
             return {'success_count': 0}
 
         
-#     if os.path.isfile(temp_db_path):
-#         os.remove(temp_db_path)
-#     if os.path.isfile(archive_json):
-#         os.remove(archive_json)
-
-        
+    if os.path.isfile(temp_db_path):
+        os.remove(temp_db_path)
+    if os.path.isfile(archive_json):
+        os.remove(archive_json)        
     print(f'[SUCCESS]: Database created at {db_path} with {count} added samples')
     
     return {'success_count':count}
 
-
-
-
-
-#
 
 ####
 
@@ -341,6 +333,72 @@ def freeze_db_by_dataset(db_path='resources/leavesdb.db', prefix='resources', fr
     
     return frozen_json_filepaths
 
+
+def clear_duplicates_from_db(db=None, local_db=None, prefix = None, json_filename='database_records.json'):
+    '''
+    Function checks db file for duplicate filenames in 'path' column, recreates JSON and db without duplicates.
+    
+    data_records = clear_duplicates_from_db(db=None, local_db='./resources/leavesdb.db', prefix = './resources', json_filename='database_records.json')
+    
+    db, Database,
+        open connection to database
+    local_db, str:
+        abs path to .db file
+    prefix, str:
+        abs path to directory in which to save filtered json and .db files.
+        
+    Return:
+        unique_data, pd.DataFrame:
+            DataFrame containing only unique 
+    '''
+    if db is None:
+        if local_db is None:
+            local_db = leavesdb.init_local_db()
+            
+        db = dataset.connect(f"sqlite:///{local_db}", row_type=stuf)
+        
+    if prefix is None:
+        prefix = PATH
+        print(PATH)
+    
+    data = pd.DataFrame(db['dataset'].all())
+    paths, indices, counts = np.unique(data['path'], return_index=True, return_counts=True)
+    #SELECT only rows with unique file paths
+    unique_data = data.iloc[indices,:]
+    #CONVERT DataFrame to list of dict records
+    data_records = unique_data.to_dict('records')
+    #CREATE & WRITE JSON records file containing previous file info combined with new file paths
+    dict2json(data_records, prefix=prefix, filename=json_filename)
+    db_json_path = os.path.join(prefix,json_filename)
+    db_path = os.path.join(prefix,'leavesdb.db')
+    #CREATE & WRITE new SQLite .db file from newly created JSON
+    build_db_from_json(frozen_json_filepaths=[db_json_path], db_path=db_path)
+
+    print(f'FILTERED database of {data.shape[0] - unique_data.shape[0]} duplicates.')
+    print(f'Previous size = {data.shape[0]}')
+    print(f'New size = {unique_data.shape[0]}')
+    return unique_data
+
+
+def analyze_db_contents():
+    
+    local_db = leavesdb.init_local_db()
+            
+    db = dataset.connect(f"sqlite:///{local_db}", row_type=stuf)    
+    
+    data = pd.DataFrame(db['dataset'].all())
+    paths, indices, counts = np.unique(data['path'], return_index=True, return_counts=True)
+
+    count_number, duplicate_counts = np.unique(counts, return_counts=True)
+
+    print('FOUND:')
+    for i in range(len(count_number)):
+        print(f'{duplicate_counts[i]} UNIQUE paths with {count_number[i]} duplicates')
+    print('-'*10)
+    print(f'Keeping a total of {sum(duplicate_counts)} paths and discarding {data.shape[0]-len(indices)} duplicates')
+        
+        
+    
 
     
 def main():
