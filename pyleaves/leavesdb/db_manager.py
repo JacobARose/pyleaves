@@ -83,6 +83,7 @@ import pandas as pd
 import dataset
 import datafreeze
 import json
+import pyleaves
 from pyleaves import leavesdb
 from pyleaves.leavesdb.db_utils import load, flattenit, image_checker, TimeLogs
 import cv2 
@@ -332,6 +333,42 @@ def freeze_db_by_dataset(db_path='resources/leavesdb.db', prefix='resources', fr
         frozen_json_filepaths.update({dataset_name:os.path.join(prefix,filename)})
     
     return frozen_json_filepaths
+
+def remove_inavlid_images_from_db(invalid_paths: list, path_col='path', db=None, local_db=None, prefix = None, json_filename='database_records.json'):
+    '''
+    Provide a list of path names to remove from the database.
+    
+    path_col, str:
+        Either 'path' or 'source_path', depending on which contains the path name you want to filter out
+    '''
+    if db is None:
+        if local_db is None:
+            local_db = leavesdb.init_local_db()
+            
+        db = dataset.connect(f"sqlite:///{local_db}", row_type=stuf)
+        
+    if prefix is None:
+        prefix = pyleaves.RESOURCES_DIR
+    
+    data = pd.DataFrame(db['dataset'].all())
+    
+    data_filter = data.loc[:,path_col].isin(invalid_paths)
+    
+    filtered_data = data[~data_filter]
+    
+    filtered_records = filtered_data.to_dict('records')
+    
+    dict2json(filtered_records, prefix=prefix, filename=json_filename)
+    db_json_path = os.path.join(prefix,json_filename)
+    db_path = os.path.join(prefix,'leavesdb.db')
+    #CREATE & WRITE new SQLite .db file from newly created JSON
+    build_db_from_json(frozen_json_filepaths=[db_json_path], db_path=db_path)
+
+    print(f'FILTERED database of {data.shape[0] - filtered_data.shape[0]} duplicates.')
+    print(f'Previous size = {data.shape[0]}')
+    print(f'New size = {filtered_data.shape[0]}')
+    
+    
 
 
 def clear_duplicates_from_db(db=None, local_db=None, prefix = None, json_filename='database_records.json'):

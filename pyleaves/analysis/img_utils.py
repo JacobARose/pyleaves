@@ -454,32 +454,31 @@ class CorruptJPEGError(Exception):
 #     cv2.imwrite(filepath, img)
 #     return filepath
 
-@dask.delayed
+# @dask.delayed
 def load(filepath):
     try:
-        return io.imread(filepath)
+        img = io.imread(filepath)
+        return img
     except:
-        CorruptJPEGError(filepath)
-@dask.delayed
+        raise CorruptJPEGError(filepath)
+# @dask.delayed
 def save(filepath, img):
     try:
         io.imsave(filepath, img, quality=95)
     except:
-        raise ValueError
+        raise CorruptJPEGError(filepath)
     return filepath
 
+@dask.delayed
 def process_file(src_fpath, target_fpath):
     try:
         img = load(src_fpath)
         result = save(target_fpath, img)
         return result
-    except (ValueError, OSError):
+    except:
         print('source image path:', src_fpath)
-        print('WITHIN EXCEPTION E')
         CorruptJPEGError(src_fpath)
-#     if not result.compute():
-#         print(src_fpath)
-    return src_fpath
+        return src_fpath
 
 
 class DaskCoder:
@@ -535,56 +534,6 @@ class DaskCoder:
             computed_results = dask.compute(*input_dataset)
 
         return computed_results
-
-
-
-
-
-# def batch_convert_to_jpg(data_df, output_dir):
-#     '''
-#     Function to load a list of image files, convert to jpg format if necessary, and save to specified target dir.
-
-#     Arguments:
-#         dataset_name, str:
-#             Name of source dataset from which images are sourced, to be name of subdir in target root dir
-#         target_dir, str:
-#             Root directory for converted images, which will be saved in hierarchy:
-#             root/
-#                 |dataset_1/
-#                           |class_1/
-#                                   |image_1
-#                                   |image_2
-#                                   ...
-
-#     Return:
-
-#     '''
-
-#     labels = set(list(data_df['label']))
-#     [ensure_dir_exists(join(output_dir,label)) for label in labels]
-#     indices = list(range(len(data_df)))
-
-#     tiff_data = data_df[data_df['source_path'].str.endswith('.tif')]
-#     non_tiff_data = data_df[~(data_df['source_path'].str.endswith('.tif'))]
-
-
-#     coder = Coder()
-
-#     outputs = []
-#     try:
-#         if non_tiff_data.shape[0]>0:
-#             print(f'converting {non_tiff_data.shape[0]} non-tiff images to jpg')
-#             outputs.extend(convert_from_non_tiff2jpg(non_tiff_data))
-#         if tiff_data.shape[0]>0:
-#             print(f'converting {tiff_data.shape[0]} tiff images to jpg')
-#             outputs.extend(convert_from_tiff2jpg(tiff_data))
-#         return outputs
-
-#     except Exception as e:
-#         print("Unexpected error:", sys.exc_info())
-#         print(f'[ERROR] {e}')
-#         raise
-
 
 
 
@@ -798,115 +747,7 @@ def convert_to_jpg(data_df, output_dir):
 
 
 
-
-# config = DatasetConfig(dataset_name=dataset_name,
-#                                target_size=(224,224),
-#                                low_class_count_thresh=low_count_thresh,
-#                                data_splits={'val_size':val_size,'test_size':test_size},
-#                                tfrecord_root_dir=output_dir,
-#                                num_shards=anum_shards)
-# dataset_name = 'Fossil'
-# y_col = 'family'
-# local_db = leavesdb.init_local_db()
-# db = dataset.connect(f'sqlite:///{local_db}', row_type=stuf)
-# db_df = pd.DataFrame(leavesdb.db_query.load_data(db, y_col=y_col, dataset=dataset_name))
-
-# #     sample_dataset = sample_dataset.map(lambda x: tf.string_split([x],sep='.'))
-# #     sample_iter = iter(sample_dataset)
-
-# #     sample = next(sample_iter)
-# db_df = data_df
-# src_paths = get_dataset_from_list(sample_list=list(db_df['source_path']))
-# src_labels = get_dataset_from_list(sample_list=list(db_df['label']))
-# target_paths = get_dataset_from_list(sample_list=list(db_df['path']))
-# mappings_dataset = tf.data.Dataset.zip((src_paths, target_paths, src_labels))
-
-# copied_dataset = mappings_dataset.map(lambda src, target, label: create_sample_copy(src, target, label), num_parallel_calls=AUTOTUNE)
-# tiff_reader = lambda src_filepath, target_filepath, label: tf.py_func(create_tiff_sample_copy, [src_filepath, target_filepath, label],[tf.string, tf.string]) #, tf.int64)
-# tiff_results = mappings_dataset.map(tiff_reader, num_parallel_calls=AUTOTUNE)
-# for sample in results.take(1):
-#     print(sample)
-# for sample in mappings_dataset.take(1):
-#     print(sample)
-# time_ds(tiff_results)
-
-
-
-
-
-# def convert_to_png(data_df, output_dir):
-#     '''
-#     Function to load a list of image files, convert to png format if necessary, and save to specified target dir.
-
-#     Arguments:
-#         dataset_name, str:
-#             Name of source dataset from which images are sourced, to be name of subdir in target root dir
-#         target_dir, str:
-#             Root directory for converted images, which will be saved in hierarchy:
-#             root/
-#                 |dataset_1/
-#                           |class_1/
-#                                   |image_1
-#                                   |image_2
-#                                   ...
-
-
-#     Return:
-
-#     '''
-
-# #     output_dir = join(target_dir,dataset_name)
-# #     ensure_dir_exists(output_dir)
-#     labels = set(list(data_df['label']))
-#     [ensure_dir_exists(join(output_dir,label)) for label in labels]
-
-#     def parse_function(row):
-#         src_filepath = row.source_path #.loc[:,'source_path']
-#         target_filepath = row.path #.loc[:,'path']
-#         label = row.label #loc[:,'label']
-#         index = row.id
-#         compression_params = [cv2.IMWRITE_PNG_COMPRESSION, 4]
-#         print('Converting image ',index)
-
-#         if not os.path.isfile(target_filepath):
-#             img = cv2.imread(src_filepath, cv2.IMREAD_UNCHANGED)
-#             cv2.imwrite(target_filepath, img, compression_params)
-#             print(f'Converted image {index} and saved at {target_filepath}')
-#         else:
-#             print(f'image {index} already exists in converted form at: {target_filepath}')
-#         return row
-
-#     def parse_batch(batch):
-#         print('starting batch inside')
-#         print(f'batch length {len(batch)}')
-# #         print('batch[0] = ',batch[0])
-# #         return len(batch)
-#         lock = Lock()
-# #         with ThreadPoolExecutor(max_workers=12) as executor:
-#         with ThreadPool(nodes=4) as executor:
-#             with lock:
-#                 _map = executor.imap
-#                 return list(_map(parse_function, batch))
-
-#     indices = list(range(len(data_df)))
-#     num_workers = 1 #os.cpu_count()#//2
-#     chunksize = len(indices)//num_workers
-#     data = chunked([stuf(row) for _, row in data_df.iterrows()],chunksize)
-
-#     try:
-
-#         outputs = []
-#     #     with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-#     #     with ProcessPoolExecutor(max_workers=num_workers) as executor:
-#         with ProcessPool(nodes=num_workers) as executor:
-
-#             outputs.extend(list(executor.map(parse_batch, data)))
-#             print('done')
-#         return outputs
-
-#     except:
-#         raise len(outputs)
-
+##############################################################################
 
 def plot_image_grid(imgs, labels = np.array([]), x_plots = 4, y_plots = 4, figsize=(15,15)):
 	fig, axes = plt.subplots(y_plots, x_plots, figsize=figsize)

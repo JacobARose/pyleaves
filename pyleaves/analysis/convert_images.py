@@ -86,7 +86,8 @@ def main():
         num_files = len(rows)
         print(f'[BEGINNING] copying {num_files} from {dataset_name}')    
         start_time = time.perf_counter()
-        try:
+#         try:
+        if True:
             if args.target_ext == 'jpg':
 #                 coder = JPGCoder(data_df, output_dir)
 #                 new_dataset_paths = coder.batch_convert()
@@ -98,12 +99,12 @@ def main():
             total_time = end_time-start_time
             new_data_location_info.update({dataset_name:{'data':new_dataset_paths, 'total_time':total_time, 'conversion_rate':num_files/total_time}})
             print(f'[FINISHED] copying {num_files} from {dataset_name}')
-        except CorruptJPEGError:
-            print(CorruptJPEGError.corrupted_files)
-        except Exception as e:
-            print(type(e))
-            print('[EXCEPTION] ', e)
-            sys.exit(0)
+#         except CorruptJPEGError:
+#             print(CorruptJPEGError.corrupted_files)
+#         except Exception as e:
+#             print(type(e))
+#             print('[EXCEPTION] ', e)
+#             sys.exit(0)
 
     print('[FINISHED] All Corrupted files->')
     print(CorruptJPEGError.corrupted_files)
