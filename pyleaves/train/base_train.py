@@ -134,16 +134,16 @@ class BaseTrainer:
     
     
 
-dataset_config = DatasetConfig(dataset_name='Fossil',
+dataset_config = DatasetConfig(dataset_name='Leaves', #'Fossil',
                                label_col='family',
                                target_size=(224,224),
-                               low_class_count_thresh=10,
+                               low_class_count_thresh=2, #0,
                                data_splits={'val_size':0.2,'test_size':0.2},
                                tfrecord_root_dir=r'/media/data/jacob/Fossil_Project/tfrecord_data',
                                num_shards=10)
 
 train_config = TrainConfig(batch_size=32,
-                           seed=3)
+                           seed=4)
 
 experiment_config = ExperimentConfig(dataset_config=dataset_config,
                                      train_config=train_config)
@@ -160,6 +160,48 @@ for imgs, labels in train_data.take(1):
     labels = [trainer.label_encodings[label] for label in labels.numpy()]
     plot_image_grid(imgs, labels, 4, 8)
 
+AUTOTUNE = tf.data.experimental.AUTOTUNE
+subsets = ['train','val','test']
+    
+for subset in subsets:
+    data = tf.data.Dataset.from_tensor_slices(trainer.tfrecord_files[subset]) \
+            .apply(lambda x: tf.data.TFRecordDataset(x)) \
+            .map(trainer.coder.decode_example,num_parallel_calls=AUTOTUNE) \
+            .shuffle(buffer_size=500, seed=trainer.config.seed) \
+            .batch(trainer.config.batch_size, drop_remainder=False) \
+            .prefetch(AUTOTUNE)
+    
+    try:
+        for i, (imgs, labels) in enumerate(data):
+            print(i, imgs.shape, labels.shape)
+    
+    finally:
+        pass
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
-
-
+    
+    
+    
+from tqdm import tqdm
+invalid_images = []
+for k, v in trainer.data_splits.items():
+    print(k)
+    
+    for path in tqdm(v['path']):
+        if not os.path.isfile(path[0]):
+            print(f'FILE NOT FOUND: {path[0]}')
+            invalid_images.append(path[0])
+            
+            

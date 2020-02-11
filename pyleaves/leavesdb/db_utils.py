@@ -24,7 +24,7 @@ def init_local_db(local_db = os.path.expanduser(r'~/scripts/leavesdb.db'), src_d
 	'''
 	ensure_dir_exists(os.path.dirname(local_db))
 
-	if not os.path.isfile(local_db):
+	if (not os.path.isfile(local_db)) or force_update:
 		print(f'Copying sql db file from {src_db} to {local_db}')
 		shutil.copyfile(src_db, local_db)
 	print(f'Proceeding with sql db at location {local_db}')

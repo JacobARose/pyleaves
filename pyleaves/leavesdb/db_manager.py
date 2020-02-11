@@ -334,7 +334,7 @@ def freeze_db_by_dataset(db_path='resources/leavesdb.db', prefix='resources', fr
     
     return frozen_json_filepaths
 
-def remove_inavlid_images_from_db(invalid_paths: list, path_col='path', db=None, local_db=None, prefix = None, json_filename='database_records.json'):
+def remove_invalid_images_from_db(invalid_paths: list, path_col='path', db=None, local_db=None, prefix = None, json_filename='database_records.json'):
     '''
     Provide a list of path names to remove from the database.
     
