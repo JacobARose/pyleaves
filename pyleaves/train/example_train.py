@@ -5,77 +5,126 @@ script: pyleaves/pyleaves/train/train.py
 
 @author: JacobARose
 """
+import argparse
 import numpy as np
 import os
 
-import tensorflow as tf
 
-# gpus = tf.config.experimental.get_visible_devices('GPU')
-# if gpus:
-#     tf.config.experimental.set_visible_devices(gpus[0], 'GPU')
-#     logical_gpus = tf.config.experimental.get_visible_devices('GPU')
-#     print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPU")
-
-# tf.enable_eager_execution()
-from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, one_hot_encode_labels #, one_hot_decode_labels
-from pyleaves.data_pipeline.tf_data_loaders import DatasetBuilder
-from pyleaves.leavesdb.db_query import get_label_encodings as _get_label_encodings, load_from_db
-from pyleaves.leavesdb.tf_utils.tf_utils import train_val_test_split as _train_val_test_split
-
-from pyleaves.models.keras_models import build_model #vgg16_base, xception_base, resnet_50_v2_base, resnet_101_v2_base, shallow
-from pyleaves.train.callbacks import get_callbacks as _get_callbacks
-from pyleaves.utils import ensure_dir_exists
+def main(dataset_name='PNAS',
+         model_name='shallow',
+         gpu_ids = [0],
+         tfrecord_root_dir=r'/media/data/jacob/Fossil_Project/tfrecord_data',
+         batch_size=64,
+         base_learning_rate=0.001,
+         num_epochs=100):
 
 
-# def run_experiment():
-if True:
-    batch_size=32
-    num_epochs=100
-    model_name='resnet_50_v2'#'vgg16'#'xception'#'shallow',
-    dataset_name='Fossil'
-    experiment_name='_'.join([dataset_name,model_name])
-    data_root_dir='/media/data/jacob'
-    experiment_root_dir='/media/data/jacob/experiments'
-    input_shape=(224,224,3)
-    low_class_count_thresh=3
-    frozen_layers=(0,-4)
-    base_learning_rate=0.001
+    import tensorflow as tf
+    tf.enable_eager_execution()
 
-    experiment = Experiment(model_name=model_name,
-                            dataset_name=dataset_name,
-                            experiment_name=experiment_name,
-                            data_root_dir=data_root_dir,
-                            experiment_root_dir=experiment_root_dir,
-                            input_shape=input_shape,
-                            low_class_count_thresh=low_class_count_thresh,
-                            frozen_layers=frozen_layers,
-                            base_learning_rate=base_learning_rate)
+    from pyleaves.utils import ensure_dir_exists, set_visible_gpus
+    
+    set_visible_gpus(gpu_ids)
 
-    model = experiment.build_model()
+    from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, one_hot_encode_labels #, one_hot_decode_labels
+    from pyleaves.data_pipeline.tf_data_loaders import DatasetBuilder
+    from pyleaves.leavesdb.db_query import get_label_encodings as _get_label_encodings, load_from_db
+    from pyleaves.leavesdb.tf_utils.tf_utils import train_val_test_split as _train_val_test_split
 
-    callbacks = experiment.callbacks
+    from pyleaves.models.keras_models import build_model #vgg16_base, xception_base, resnet_50_v2_base, resnet_101_v2_base, shallow
+    from pyleaves.train.callbacks import get_callbacks
+
+    from pyleaves.config import DatasetConfig, TrainConfig, ExperimentConfig
+    from pyleaves.train.base_train import BaseTrainer
+    
+    
 
 
-    print('num_classes = ',experiment.num_classes)
+    dataset_config = DatasetConfig(dataset_name=dataset_name,
+                                   label_col='family',
+                                   target_size=(224,224),
+                                   channels=3,
+                                   low_class_count_thresh=3,
+                                   data_splits={'val_size':0.2,'test_size':0.2},
+                                   tfrecord_root_dir=tfrecord_root_dir,
+                                   num_shards=10)
 
-    train_data = experiment.get_dataset(subset='train', batch_size=batch_size)
-    val_data = experiment.get_dataset(subset='val', batch_size=batch_size)
-    test_data = experiment.get_dataset(subset='test', batch_size=batch_size)
+    train_config = TrainConfig(model_name=model_name,
+                     batch_size=batch_size,
+                     frozen_layers=(0,-4),
+                     base_learning_rate=base_learning_rate,
+                     buffer_size=1000,
+                     num_epochs=num_epochs,
+                     seed=3)
 
-    steps_per_epoch = experiment.metadata_subsets['train']['num_samples']//batch_size
-    validation_steps = experiment.metadata_subsets['val']['num_samples']//batch_size
+    experiment_config = ExperimentConfig(dataset_config=dataset_config,
+                                         train_config=train_config)
+
+    trainer = BaseTrainer(experiment_config=experiment_config)
+
+
+    train_data = trainer.get_data_loader(subset='train')
+    val_data = trainer.get_data_loader(subset='val')
+    test_data = trainer.get_data_loader(subset='test')
+
+#     experiment_dir = os.path.join(os.path.expanduser('~'),'experiments',trainer.config.model_name,trainer.config.dataset_name)
+    experiment_dir = os.path.join(r'/media/data/jacob/Fossil_Project','experiments',trainer.config.model_name,trainer.config.dataset_name)
+
+    model_params = trainer.get_model_params('train')
+    fit_params = trainer.get_fit_params()
+    callbacks = get_callbacks(weights_best=os.path.join(experiment_dir,'weights_best.h5'), logs_dir=experiment_dir, restore_best_weights=False)
+
+    model = build_model(**model_params)  #name='shallow', num_classes=10000, frozen_layers=(0,-4), input_shape=(224,224,3), base_learning_rate=0.0001)
+
 
     history = model.fit(train_data,
-             steps_per_epoch = steps_per_epoch,
-             epochs=num_epochs,
-             validation_data=val_data,
-             validation_steps=validation_steps,
-             callbacks=callbacks
-             )
+                 steps_per_epoch = fit_params['steps_per_epoch'],
+                 epochs=fit_params['epochs'],
+                 validation_data=val_data,
+                 validation_steps=fit_params['validation_steps'],
+                 callbacks=callbacks
+                 )
+    
+    
+if __name__=='__main__':    
+    '''
+    Example:
+    python /home/jacob/pyleaves/pyleaves/train/example_train.py -d PNAS -m resnet_50_v2 -gpu 3 -bsz 64
+    
+    
+    python example_train.py -d PNAS -m resnet_50_v2 -gpu 3 -bsz 64
+    
+    Possible models:
+    [
+    'shallow',
+    'vgg16',
+    'xception',
+    'resnet_50_v2',
+    'resnet_101_v2'
+    ]
+    
+    '''
+    
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--dataset_name', default='PNAS', type=str, help='Name of dataset of images to use for creating TFRecords')
+    parser.add_argument('-m', '--model_name', default='shallow', type=str, help='Name of model to train')
+    parser.add_argument('-gpu', '--gpu_id', default=0, type=int, help='integer number of gpu to train on')
+    
+    parser.add_argument('-tfrec', '--tfrecord_dir', default=r'/media/data/jacob/Fossil_Project/tfrecord_data', type=str, help=r"Parent dir above the location that's intended for saving the TFRecords for this dataset")
+    parser.add_argument('-bsz', '--batch_size', default=64, type=int, help='Batch size. What else do you need to know?')
+    parser.add_argument('-lr', '--base_learning_rate', default=0.001, type=float, help='Starting learning rate')
+    parser.add_argument('-epochs', '--num_epochs', default=100, type=int, help='Number of epochs')
+    
+    args = parser.parse_args()
 
-# import matplotlib.pyplot as plt
-# plt.figure(); plt.plot(history.history['loss'],'b.');plt.plot(history.history['val_loss'],'r--')
-# plt.legend(['loss','val_loss'])
+    main(args.dataset_name,
+         args.model_name,
+         [args.gpu_id],
+         args.tfrecord_dir,
+         args.batch_size,
+         args.base_learning_rate,
+         args.num_epochs)
     
     
     
@@ -94,56 +143,7 @@ if True:
     
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+#####################################################################################################################    
     
     
     

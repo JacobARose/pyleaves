@@ -19,7 +19,7 @@ import pandas as pd
 from stuf import stuf
 import sys
 import tensorflow as tf
-tf.enable_eager_execution()
+# tf.enable_eager_execution()
 
 from tensorflow.data.experimental import AUTOTUNE
 # from pyleaves.data_pipeline.preprocessing import generate_encoding_map #encode_labels, filter_low_count_labels, one_hot_encode_labels, one_hot_decode_labels
@@ -32,8 +32,8 @@ from pyleaves.leavesdb.tf_utils.tf_utils import (train_val_test_split,
 from pyleaves.utils import ensure_dir_exists, set_visible_gpus
 from pyleaves.tests.test_utils import timeit, timelined_benchmark, draw_timeline, map_decorator
 
-gpu_ids = [0]
-set_visible_gpus(gpu_ids)
+# gpu_ids = [0]
+# set_visible_gpus(gpu_ids)
 
 def _bytes_feature(value):
     """Returns a bytes_list from a string / byte."""
@@ -134,9 +134,10 @@ def save_trainvaltest_tfrecords(dataset_name='PNAS',
 #     file_log = {'label_map':metadata_splits['label_map']}
     for split_name, split_data in data_splits.items():
         num_samples = len(split_data['label'])
+        num_classes = metadata_splits[split_name]['num_classes']
         print(f'Starting to split {split_name} subset with {num_samples} total samples into {num_shards} shards')
         
-        coder = TFRecordCoder(split_data, output_dir, subset=split_name, target_size=target_size, num_shards=num_shards)
+        coder = TFRecordCoder(split_data, output_dir, subset=split_name, target_size=target_size, num_shards=num_shards, num_classes=num_classes)
         coder.execute_convert()        
         coder.label_map = metadata_splits['label_map']
         file_logs.update({split_name:coder.filepath_log})

@@ -75,6 +75,7 @@ class DatasetConfig(BaseConfig):
                  dataset_name='PNAS',
                  label_col='family',
                  target_size=(224,224),
+                 channels=3,
                  low_class_count_thresh=3,
                  data_splits={'val_size':0.2,'test_size':0.2},
                  tfrecord_root_dir=r'/media/data/jacob/Fossil_Project/tfrecord_data',
@@ -85,6 +86,7 @@ class DatasetConfig(BaseConfig):
         super().__init__(dataset_name=dataset_name,
                          label_col=label_col,
                          target_size=target_size,
+                         channels=channels,
                          low_class_count_thresh=low_class_count_thresh,
                          data_splits=data_splits,
                          tfrecord_root_dir=tfrecord_root_dir,
@@ -94,9 +96,19 @@ class DatasetConfig(BaseConfig):
 class TrainConfig(BaseConfig):
     
     def __init__(self,
+                 model_name='shallow',
                  batch_size=32,
+                 frozen_layers=(0,-4),
+                 base_learning_rate=0.001,
+                 buffer_size=1000,
+                 num_epochs=50,
                  seed=3):
-        super().__init__(batch_size=batch_size,
+        super().__init__(model_name=model_name,
+                         batch_size=batch_size,
+                         frozen_layers=frozen_layers,
+                         base_learning_rate=base_learning_rate,
+                         buffer_size=buffer_size,
+                         num_epochs=num_epochs,
                          seed=seed)
         
         

@@ -16,8 +16,10 @@ def set_visible_gpus(gpu_ids=[0]):
     from tensorflow.config import experimental
     gpus = experimental.get_visible_devices('GPU')
     if gpus:
+#         print(gpus)
         experimental.set_visible_devices([gpus[i] for i in gpu_ids], 'GPU')
         logical_gpus = experimental.get_visible_devices('GPU')
         print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPU")
+        print(logical_gpus)
     else:
         print("No visible GPUs found")

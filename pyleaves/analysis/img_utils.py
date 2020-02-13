@@ -236,62 +236,14 @@ class JPGCoder(Coder):
 ##################################################################
 
 
-# def decode_example(serialized_example):
-#     feature_description = {
-#     'image/height': tf.io.FixedLenFeature([], tf.int64, default_value=0),
-#     'image/width': tf.io.FixedLenFeature([], tf.int64, default_value=0),
-#     'image/channels': tf.io.FixedLenFeature([], tf.int64, default_value=0),
-#     'image/bytes': tf.io.FixedLenFeature([], tf.string),
-#     'label': tf.io.FixedLenFeature([], tf.int64, default_value=-1)
-#                             }
-#     features = tf.io.parse_single_example(serialized_example,features=feature_description)
-
-#     img = tf.image.decode_jpeg(features['image/bytes'], channels=3)
-#     img = tf.image.convert_image_dtype(img, dtype=tf.float32)
-#     label = tf.cast(features['label'], tf.int32)
-
-#     return img, label
-# #################################################################
-# def encode_image(img):
-#     '''
-#     Encode image array as jpg prior to constructing Examples for TFRecords for compressed file size.
-#     '''
-#     return tf.image.encode_jpeg(img, optimize_size=True, chroma_downsampling=False)
-
-# def decode_image(img_string, channels=3):
-#     return tf.io.decode_image(img_string,channels=channels)
-# ##################################################################
-# def encode_example(img, label_int):
-#     shape = img.shape
-#     img_buffer = tf.image.encode_jpeg(img, optimize_size=True, chroma_downsampling=False) #.tostring() 
-#     features = {
-#         'image/bytes': _bytes_feature(img_buffer),
-#         'label': _int64_feature(label_int)
-#     }
-#     example_proto = tf.train.Example(features=tf.train.Features(feature=features))
-#     return example_proto.SerializeToString()
-#     features = {
-#         'image/height': _int64_feature(shape[0]),
-#         'image/width': _int64_feature(shape[1]),
-#         'image/channels': _int64_feature(shape[2]),
-#         'image/bytes': _bytes_feature(img_buffer),
-#         'label': _int64_feature(label_int)
-#     }
-#     example_proto = tf.train.Example(features=tf.train.Features(feature=features))
-#     return example_proto.SerializeToString()
-
-
-
-
 def load_and_encode_example(path, label, target_size = (224,224)):
     img = load_image(path, target_size=target_size)
     return encode_example(img,label)
 
 
-
 class TFRecordCoder(JPGCoder):
 
-    def __init__(self, data, root_dir, subset='train', target_size=(224,224), num_shards=10):
+    def __init__(self, data, root_dir, subset='train', target_size=(224,224), num_shards=10, num_classes=1000):
         '''
         Example usage:
         
@@ -311,6 +263,7 @@ class TFRecordCoder(JPGCoder):
         self.subset = subset
         self.target_size = target_size        
         self.num_shards = num_shards
+        self.num_classes=num_classes
         
         self.num_samples = len(data['label'])
         self.indices = np.arange(self.num_samples)
@@ -366,7 +319,10 @@ class TFRecordCoder(JPGCoder):
 
         img = tf.image.decode_jpeg(features['image/bytes'], channels=3)
         img = tf.image.convert_image_dtype(img, dtype=tf.float32)
+        img = tf.image.resize_image_with_pad(img, *self.target_size)
+        
         label = tf.cast(features['label'], tf.int32)
+        label = tf.one_hot(label, depth=self.num_classes)
 
         return img, label
     
@@ -379,6 +335,7 @@ class TFRecordCoder(JPGCoder):
     def stage_dataset(self, data):
         paths = [path[0] for path in data['path']]
         labels = [label for label in data['label']]
+
         shard_size = self.num_samples//self.num_shards
         print('self.num_shards',self.num_shards)
         return self._get_sharded_dataset(paths, labels, shard_size)
@@ -405,14 +362,26 @@ class TFRecordCoder(JPGCoder):
             print("Unexpected error:", sys.exc_info())
             print(f'[ERROR] {e}')
             raise
-
+#     @tf.function
     def execute_convert(self):
         print(f"converting {self.num_samples} images to tfrecord")
         staged_data = self.stage_dataset(data=self.data)
-        
-        for shard_id, (images, labels) in enumerate(staged_data):
 
-            self.execute_batch(shard_id+1, images, labels)
+        for shard_id, (images, labels) in enumerate(staged_data):
+            self.execute_batch(shard_id, images, labels)
+        
+        
+#         data_iterator = staged_data.make_one_shot_iterator().get_next()
+#         sess = tf.Session()
+#         with sess.as_default():
+#             for shard_id in range(self.num_shards):
+                
+#                 images, labels = sess.run(data_iterator)
+                
+#                 self.execute_batch(shard_id, images, labels)
+        
+        
+
 
             
 

@@ -22,9 +22,9 @@ from pyleaves.config import DatasetConfig, TrainConfig, ExperimentConfig
 from stuf import stuf
 
 import tensorflow as tf
-tf.enable_eager_execution()
-gpu_ids = [0]
-set_visible_gpus(gpu_ids)
+# tf.enable_eager_execution()
+# gpu_ids = [0]
+# set_visible_gpus(gpu_ids)
 
     
     
@@ -47,6 +47,7 @@ class BaseTrainer:
     def transform(self):
         self.x, self.y = self.db_filter(self.db_df)
         self.data_splits, self.metadata_splits = self.split_data(self.x, self.y)
+        self.num_classes = self.metadata_splits['train']['num_classes']
         self.label_encodings = self.get_label_encodings(self.db_df, label_col=self.config.label_col)
         return self.data_splits
     
@@ -125,83 +126,103 @@ class BaseTrainer:
             if np.all([len(records_list) > 0 for _, records_list in tfrecords.items()]):    
                 for records_subset, records_list in tfrecords.items():
                     print(f'found {len(records_list)} records in {records_subset}')
-                return TFRecordCoder(self.data_splits['train'], self.root_dir), tfrecords
+                return TFRecordCoder(self.data_splits['train'], self.root_dir,num_classes=self.num_classes), tfrecords
         
         print('Creating records')
         return create_tfrecords(self.config)
     
+    def get_data_loader(self, subset='train'):
+        assert subset in self.tfrecord_files.keys()
+    
+        return self.coder.read_tfrecords(self.tfrecord_files[subset],
+                                  buffer_size=self.config.buffer_size,
+                                  seed=self.config.seed,
+                                  batch_size=self.config.batch_size)
+    
+    def get_model_params(self, subset='train'):
+        metadata = self.metadata_splits[subset]
+        config = self.config
+        
+        params = {'name':config.model_name,
+                  'num_classes':metadata['num_classes'],
+                  'frozen_layers':config.frozen_layers,
+                  'input_shape':(*config.target_size,config.channels),
+                  'base_learning_rate':config.base_learning_rate
+                 }
+        return params
+    
+    def get_fit_params(self):
+        params = {'steps_per_epoch' : self.metadata_splits['train']['num_samples']//self.config.batch_size,
+                  'validation_steps' : self.metadata_splits['val']['num_samples']//self.config.batch_size,
+                  'epochs' : self.config.num_epochs
+                 }
+        return params
+    
+    
+    
+# class KerasTrainer(BaseTrain):
+    
+#     def __init__(self, experiment_config)
 
-    
-    
-
-dataset_config = DatasetConfig(dataset_name='Leaves', #'Fossil',
-                               label_col='family',
-                               target_size=(224,224),
-                               low_class_count_thresh=2, #0,
-                               data_splits={'val_size':0.2,'test_size':0.2},
-                               tfrecord_root_dir=r'/media/data/jacob/Fossil_Project/tfrecord_data',
-                               num_shards=10)
-
-train_config = TrainConfig(batch_size=32,
-                           seed=4)
-
-experiment_config = ExperimentConfig(dataset_config=dataset_config,
-                                     train_config=train_config)
-    
-trainer = BaseTrainer(experiment_config=experiment_config)
-# db_df = trainer.db_query(dataset_name='Fossil')
-# db_df.head()
-
-##LOAD AND PLOT 1 BATCH OF IMAGES AND LABELS FROM FOSSIL DATASET
-
-train_data = trainer.coder.read_tfrecords(trainer.tfrecord_files['train'], buffer_size=500, seed=trainer.config.seed, batch_size=trainer.config.batch_size)
-
-for imgs, labels in train_data.take(1):
-    labels = [trainer.label_encodings[label] for label in labels.numpy()]
-    plot_image_grid(imgs, labels, 4, 8)
-
-AUTOTUNE = tf.data.experimental.AUTOTUNE
-subsets = ['train','val','test']
-    
-for subset in subsets:
-    data = tf.data.Dataset.from_tensor_slices(trainer.tfrecord_files[subset]) \
-            .apply(lambda x: tf.data.TFRecordDataset(x)) \
-            .map(trainer.coder.decode_example,num_parallel_calls=AUTOTUNE) \
-            .shuffle(buffer_size=500, seed=trainer.config.seed) \
-            .batch(trainer.config.batch_size, drop_remainder=False) \
-            .prefetch(AUTOTUNE)
-    
-    try:
-        for i, (imgs, labels) in enumerate(data):
-            print(i, imgs.shape, labels.shape)
-    
-    finally:
-        pass
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     
     
     
 
     
+if __name__ == '__main__':
+
+    dataset_config = DatasetConfig(dataset_name='Leaves', #'Fossil',
+                                   label_col='family',
+                                   target_size=(224,224),
+                                   low_class_count_thresh=2, #0,
+                                   data_splits={'val_size':0.2,'test_size':0.2},
+                                   tfrecord_root_dir=r'/media/data/jacob/Fossil_Project/tfrecord_data',
+                                   num_shards=10)
+
+    train_config = TrainConfig(batch_size=32,
+                               seed=4)
+
+    experiment_config = ExperimentConfig(dataset_config=dataset_config,
+                                         train_config=train_config)
+
+    trainer = BaseTrainer(experiment_config=experiment_config)
+    # db_df = trainer.db_query(dataset_name='Fossil')
+    # db_df.head()
+
+    ##LOAD AND PLOT 1 BATCH OF IMAGES AND LABELS FROM FOSSIL DATASET
+
+    train_data = trainer.coder.read_tfrecords(trainer.tfrecord_files['train'], buffer_size=500, seed=trainer.config.seed, batch_size=trainer.config.batch_size)
+
+    for imgs, labels in train_data.take(1):
+        labels = [trainer.label_encodings[label] for label in labels.numpy()]
+        plot_image_grid(imgs, labels, 4, 8)
+
     
     
-from tqdm import tqdm
-invalid_images = []
-for k, v in trainer.data_splits.items():
-    print(k)
+
+# AUTOTUNE = tf.data.experimental.AUTOTUNE
+# subsets = ['train','val','test']
     
-    for path in tqdm(v['path']):
-        if not os.path.isfile(path[0]):
-            print(f'FILE NOT FOUND: {path[0]}')
-            invalid_images.append(path[0])
-            
-            
+# for subset in subsets:
+#     data = tf.data.Dataset.from_tensor_slices(trainer.tfrecord_files[subset]) \
+#             .apply(lambda x: tf.data.TFRecordDataset(x)) \
+#             .map(trainer.coder.decode_example,num_parallel_calls=AUTOTUNE) \
+#             .shuffle(buffer_size=500, seed=trainer.config.seed) \
+#             .batch(trainer.config.batch_size, drop_remainder=False) \
+#             .prefetch(AUTOTUNE)
+#     try:
+#         for i, (imgs, labels) in enumerate(data):
+#             print(i, imgs.shape, labels.shape)
+#     finally:
+#         pass
+    
+
+# from tqdm import tqdm
+# invalid_images = []
+# for k, v in trainer.data_splits.items():
+#     print(k)
+    
+#     for path in tqdm(v['path']):
+#         if not os.path.isfile(path[0]):
+#             print(f'FILE NOT FOUND: {path[0]}')
+#             invalid_images.append(path[0])

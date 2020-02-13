@@ -125,7 +125,6 @@ def check_if_tfrecords_exist(output_dir):
 
 
 
-
 def bytes_feature(value):
     """Returns a bytes_list from a string / byte."""
     # If the value is an eager tensor BytesList won't unpack a string from an EagerTensor.
