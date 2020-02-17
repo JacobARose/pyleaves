@@ -1,13 +1,10 @@
 """
-Created on Tue Dec 17 03:23:32 2019
+Created on Mon Feb 10 03:23:32 2019
 
-script: pyleaves/pyleaves/train/train.py
+script: pyleaves/pyleaves/train/example_train.py
 
 @author: JacobARose
 """
-import argparse
-import numpy as np
-import os
 
 
 def main(dataset_name='PNAS',
@@ -17,14 +14,6 @@ def main(dataset_name='PNAS',
          batch_size=64,
          base_learning_rate=0.001,
          num_epochs=100):
-
-
-    import tensorflow as tf
-    tf.enable_eager_execution()
-
-    from pyleaves.utils import ensure_dir_exists, set_visible_gpus
-    
-    set_visible_gpus(gpu_ids)
 
     from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, one_hot_encode_labels #, one_hot_decode_labels
     from pyleaves.data_pipeline.tf_data_loaders import DatasetBuilder
@@ -84,6 +73,7 @@ def main(dataset_name='PNAS',
                  validation_steps=fit_params['validation_steps'],
                  callbacks=callbacks
                  )
+    return history
     
     
 if __name__=='__main__':    
@@ -104,7 +94,23 @@ if __name__=='__main__':
     ]
     
     '''
+   
+    import argparse
+    import numpy as np
+    import os
+
+    import tensorflow as tf
+    tf.enable_eager_execution()
     
+    import mlflow
+    import mlflow.tensorflow
+    mlflow.set_tracking_uri(r'/media/data/jacob/Fossil_Project/mlflow')
+    
+    mlflow.tensorflow.autolog()    
+    
+    
+    print(mlflow.tracking.get_tracking_uri())
+    print(mlflow.get_artifact_uri())
     
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dataset_name', default='PNAS', type=str, help='Name of dataset of images to use for creating TFRecords')
@@ -115,10 +121,16 @@ if __name__=='__main__':
     parser.add_argument('-bsz', '--batch_size', default=64, type=int, help='Batch size. What else do you need to know?')
     parser.add_argument('-lr', '--base_learning_rate', default=0.001, type=float, help='Starting learning rate')
     parser.add_argument('-epochs', '--num_epochs', default=100, type=int, help='Number of epochs')
+    parser.add_argument('-f',default='')
+
+    from pyleaves.utils import ensure_dir_exists, set_visible_gpus   
+    from pyleaves.analysis.mlflow_utils import mlflow_log_history, mlflow_log_best_history
+
     
     args = parser.parse_args()
 
-    main(args.dataset_name,
+    set_visible_gpus([args.gpu_id])    
+    history = main(args.dataset_name,
          args.model_name,
          [args.gpu_id],
          args.tfrecord_dir,
@@ -127,7 +139,9 @@ if __name__=='__main__':
          args.num_epochs)
     
     
+#     mlflow_log_best_history(history)
     
+    mlflow_log_history(history)
     
     
     

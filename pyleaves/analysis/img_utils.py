@@ -392,8 +392,8 @@ class TFRecordCoder(JPGCoder):
             .apply(lambda x: tf.data.TFRecordDataset(x)) \
             .map(self.decode_example,num_parallel_calls=AUTOTUNE) \
             .shuffle(buffer_size=buffer_size, seed=seed) \
-            .repeat() \
             .batch(batch_size,drop_remainder=drop_remainder) \
+            .repeat() \
             .prefetch(AUTOTUNE)
             
 
