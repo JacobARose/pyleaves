@@ -13,7 +13,7 @@ import pandas as pd
 from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, generate_encoding_map
 from pyleaves import leavesdb
 from pyleaves.data_pipeline.tf_data_loaders import DatasetBuilder
-from pyleaves.analysis.img_utils import TFRecordCoder, plot_image_grid
+from pyleaves.analysis.img_utils import TFRecordCoder, plot_image_grid, imagenet_mean_subtraction, ImageAugmentor
 from pyleaves.leavesdb.tf_utils.tf_utils import train_val_test_split, get_data_splits_metadata
 from pyleaves.leavesdb.tf_utils.create_tfrecords import main as create_tfrecords
 from pyleaves.utils import ensure_dir_exists, set_visible_gpus
@@ -22,10 +22,10 @@ from pyleaves.config import DatasetConfig, TrainConfig, ExperimentConfig
 from stuf import stuf
 
 import tensorflow as tf
-# tf.enable_eager_execution()
+tf.compat.v1.enable_eager_execution()
 # gpu_ids = [0]
 # set_visible_gpus(gpu_ids)
-
+AUTOTUNE = tf.data.experimental.AUTOTUNE
     
     
 class BaseTrainer:
@@ -35,6 +35,8 @@ class BaseTrainer:
         self.config = experiment_config
         self.name = ''
         self.tfrecord_root_dir = self.config.dirs['tfrecord_root_dir']       
+        self.preprocessing = self.config.preprocessing
+        self.augmentors = ImageAugmentor()
         
         self.extract()
         self.transform()
@@ -100,10 +102,11 @@ class BaseTrainer:
         return self.data_splits, self.metadata_splits
     
     def get_label_encodings(self, db_df, label_col='family'):
-        self.label_encodings = leavesdb.db_query.generate_encoding_map(db_df, text_label_col=label_col, int_label_col='label')
-        self.num_classes = len(self.label_encodings)
+#         self.label_encodings = leavesdb.db_query.generate_encoding_map(db_df, text_label_col=label_col, int_label_col='label')
+        self.label_encodings = leavesdb.db_query.get_label_encodings(db_df, y_col=label_col, low_count_thresh=self.config.low_class_count_thresh)
+        print('Getting label_encodings:\n Previous computed num_classes =',self.num_classes,'\n num_classes based on label_encodings =',len(self.label_encodings))
+#         self.num_classes = len(self.label_encodings)
         return self.label_encodings
-    
     
     def stage_tfrecords(self):
         '''
@@ -119,25 +122,44 @@ class BaseTrainer:
             
             for subset_dir in os.listdir(dataset_root_dir):
                 if len(os.listdir(os.path.join(dataset_root_dir,subset_dir))) == 0:
-                    return create_tfrecords(self.config)
-                
+                    return create_tfrecords(self.config)  
             tfrecords = self.dataset_builder.collect_subsets(dataset_root_dir)
-            
             if np.all([len(records_list) > 0 for _, records_list in tfrecords.items()]):    
                 for records_subset, records_list in tfrecords.items():
                     print(f'found {len(records_list)} records in {records_subset}')
                 return TFRecordCoder(self.data_splits['train'], self.root_dir,num_classes=self.num_classes), tfrecords
-        
         print('Creating records')
         return create_tfrecords(self.config)
     
+    
     def get_data_loader(self, subset='train'):
         assert subset in self.tfrecord_files.keys()
+        
+        tfrecord_paths = self.tfrecord_files[subset]
+        config = self.config
     
-        return self.coder.read_tfrecords(self.tfrecord_files[subset],
-                                  buffer_size=self.config.buffer_size,
-                                  seed=self.config.seed,
-                                  batch_size=self.config.batch_size)
+        data = tf.data.Dataset.from_tensor_slices(tfrecord_paths) \
+                    .apply(lambda x: tf.data.TFRecordDataset(x)) \
+                    .map(self.coder.decode_example, num_parallel_calls=AUTOTUNE)
+        
+        if self.preprocessing == 'imagenet':
+            data = data.map(imagenet_mean_subtraction, num_parallel_calls=AUTOTUNE)
+        
+        if subset == 'train':
+            data = data.shuffle(buffer_size=config.buffer_size, seed=config.seed)
+            
+            if config.augment_images == True:
+                data = data.map(self.augmentors.rotate, num_parallel_calls=AUTOTUNE) \
+                           .map(self.augmentors.flip, num_parallel_calls=AUTOTUNE) \
+                           .map(self.augmentors.color, num_parallel_calls=AUTOTUNE)
+            
+            
+            
+        data = data.batch(config.batch_size, drop_remainder=False) \
+                   .repeat() \
+                   .prefetch(AUTOTUNE)
+        return data
+
     
     def get_model_params(self, subset='train'):
         metadata = self.metadata_splits[subset]
@@ -171,30 +193,42 @@ class BaseTrainer:
     
 if __name__ == '__main__':
 
-    dataset_config = DatasetConfig(dataset_name='Leaves', #'Fossil',
+    dataset_config = DatasetConfig(dataset_name='PNAS',
                                    label_col='family',
                                    target_size=(224,224),
-                                   low_class_count_thresh=2, #0,
+                                   channels=3,
+                                   low_class_count_thresh=3,
                                    data_splits={'val_size':0.2,'test_size':0.2},
                                    tfrecord_root_dir=r'/media/data/jacob/Fossil_Project/tfrecord_data',
                                    num_shards=10)
 
-    train_config = TrainConfig(batch_size=32,
-                               seed=4)
-
+    train_config = TrainConfig(model_name='vgg16',
+                     batch_size=64,
+                     frozen_layers=(0,-4),
+                     base_learning_rate=1e-4,
+                     buffer_size=1000,
+                     num_epochs=100,
+                     preprocessing=None, #'imagenet',
+                     augment_images=True,
+                     seed=3)
+    
+    
+    
     experiment_config = ExperimentConfig(dataset_config=dataset_config,
                                          train_config=train_config)
 
     trainer = BaseTrainer(experiment_config=experiment_config)
-    # db_df = trainer.db_query(dataset_name='Fossil')
-    # db_df.head()
 
     ##LOAD AND PLOT 1 BATCH OF IMAGES AND LABELS FROM FOSSIL DATASET
+    experiment_dir = os.path.join(r'/media/data/jacob/Fossil_Project','experiments',trainer.config.model_name,trainer.config.dataset_name)
 
-    train_data = trainer.coder.read_tfrecords(trainer.tfrecord_files['train'], buffer_size=500, seed=trainer.config.seed, batch_size=trainer.config.batch_size)
+    train_data = trainer.get_data_loader(subset='train')
+    val_data = trainer.get_data_loader(subset='val')
+    test_data = trainer.get_data_loader(subset='test')
+    
 
     for imgs, labels in train_data.take(1):
-        labels = [trainer.label_encodings[label] for label in labels.numpy()]
+        labels = [trainer.label_encodings[np.argmax(label)] for label in labels.numpy()]
         plot_image_grid(imgs, labels, 4, 8)
 
     

@@ -7,8 +7,8 @@ Script defining various input_fns for use with tf.Estimators
 
 
 
-class BaseInputFunction:
+# class BaseInputFunction:
     
-    def __init__(self):
+#     def __init__(self):
         
         

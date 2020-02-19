@@ -25,6 +25,8 @@ import time
 import tensorflow as tf
 # tf.compat.v1.enable_eager_execution()
 
+from tensorflow.keras.applications.vgg16 import preprocess_input
+
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -270,6 +272,9 @@ class TFRecordCoder(JPGCoder):
         self.data = data
         self.output_ext='tfrecord'
         self.filepath_log = []
+        
+        temp = tf.zeros([4, 32, 32, 3])  # Or tf.zeros
+        tf.keras.applications.vgg16.preprocess_input(temp)
 
     @property
     def subset(self):
@@ -319,13 +324,16 @@ class TFRecordCoder(JPGCoder):
 
         img = tf.image.decode_jpeg(features['image/bytes'], channels=3)
         img = tf.image.convert_image_dtype(img, dtype=tf.float32)
-        img = tf.image.resize_image_with_pad(img, *self.target_size)
+        img = tf.image.resize_image_with_pad(img, *self.target_size)        
+        
+
         
         label = tf.cast(features['label'], tf.int32)
         label = tf.one_hot(label, depth=self.num_classes)
 
         return img, label
-    
+#         img = preprocess_input(img)
+
     def _get_sharded_dataset(self, paths, labels, shard_size):
         return tf.data.Dataset.from_tensor_slices((paths, labels)) \
                 .map(self.parse_image,num_parallel_calls=AUTOTUNE) \
@@ -370,21 +378,6 @@ class TFRecordCoder(JPGCoder):
         for shard_id, (images, labels) in enumerate(staged_data):
             self.execute_batch(shard_id, images, labels)
         
-        
-#         data_iterator = staged_data.make_one_shot_iterator().get_next()
-#         sess = tf.Session()
-#         with sess.as_default():
-#             for shard_id in range(self.num_shards):
-                
-#                 images, labels = sess.run(data_iterator)
-                
-#                 self.execute_batch(shard_id, images, labels)
-        
-        
-
-
-            
-
     def read_tfrecords(self, tfrecord_paths=None, buffer_size=100, seed=17, batch_size=16, drop_remainder=False):
         if tfrecord_paths is None:
             tfrecord_paths = self.filepath_log
@@ -392,11 +385,124 @@ class TFRecordCoder(JPGCoder):
             .apply(lambda x: tf.data.TFRecordDataset(x)) \
             .map(self.decode_example,num_parallel_calls=AUTOTUNE) \
             .shuffle(buffer_size=buffer_size, seed=seed) \
-            .repeat() \
             .batch(batch_size,drop_remainder=drop_remainder) \
+            .repeat() \
             .prefetch(AUTOTUNE)
             
+_R_MEAN = 123.68 / 255.0
+_G_MEAN = 116.78 / 255.0
+_B_MEAN = 103.94 / 255.0
+        
+def imagenet_mean_subtraction(image, label):
+    """
+    Subtracts the given means from each image channel.
+    For example:
+        means = [123.68, 116.779, 103.939]
+        image = imagenet_mean_subtraction(image, means)
+    Args:
+        image: a tensor of size [height, width, C].
+        means: a C-vector of values to subtract from each channel.
+        num_channels: number of color channels in the image that will be distorted.
+    Returns:
+        the centered image.
+    Raises:
+        ValueError: If the rank of `image` is unknown, if `image` has a rank other
+        than three or if the number of channels in `image` doesn't match the
+        number of values in `means`.
+    """
+    
 
+    means = tf.reshape(
+                        tf.constant([_R_MEAN, _G_MEAN, _B_MEAN]),
+                        [1,1,3]
+                       )
+    
+    if image.get_shape().ndims != 3:
+        raise ValueError('Input must be of size [height, width, C>0]')
+
+#     if len(means) != num_channels:
+#         raise ValueError('len(means) must match the number of channels')
+
+    return image - means, label
+        
+
+    
+    
+class ImageAugmentor:
+
+
+    def rotate(self, x: tf.Tensor, label: tf.Tensor) -> tf.Tensor:
+        """Rotation augmentation
+
+        Args:
+            x: Image
+
+        Returns:
+            Augmented image
+        """
+
+        # Rotate 0, 90, 180, 270 degrees
+        return tf.image.rot90(x, tf.random_uniform(shape=[], minval=0, maxval=4, dtype=tf.int32)), label
+
+
+    def flip(self, x: tf.Tensor, label: tf.Tensor) -> tf.Tensor:
+        """Flip augmentation
+
+        Args:
+            x: Image to flip
+
+        Returns:
+            Augmented image
+        """
+        x = tf.image.random_flip_left_right(x)
+        x = tf.image.random_flip_up_down(x)
+
+        return x, label
+
+    def color(self, x: tf.Tensor, label: tf.Tensor) -> tf.Tensor:
+        """Color augmentation
+
+        Args:
+            x: Image
+
+        Returns:
+            Augmented image
+        """
+        x = tf.image.random_hue(x, 0.08)
+        x = tf.image.random_saturation(x, 0.6, 1.6)
+        x = tf.image.random_brightness(x, 0.05)
+        x = tf.image.random_contrast(x, 0.7, 1.3)
+        return x, label
+
+
+    
+    
+
+    
+# def augment(x: tf.Tensor) -> tf.Tensor:
+#     """Some augmentation
+
+#     Args:
+#         x: Image
+
+#     Returns:
+#         Augmented image
+#     """
+#     x = .... # augmentation here
+#     return x
+
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+##############################################################################
+##############################################################################        
         
 
 class CorruptJPEGError(Exception):
@@ -410,18 +516,10 @@ class CorruptJPEGError(Exception):
             type(self).corrupted_files.append(*args)
         
 
-            
+
 ##############################################################################
 ##############################################################################
 #DASK
-# @dask.delayed
-# def load(filepath):
-#     return cv2.imread(filepath)
-
-# @dask.delayed
-# def save(filepath, img):
-#     cv2.imwrite(filepath, img)
-#     return filepath
 
 # @dask.delayed
 def load(filepath):

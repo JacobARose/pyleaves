@@ -102,6 +102,8 @@ class TrainConfig(BaseConfig):
                  base_learning_rate=0.001,
                  buffer_size=1000,
                  num_epochs=50,
+                 preprocessing=None,
+                 augment_images=False,
                  seed=3):
         super().__init__(model_name=model_name,
                          batch_size=batch_size,
@@ -109,7 +111,15 @@ class TrainConfig(BaseConfig):
                          base_learning_rate=base_learning_rate,
                          buffer_size=buffer_size,
                          num_epochs=num_epochs,
+                         preprocessing=preprocessing,
+                         augment_images=augment_images,
                          seed=seed)
+        '''
+        
+        preprocessing : Can be any of [None, 'imagenet']
+            If 'imagenet', subtract hard-coded imagenet mean from each of the RGB channels
+        
+        '''
         
         
 class ExperimentConfig(BaseConfig):
