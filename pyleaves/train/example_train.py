@@ -15,31 +15,12 @@ def main(dataset_name='PNAS',
          batch_size=64,
          target_size=(224,224),
          base_learning_rate=0.001,
-<<<<<<< HEAD
          num_epochs=100,
          preprocessing='imagenet',
          augment_images=False):
             
 #     reset_keras_session()
     tf.reset_default_graph()
-=======
-         num_epochs=100):
-
-    from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, one_hot_encode_labels #, one_hot_decode_labels
-    from pyleaves.data_pipeline.tf_data_loaders import DatasetBuilder
-    from pyleaves.leavesdb.db_query import get_label_encodings as _get_label_encodings, load_from_db
-    from pyleaves.leavesdb.tf_utils.tf_utils import train_val_test_split as _train_val_test_split
-
-    from pyleaves.models.keras_models import build_model #vgg16_base, xception_base, resnet_50_v2_base, resnet_101_v2_base, shallow
-    from pyleaves.train.callbacks import get_callbacks
-
-    from pyleaves.config import DatasetConfig, TrainConfig, ExperimentConfig
-    from pyleaves.train.base_train import BaseTrainer
-    
-    
-
-
->>>>>>> 142fee97f7495797d81e8c4a50d8d24bead4e487
     dataset_config = DatasetConfig(dataset_name=dataset_name,
                                    label_col='family',
                                    target_size=target_size,
@@ -126,7 +107,6 @@ if __name__=='__main__':
     import mlflow.tensorflow
     mlflow.set_tracking_uri(r'/media/data/jacob/Fossil_Project/mlflow')
     
-    mlflow.tensorflow.autolog()    
     
     
     print(mlflow.tracking.get_tracking_uri())
@@ -142,14 +122,6 @@ if __name__=='__main__':
     parser.add_argument('-lr', '--base_learning_rate', default=0.001, type=float, help='Starting learning rate')
     parser.add_argument('-epochs', '--num_epochs', default=100, type=int, help='Number of epochs')
     parser.add_argument('-f',default='')
-<<<<<<< HEAD
-=======
-
-    from pyleaves.utils import ensure_dir_exists, set_visible_gpus   
-    from pyleaves.analysis.mlflow_utils import mlflow_log_history, mlflow_log_best_history
-
-    
->>>>>>> 142fee97f7495797d81e8c4a50d8d24bead4e487
     args = parser.parse_args()
     
     from pyleaves.utils import ensure_dir_exists, set_visible_gpus   
@@ -157,7 +129,6 @@ if __name__=='__main__':
     
     from pyleaves.analysis.mlflow_utils import mlflow_log_history, mlflow_log_best_history
 
-<<<<<<< HEAD
     ####
     from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, one_hot_encode_labels #, one_hot_decode_labels
     from pyleaves.data_pipeline.tf_data_loaders import DatasetBuilder
@@ -167,16 +138,6 @@ if __name__=='__main__':
     from pyleaves.train.callbacks import get_callbacks
     from pyleaves.config import DatasetConfig, TrainConfig, ExperimentConfig
     from pyleaves.train.base_train import BaseTrainer
-=======
-    set_visible_gpus([args.gpu_id])    
-    history = main(args.dataset_name,
-         args.model_name,
-         [args.gpu_id],
-         args.tfrecord_dir,
-         args.batch_size,
-         args.base_learning_rate,
-         args.num_epochs)
->>>>>>> 142fee97f7495797d81e8c4a50d8d24bead4e487
     
 
     if args.model_name in ['vgg16', 'resnet_50_v2','resnet_101_v2']:
@@ -186,44 +147,39 @@ if __name__=='__main__':
     else:
         target_size=(224,224) 
     
-<<<<<<< HEAD
 
+    mlflow.set_experiment('Base Learning rate hp_search')
+    
     learning_rates = [0.001,1e-4,1e-5,1e-6]
     histories = []
     for lr in learning_rates:
         
-        experiment_dir = os.path.join(r'/media/data/jacob/Fossil_Project','experiments',args.model_name,args.dataset_name,f'lr-{lr}')
-        
-        args.base_learning_rate=lr
-        args.target_size=target_size
-        mlflow.log_params(args.__dict__)        
-        
-        print('STARTING LEARNING RATE =',lr)
-        history = main(args.dataset_name,
-             args.model_name,
-             experiment_dir,
-             [args.gpu_id],
-             args.tfrecord_dir,
-             batch_size=args.batch_size,
-             target_size=target_size,
-             base_learning_rate=lr,
-             num_epochs=args.num_epochs,
-             preprocessing='imagenet',
-             augment_images=True)
-#              args.base_learning_rate,
-        
-    
-        histories.append((lr,history))
-    #     mlflow_log_best_history(history)
+        with mlflow.start_run(run_name=f'lr={lr}'):
+            experiment_dir = os.path.join(r'/media/data/jacob/Fossil_Project','experiments',args.model_name,args.dataset_name,f'lr-{lr}')
 
-        mlflow_log_history(history)
-=======
-#     mlflow_log_best_history(history)
+            args.base_learning_rate=lr
+            args.target_size=target_size
+            
+            mlflow.tensorflow.autolog()
+            mlflow.log_params(args.__dict__)        
+
+            print('STARTING LEARNING RATE =',lr)
+            history = main(args.dataset_name,
+                 args.model_name,
+                 experiment_dir,
+                 [args.gpu_id],
+                 args.tfrecord_dir,
+                 batch_size=args.batch_size,
+                 target_size=target_size,
+                 base_learning_rate=lr,
+                 num_epochs=args.num_epochs,
+                 preprocessing='imagenet',
+                 augment_images=True)
+
+            histories.append((lr,history))
+        #     mlflow_log_best_history(history)
+            mlflow_log_history(history)
     
-    mlflow_log_history(history)
->>>>>>> 142fee97f7495797d81e8c4a50d8d24bead4e487
-    
-#         tf.reset_default_graph()
     
     
     

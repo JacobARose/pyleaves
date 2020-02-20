@@ -10,22 +10,28 @@ import dataset
 import numpy as np
 import os
 import pandas as pd
+
+import tensorflow as tf
+tf.compat.v1.enable_eager_execution()
+
+from pyleaves.utils import ensure_dir_exists, set_visible_gpus
+gpu_ids = [6]
+set_visible_gpus(gpu_ids)
+AUTOTUNE = tf.data.experimental.AUTOTUNE
+
+
+
 from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, generate_encoding_map
 from pyleaves import leavesdb
 from pyleaves.data_pipeline.tf_data_loaders import DatasetBuilder
 from pyleaves.analysis.img_utils import TFRecordCoder, plot_image_grid, imagenet_mean_subtraction, ImageAugmentor
 from pyleaves.leavesdb.tf_utils.tf_utils import train_val_test_split, get_data_splits_metadata
 from pyleaves.leavesdb.tf_utils.create_tfrecords import main as create_tfrecords
-from pyleaves.utils import ensure_dir_exists, set_visible_gpus
+
 from pyleaves.config import DatasetConfig, TrainConfig, ExperimentConfig
 
 from stuf import stuf
 
-import tensorflow as tf
-tf.compat.v1.enable_eager_execution()
-# gpu_ids = [0]
-# set_visible_gpus(gpu_ids)
-AUTOTUNE = tf.data.experimental.AUTOTUNE
     
     
 class BaseTrainer:
@@ -208,7 +214,7 @@ if __name__ == '__main__':
                      base_learning_rate=1e-4,
                      buffer_size=1000,
                      num_epochs=100,
-                     preprocessing=None, #'imagenet',
+                     preprocessing='imagenet',
                      augment_images=True,
                      seed=3)
     
@@ -229,6 +235,7 @@ if __name__ == '__main__':
 
     for imgs, labels in train_data.take(1):
         labels = [trainer.label_encodings[np.argmax(label)] for label in labels.numpy()]
+        imgs = (imgs.numpy()+1)/2
         plot_image_grid(imgs, labels, 4, 8)
 
     
