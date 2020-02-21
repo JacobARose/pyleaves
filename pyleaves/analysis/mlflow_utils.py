@@ -9,16 +9,12 @@ Logging utils for working with mlflow
 import mlflow
 
 
-<<<<<<< HEAD
 # def mlflow_log_params_dict(params_dict: dict):
     
 #     for k,v in params_dict.items():
 #         mlflow.log_para
 
 
-
-=======
->>>>>>> 142fee97f7495797d81e8c4a50d8d24bead4e487
 def mlflow_log_history(history):
     '''
     Log full metric history per each epoch

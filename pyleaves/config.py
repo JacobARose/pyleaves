@@ -131,3 +131,17 @@ class ExperimentConfig(BaseConfig):
         self.train_config = train_config
         
         super().__init__(**dataset_config, **train_config)
+        
+        
+        
+        
+        
+class MLFlowConfig(BaseConfig):
+    '''
+    Config for packaging parameters used in managing MLFlow servers/loggers
+    '''
+    def __init__(self,
+                 experiment_name='default',
+                 tracking_uri=r'/media/data/jacob/Fossil_Project/mlflow',
+                 artifact_uri=r'/media/data/jacob/Fossil_Project/tfrecord_data'):
+        self.experiment_name = experiment_name

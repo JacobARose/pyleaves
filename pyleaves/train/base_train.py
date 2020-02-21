@@ -15,8 +15,8 @@ import tensorflow as tf
 tf.compat.v1.enable_eager_execution()
 
 from pyleaves.utils import ensure_dir_exists, set_visible_gpus
-gpu_ids = [6]
-set_visible_gpus(gpu_ids)
+# gpu_ids = [6]
+# set_visible_gpus(gpu_ids)
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
@@ -186,6 +186,18 @@ class BaseTrainer:
                  }
         return params
     
+    
+    
+class MLFlowTrainer(BaseTrainer):
+    
+    '''
+    Subclass of BaseTrainer that uses mlflow.log_artifacts to log the exact tfrecord files used in experiment.
+    
+    '''
+    def __init__(self, *args, **kwargs):
+        
+    
+
     
     
 # class KerasTrainer(BaseTrain):

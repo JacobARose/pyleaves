@@ -10,6 +10,17 @@ from pyleaves.data_pipeline.preprocessing import generate_encoding_map, encode_l
 from pyleaves import leavesdb
 from pyleaves.utils import ensure_dir_exists
 
+
+def reset_eager_session():
+    '''
+    Version for eager execution without explicit tf.Session()
+    Helper function for resetting Tensorflow session and default graph, mainly for scripts that involve multiple experiments.
+    Likely could be simplified or scaled down, written to ensure everything is reset.
+    '''
+    tf.reset_default_graph()
+    K.clear_session()
+
+
 def reset_keras_session():
     '''
     Helper function for resetting Tensorflow session and default graph, mainly for scripts that involve multiple experiments.

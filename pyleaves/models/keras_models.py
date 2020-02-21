@@ -60,7 +60,11 @@ def shallow(input_shape=(224,224,3)):
     return model
 
 
-def build_model(name='shallow', num_classes=10000, frozen_layers=(0,-4), input_shape=(224,224,3), base_learning_rate=0.0001):
+def build_model(name='shallow',
+                num_classes=10000,
+                frozen_layers=(0,-4),
+                input_shape=(224,224,3),
+                base_learning_rate=0.0001):
 
     if name == 'shallow':
         base = shallow(input_shape)
