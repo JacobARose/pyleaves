@@ -10,7 +10,7 @@ from stuf import stuf
 from pyleaves.data_pipeline.preprocessing import generate_encoding_map, encode_labels, filter_low_count_labels
 from pyleaves import leavesdb
 
-def get_label_encodings(dataset='Fossil', y_col='family', low_count_thresh=0):
+def get_label_encodings(data_df=None, dataset='Fossil', y_col='family', low_count_thresh=0):
     '''
     Arguments:
         db: dataset.database.Database, Must be an open connection to a database
@@ -26,8 +26,12 @@ def get_label_encodings(dataset='Fossil', y_col='family', low_count_thresh=0):
 
 
     '''
-    data, _ = load_from_db(dataset_name=dataset)
-
+    if data_df is None:
+        data, _ = load_from_db(dataset_name=dataset)
+    else:
+        data=data_df
+    
+    
     data_df = encode_labels(data)
     data_df = filter_low_count_labels(data_df, threshold=low_count_thresh)
     data_df = encode_labels(data_df) #Re-encode numeric labels after removing sub-threshold classes so that max(labels) == len(labels)

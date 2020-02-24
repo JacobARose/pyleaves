@@ -4,10 +4,10 @@
 # jupyter checkpoints
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
-
+*/*/.ipynb_checkpoints/*
 
 */dask-worker-space/*
-
+*/*/dask-worker-space/*
 # Setuptools distribution folder.
 /dist/
 

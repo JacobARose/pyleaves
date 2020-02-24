@@ -5,6 +5,8 @@ Model definitions for tensorflow.keras model architectures
 import numpy as np
 import os
 import tensorflow as tf
+# from pyleaves.utils import set_visible_gpus
+# set_visible_gpus([4])
 from tensorflow.python.keras.models import Sequential, Model
 from tensorflow.python.keras.layers import  Dropout, Input
 from tensorflow.python.keras.layers import Dense, Flatten
@@ -18,6 +20,7 @@ import matplotlib.pyplot as plt
 from pyleaves.train.metrics import METRICS
 
 def vgg16_base(input_shape=(224,224,3), frozen_layers=(0,-4)):
+    print('printing vgg16 base with input_shape=',input_shape)
     vgg16_model = tf.keras.applications.vgg16.VGG16(weights='imagenet',
                         include_top=False, input_tensor=Input(shape=input_shape))
     for layer in vgg16_model.layers[frozen_layers[0]:frozen_layers[1]]:
@@ -66,6 +69,8 @@ def build_model(name='shallow',
                 input_shape=(224,224,3),
                 base_learning_rate=0.0001):
 
+    print('building model: ',name)
+    
     if name == 'shallow':
         base = shallow(input_shape)
     elif name == 'vgg16':

@@ -5,13 +5,16 @@ from tensorflow.compat.v1.keras.callbacks import (CSVLogger,
                                                   TensorBoard,
                                                   LearningRateScheduler,
                                                   EarlyStopping)
-
+import datetime
 
 def get_callbacks(weights_best=r'./model_ckpt.h5', logs_dir=r'/media/data/jacob', restore_best_weights=False):
     
+    
+    
     checkpoint = ModelCheckpoint(weights_best, monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='min',restore_best_weights=restore_best_weights)
+    
     tfboard = TensorBoard(log_dir=logs_dir)
     csv = CSVLogger(os.path.join(logs_dir,'training_log.csv'))
-    early = EarlyStopping(monitor='val_loss', patience=20, verbose=1)
+    early = EarlyStopping(monitor='val_loss', patience=30, verbose=1)
     
     return [checkpoint,tfboard,early,csv]

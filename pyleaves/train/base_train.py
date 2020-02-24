@@ -24,7 +24,7 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, generate_encoding_map
 from pyleaves import leavesdb
 from pyleaves.data_pipeline.tf_data_loaders import DatasetBuilder
-from pyleaves.analysis.img_utils import TFRecordCoder, plot_image_grid, imagenet_mean_subtraction, ImageAugmentor
+from pyleaves.analysis.img_utils import TFRecordCoder, plot_image_grid, imagenet_mean_subtraction, ImageAugmentor, get_keras_preprocessing_function
 from pyleaves.leavesdb.tf_utils.tf_utils import train_val_test_split, get_data_splits_metadata
 from pyleaves.leavesdb.tf_utils.create_tfrecords import main as create_tfrecords
 
@@ -40,9 +40,11 @@ class BaseTrainer:
         
         self.config = experiment_config
         self.name = ''
-        self.tfrecord_root_dir = self.config.dirs['tfrecord_root_dir']       
-        self.preprocessing = self.config.preprocessing
-        self.augmentors = ImageAugmentor()
+        self.tfrecord_root_dir = self.config.dirs['tfrecord_root_dir']     
+        if self.config.preprocessing:
+            self.preprocessing = get_keras_preprocessing_function(self.config.model_name, self.config.input_format)
+            
+        self.augmentors = ImageAugmentor(self.config.augmentations)
         
         self.extract()
         self.transform()
@@ -50,6 +52,8 @@ class BaseTrainer:
         
     def extract(self):
         self.db_df = self.db_query(dataset_name=self.config.dataset_name)
+        self.target_size = self.config.target_size
+        self.num_channels = self.config.num_channels
         return self.db_df
     
     def transform(self):
@@ -133,7 +137,7 @@ class BaseTrainer:
             if np.all([len(records_list) > 0 for _, records_list in tfrecords.items()]):    
                 for records_subset, records_list in tfrecords.items():
                     print(f'found {len(records_list)} records in {records_subset}')
-                return TFRecordCoder(self.data_splits['train'], self.root_dir,num_classes=self.num_classes), tfrecords
+                return TFRecordCoder(self.data_splits['train'], self.root_dir,target_size=self.target_size, num_channels=self.num_channels, num_classes=self.num_classes), tfrecords
         print('Creating records')
         return create_tfrecords(self.config)
     
@@ -146,20 +150,18 @@ class BaseTrainer:
     
         data = tf.data.Dataset.from_tensor_slices(tfrecord_paths) \
                     .apply(lambda x: tf.data.TFRecordDataset(x)) \
-                    .map(self.coder.decode_example, num_parallel_calls=AUTOTUNE)
-        
-        if self.preprocessing == 'imagenet':
-            data = data.map(imagenet_mean_subtraction, num_parallel_calls=AUTOTUNE)
+                    .map(self.coder.decode_example, num_parallel_calls=AUTOTUNE) \
+                    .map(self.preprocessing, num_parallel_calls=AUTOTUNE)        
+#         if self.preprocessing == 'imagenet':
+#             data = data.map(imagenet_mean_subtraction, num_parallel_calls=AUTOTUNE)
         
         if subset == 'train':
             data = data.shuffle(buffer_size=config.buffer_size, seed=config.seed)
             
             if config.augment_images == True:
                 data = data.map(self.augmentors.rotate, num_parallel_calls=AUTOTUNE) \
-                           .map(self.augmentors.flip, num_parallel_calls=AUTOTUNE) \
-                           .map(self.augmentors.color, num_parallel_calls=AUTOTUNE)
-            
-            
+                           .map(self.augmentors.flip, num_parallel_calls=AUTOTUNE) #\
+#                            .map(self.augmentors.color, num_parallel_calls=AUTOTUNE)
             
         data = data.batch(config.batch_size, drop_remainder=False) \
                    .repeat() \
@@ -174,7 +176,7 @@ class BaseTrainer:
         params = {'name':config.model_name,
                   'num_classes':metadata['num_classes'],
                   'frozen_layers':config.frozen_layers,
-                  'input_shape':(*config.target_size,config.channels),
+                  'input_shape':(*config.target_size,config.num_channels),
                   'base_learning_rate':config.base_learning_rate
                  }
         return params
@@ -188,13 +190,13 @@ class BaseTrainer:
     
     
     
-class MLFlowTrainer(BaseTrainer):
+# class MLFlowTrainer(BaseTrainer):
     
-    '''
-    Subclass of BaseTrainer that uses mlflow.log_artifacts to log the exact tfrecord files used in experiment.
+#     '''
+#     Subclass of BaseTrainer that uses mlflow.log_artifacts to log the exact tfrecord files used in experiment.
     
-    '''
-    def __init__(self, *args, **kwargs):
+#     '''
+#     def __init__(self, *args, **kwargs):
         
     
 
@@ -205,7 +207,7 @@ class MLFlowTrainer(BaseTrainer):
 #     def __init__(self, experiment_config)
 
     
-    
+
     
 
     

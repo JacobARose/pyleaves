@@ -27,7 +27,6 @@ import tensorflow as tf
 
 from tensorflow.keras.applications.vgg16 import preprocess_input
 
-
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 join = os.path.join
@@ -245,7 +244,7 @@ def load_and_encode_example(path, label, target_size = (224,224)):
 
 class TFRecordCoder(JPGCoder):
 
-    def __init__(self, data, root_dir, subset='train', target_size=(224,224), num_shards=10, num_classes=1000):
+    def __init__(self, data, root_dir, subset='train', target_size=(224,224), num_channels=3, num_shards=10, num_classes=1000):
         '''
         Example usage:
         
@@ -263,9 +262,10 @@ class TFRecordCoder(JPGCoder):
 #         ensure_dir_exists(join(output_dir,subset))
         self.root_dir = root_dir
         self.subset = subset
-        self.target_size = target_size        
+        self.target_size = target_size
+        self.num_channels = num_channels
         self.num_shards = num_shards
-        self.num_classes=num_classes
+        self.num_classes = num_classes
         
         self.num_samples = len(data['label'])
         self.indices = np.arange(self.num_samples)
@@ -322,11 +322,12 @@ class TFRecordCoder(JPGCoder):
                                 }
         features = tf.io.parse_single_example(example,features=feature_description)
 
-        img = tf.image.decode_jpeg(features['image/bytes'], channels=3)
-        img = tf.image.convert_image_dtype(img, dtype=tf.float32)
-        img = tf.image.resize_image_with_pad(img, *self.target_size)        
-        
-
+        img = tf.image.decode_jpeg(features['image/bytes'], channels=3) # * 255.0
+        img = tf.image.convert_image_dtype(img, dtype=tf.uint8)
+        #img = tf.image.convert_image_dtype(img, dtype=tf.float32)
+        img = tf.image.resize_image_with_pad(img, *self.target_size)
+        if self.num_channels==1:
+            img = tf.image.rgb_to_grayscale(img)
         
         label = tf.cast(features['label'], tf.int32)
         label = tf.one_hot(label, depth=self.num_classes)
@@ -400,7 +401,7 @@ def imagenet_mean_subtraction(image, label):
         means = [123.68, 116.779, 103.939]
         image = imagenet_mean_subtraction(image, means)
     Args:
-        image: a tensor of size [height, width, C].
+        image: a tensor of size [height, width, C]. Range between [0,1]
         means: a C-vector of values to subtract from each channel.
         num_channels: number of color channels in the image that will be distorted.
     Returns:
@@ -424,12 +425,55 @@ def imagenet_mean_subtraction(image, label):
 #         raise ValueError('len(means) must match the number of channels')
 
     return image - means, label
+
+
+
+def get_keras_preprocessing_function(model_name: str, input_format=tuple):
+    '''
+    if input_dict_format==True:
+        Includes value unpacking in preprocess function to accomodate TFDS {'image':...,'label':...} format
+    '''
+    if model_name == 'vgg16':
+        from tensorflow.keras.applications.vgg16 import preprocess_input
+    elif model_name == 'xception':
+        from tensorflow.keras.applications.xception import preprocess_input
+    elif model_name in ['resnet_50_v2','resnet_101_v2']:
+        from tensorflow.keras.applications.resnet_v2 import preprocess_input
+    else:
+        preprocess_input = lambda x: x
+    
+    if input_format==dict:
+        def preprocess_func(input_example):
+
+            x, y = input_example['image'], input_example['label']
+            return preprocess_input(x), y
+        _temp = {'image':tf.zeros([4, 32, 32, 3]), 'label':tf.zeros(())}
+
         
+    elif input_format==tuple:
+        _temp = ( tf.zeros([4, 32, 32, 3]), tf.zeros(()) )
+        def preprocess_func(x, y):
+            return preprocess_input(x), y
+                 
+    else:
+        print('''input_format must be either dict or tuple, corresponding to data organized as:
+              tuple: (x, y)
+              or
+              dict: {'image':x, 'label':y}
+              ''')
+        return None
+    preprocess_func(_temp)    
+    return preprocess_func
 
     
     
 class ImageAugmentor:
-
+    
+    def __init__(self,
+                 augmentations=['rotate',
+                                'flip',
+                                'color']):
+        self.augmentations = augmentations        
 
     def rotate(self, x: tf.Tensor, label: tf.Tensor) -> tf.Tensor:
         """Rotation augmentation

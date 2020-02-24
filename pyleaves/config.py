@@ -75,22 +75,24 @@ class DatasetConfig(BaseConfig):
                  dataset_name='PNAS',
                  label_col='family',
                  target_size=(224,224),
-                 channels=3,
+                 num_channels=3,
                  low_class_count_thresh=3,
                  data_splits={'val_size':0.2,'test_size':0.2},
                  tfrecord_root_dir=r'/media/data/jacob/Fossil_Project/tfrecord_data',
-                 num_shards=10):
+                 num_shards=10,
+                 input_format=tuple):
         self.dirs = {'tfrecord_root_dir':tfrecord_root_dir}
         self.init_directories(self.dirs)
         
         super().__init__(dataset_name=dataset_name,
                          label_col=label_col,
                          target_size=target_size,
-                         channels=channels,
+                         num_channels=num_channels,
                          low_class_count_thresh=low_class_count_thresh,
                          data_splits=data_splits,
                          tfrecord_root_dir=tfrecord_root_dir,
                          num_shards=num_shards,
+                         input_format=input_format,
                          dirs=self.dirs)
         
 class TrainConfig(BaseConfig):
@@ -104,6 +106,7 @@ class TrainConfig(BaseConfig):
                  num_epochs=50,
                  preprocessing=None,
                  augment_images=False,
+                 augmentations=['rotate','flip','color'],
                  seed=3):
         super().__init__(model_name=model_name,
                          batch_size=batch_size,
@@ -113,6 +116,7 @@ class TrainConfig(BaseConfig):
                          num_epochs=num_epochs,
                          preprocessing=preprocessing,
                          augment_images=augment_images,
+                         augmentations=augmentations,
                          seed=seed)
         '''
         

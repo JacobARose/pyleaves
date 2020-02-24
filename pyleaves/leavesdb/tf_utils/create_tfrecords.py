@@ -115,6 +115,7 @@ def save_labels_int2text_tfrecords(labels):
 def save_trainvaltest_tfrecords(dataset_name='PNAS',
                                 output_dir = os.path.expanduser(r'~/data'),
                                 target_size=(224,224),
+                                num_channels=3,
                                 low_count_threshold=10,
                                 val_size=0.3,
                                 test_size=0.3,
@@ -137,7 +138,7 @@ def save_trainvaltest_tfrecords(dataset_name='PNAS',
         num_classes = metadata_splits[split_name]['num_classes']
         print(f'Starting to split {split_name} subset with {num_samples} total samples into {num_shards} shards')
         
-        coder = TFRecordCoder(split_data, output_dir, subset=split_name, target_size=target_size, num_shards=num_shards, num_classes=num_classes)
+        coder = TFRecordCoder(split_data, output_dir, subset=split_name, target_size=target_size, num_channels=num_channels, num_shards=num_shards, num_classes=num_classes)
         coder.execute_convert()        
         coder.label_map = metadata_splits['label_map']
         file_logs.update({split_name:coder.filepath_log})
@@ -162,13 +163,15 @@ def main(config=None):
     
     dataset_name = config.dataset_name
     target_size = config.target_size
+    #TODO add ability to save TFRecords with configurable num_channels, currently just saves rgb
+    num_channels = config.num_channels
     low_count_threshold = config.low_class_count_thresh
     val_size = config.data_splits['val_size']
     test_size = config.data_splits['test_size']
     tfrecord_root_dir = config.tfrecord_root_dir
     num_shards = config.num_shards
     
-    output_dir = os.path.join(tfrecord_root_dir,dataset_name)
+    output_dir = os.path.join(tfrecord_root_dir,dataset_name,f'num_channels-{num_channels}')
 
     file_log = check_if_tfrecords_exist(output_dir)
 
@@ -180,11 +183,12 @@ def main(config=None):
         coder = save_trainvaltest_tfrecords(dataset_name=dataset_name,
                                                    output_dir=output_dir,
                                                    target_size=target_size,
+                                                   num_channels=num_channels,
                                                    low_count_threshold=low_count_threshold,
                                                    val_size=val_size,
                                                    test_size=test_size,
                                                    num_shards=num_shards)
-        label_map = coder.label_map #file_log.pop('label_map', None)
+        label_map = coder.label_map
 
         for subset, records in coder.file_logs.items():
             file_log[subset] = [os.path.join(output_dir,subset,record_fname) for record_fname in sorted(records)]
