@@ -212,7 +212,7 @@ if __name__ == '__main__':
     from pyleaves.leavesdb.tf_utils.create_tfrecords import main as create_tfrecords
 
     from pyleaves.config import DatasetConfig, TrainConfig, ExperimentConfig
-
+    from pyleaves.analysis.mlflow_utils import mlflow_log_history, mlflow_log_best_history
     from stuf import stuf
     import tensorflow_datasets as tfds    
     
@@ -259,7 +259,7 @@ if __name__ == '__main__':
                                                batch_size=args.batch_size,
                                                frozen_layers=(0,-4),
                                                base_learning_rate=args.base_learning_rate,
-                                               buffer_size=1000,
+                                               buffer_size=500,
                                                num_epochs=args.num_epochs,
                                                preprocessing=True,
                                                augment_images=True,
@@ -300,7 +300,7 @@ if __name__ == '__main__':
                      )
         
         mlflow.log_params(trainer.config)    
-    
+        mlflow_log_history(history)
     
 
 
