@@ -286,10 +286,9 @@ class TFRecordCoder(JPGCoder):
         self.output_dir = join(self.root_dir,self._subset)
         ensure_dir_exists(self.output_dir) 
         
-        
     def gen_shard_filepath(self, shard_key, output_dir):
         '''
-        e.g. shard_filepath = self.gen_shard_filepth(shard_key=0, output_dir, output_base_name='train', num_shards=10)
+        e.g. shard_filepath = self.gen_shard_filepth(shard_key=0, output_dir)
         '''
         shard_fname = f'{self.subset}-{str(shard_key).zfill(5)}-of-{str(self.num_shards).zfill(5)}.tfrecord'
         shard_filepath = os.path.join(output_dir,shard_fname)
@@ -299,10 +298,8 @@ class TFRecordCoder(JPGCoder):
 
         img = tf.io.read_file(src_filepath)
         img = tf.image.decode_image(img, channels=3)
-        img = tf.image.resize_image_with_pad(img, *self.target_size)
+        img = tf.compat.v1.image.resize_image_with_pad(img, *self.target_size)
         return img, label
-#         img = tf.image.resize_with_crop_or_pad(img, *self.target_size)
-#         return img, label
 
     def encode_example(self, img, label):
         img = tf.image.encode_jpeg(img, optimize_size=True, chroma_downsampling=False)
@@ -314,7 +311,6 @@ class TFRecordCoder(JPGCoder):
         example_proto = tf.train.Example(features=tf.train.Features(feature=features))
         return example_proto.SerializeToString()
 
-    
     def decode_example(self, example):
         feature_description = {
                                 'image/bytes': tf.io.FixedLenFeature([], tf.string),
@@ -323,18 +319,13 @@ class TFRecordCoder(JPGCoder):
         features = tf.io.parse_single_example(example,features=feature_description)
 
         img = tf.image.decode_jpeg(features['image/bytes'], channels=3) # * 255.0
-        img = tf.image.convert_image_dtype(img, dtype=tf.uint8)
-        #img = tf.image.convert_image_dtype(img, dtype=tf.float32)
-        img = tf.image.resize_image_with_pad(img, *self.target_size)
-        if self.num_channels==1:
-            img = tf.image.rgb_to_grayscale(img)
+        img = tf.compat.v1.image.resize_image_with_pad(img, *self.target_size)
         
         label = tf.cast(features['label'], tf.int32)
         label = tf.one_hot(label, depth=self.num_classes)
 
-        return img, label
-#         img = preprocess_input(img)
-
+        return img, label       
+            
     def _get_sharded_dataset(self, paths, labels, shard_size):
         return tf.data.Dataset.from_tensor_slices((paths, labels)) \
                 .map(self.parse_image,num_parallel_calls=AUTOTUNE) \
@@ -348,7 +339,6 @@ class TFRecordCoder(JPGCoder):
         shard_size = self.num_samples//self.num_shards
         print('self.num_shards',self.num_shards)
         return self._get_sharded_dataset(paths, labels, shard_size)
-#         return tf.data.Dataset.from_tensor_slices((paths, labels))
     
     def execute_batch(self, shard_id, images, labels):
         try:
@@ -371,7 +361,7 @@ class TFRecordCoder(JPGCoder):
             print("Unexpected error:", sys.exc_info())
             print(f'[ERROR] {e}')
             raise
-#     @tf.function
+
     def execute_convert(self):
         print(f"converting {self.num_samples} images to tfrecord")
         staged_data = self.stage_dataset(data=self.data)
@@ -444,17 +434,17 @@ def get_keras_preprocessing_function(model_name: str, input_format=tuple):
     
     if input_format==dict:
         def preprocess_func(input_example):
-
-            x, y = input_example['image'], input_example['label']
+            x = input_example['image']
+            y = input_example['label']
             return preprocess_input(x), y
         _temp = {'image':tf.zeros([4, 32, 32, 3]), 'label':tf.zeros(())}
-
+        preprocess_func(_temp)
         
     elif input_format==tuple:
-        _temp = ( tf.zeros([4, 32, 32, 3]), tf.zeros(()) )
         def preprocess_func(x, y):
             return preprocess_input(x), y
-                 
+        _temp = ( tf.zeros([4, 32, 32, 3]), tf.zeros(()) )        
+        preprocess_func(*_temp)
     else:
         print('''input_format must be either dict or tuple, corresponding to data organized as:
               tuple: (x, y)
@@ -462,8 +452,52 @@ def get_keras_preprocessing_function(model_name: str, input_format=tuple):
               dict: {'image':x, 'label':y}
               ''')
         return None
-    preprocess_func(_temp)    
+    
     return preprocess_func
+
+
+
+
+
+
+# def get_keras_preprocessing_function(model_name: str, input_format=tuple):
+#     '''
+#     if input_dict_format==True:
+#         Includes value unpacking in preprocess function to accomodate TFDS {'image':...,'label':...} format
+#     '''
+#     if model_name == 'vgg16':
+#         from tensorflow.keras.applications.vgg16 import preprocess_input
+#     elif model_name == 'xception':
+#         from tensorflow.keras.applications.xception import preprocess_input
+#     elif model_name in ['resnet_50_v2','resnet_101_v2']:
+#         from tensorflow.keras.applications.resnet_v2 import preprocess_input
+#     else:
+#         preprocess_input = lambda x: x
+    
+#     if input_format==dict:
+#         def preprocess_func(input_example):
+
+#             x = tf.cast(input_example['image'],tf.float32)
+#             y = input_example['label']
+#             return preprocess_input(x), y
+#         _temp = {'image':tf.zeros([4, 32, 32, 3]), 'label':tf.zeros(())}
+#         preprocess_func(_temp)
+        
+#     elif input_format==tuple:
+#         def preprocess_func(x, y):
+#             x = tf.cast(x, tf.float32)
+#             return preprocess_input(x), y
+#         _temp = ( tf.zeros([4, 32, 32, 3]), tf.zeros(()) )        
+#         preprocess_func(*_temp)
+#     else:
+#         print('''input_format must be either dict or tuple, corresponding to data organized as:
+#               tuple: (x, y)
+#               or
+#               dict: {'image':x, 'label':y}
+#               ''')
+#         return None
+    
+#     return preprocess_func
 
     
     
@@ -472,9 +506,10 @@ class ImageAugmentor:
     def __init__(self,
                  augmentations=['rotate',
                                 'flip',
-                                'color']):
+                                'color'],
+                 seed=12):
         self.augmentations = augmentations        
-
+        self.seed = seed
     def rotate(self, x: tf.Tensor, label: tf.Tensor) -> tf.Tensor:
         """Rotation augmentation
 
@@ -486,7 +521,7 @@ class ImageAugmentor:
         """
 
         # Rotate 0, 90, 180, 270 degrees
-        return tf.image.rot90(x, tf.random_uniform(shape=[], minval=0, maxval=4, dtype=tf.int32)), label
+        return tf.image.rot90(x, tf.random.uniform(shape=[], minval=0, maxval=4, dtype=tf.int32,seed=self.seed)), label
 
 
     def flip(self, x: tf.Tensor, label: tf.Tensor) -> tf.Tensor:
@@ -498,8 +533,8 @@ class ImageAugmentor:
         Returns:
             Augmented image
         """
-        x = tf.image.random_flip_left_right(x)
-        x = tf.image.random_flip_up_down(x)
+        x = tf.image.random_flip_left_right(x, seed=self.seed)
+        x = tf.image.random_flip_up_down(x, seed=self.seed)
 
         return x, label
 
@@ -512,12 +547,28 @@ class ImageAugmentor:
         Returns:
             Augmented image
         """
-        x = tf.image.random_hue(x, 0.08)
-        x = tf.image.random_saturation(x, 0.6, 1.6)
-        x = tf.image.random_brightness(x, 0.05)
-        x = tf.image.random_contrast(x, 0.7, 1.3)
+        x = tf.image.random_hue(x, 0.08, seed=self.seed)
+        x = tf.image.random_saturation(x, 0.6, 1.6, seed=self.seed)
+        x = tf.image.random_brightness(x, 0.05, seed=self.seed)
+        x = tf.image.random_contrast(x, 0.7, 1.3, seed=self.seed)
         return x, label
 
+    
+    
+def rgb2gray_3channel(img, label):
+    '''
+    Convert rgb image to grayscale, but keep num_channels=3
+    '''
+    img = tf.image.rgb_to_grayscale(img)
+    img = tf.image.grayscale_to_rgb(img)
+    return img, label
+
+def rgb2gray_1channel(img, label):
+    '''
+    Convert rgb image to grayscale, num_channels from 3 to 1
+    '''
+    img = tf.image.rgb_to_grayscale(img)
+    return img, label    
 
     
     
@@ -535,6 +586,41 @@ class ImageAugmentor:
 #     x = .... # augmentation here
 #     return x
 
+        
+        
+        
+
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         

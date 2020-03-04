@@ -76,11 +76,17 @@ class DatasetConfig(BaseConfig):
                  label_col='family',
                  target_size=(224,224),
                  num_channels=3,
+                 grayscale=False,
                  low_class_count_thresh=3,
                  data_splits={'val_size':0.2,'test_size':0.2},
                  tfrecord_root_dir=r'/media/data/jacob/Fossil_Project/tfrecord_data',
                  num_shards=10,
                  input_format=tuple):
+        '''
+        if grayscale==True and num_channels==3:
+            Convert to grayscale 1 channel then duplicate to 3 channels for full [batch,h,w,3] shape
+        '''
+        
         self.dirs = {'tfrecord_root_dir':tfrecord_root_dir}
         self.init_directories(self.dirs)
         
@@ -88,6 +94,7 @@ class DatasetConfig(BaseConfig):
                          label_col=label_col,
                          target_size=target_size,
                          num_channels=num_channels,
+                         grayscale=grayscale,
                          low_class_count_thresh=low_class_count_thresh,
                          data_splits=data_splits,
                          tfrecord_root_dir=tfrecord_root_dir,
@@ -107,7 +114,9 @@ class TrainConfig(BaseConfig):
                  preprocessing=None,
                  augment_images=False,
                  augmentations=['rotate','flip','color'],
-                 seed=3):
+                 regularization=None,
+                 seed=3,
+                 verbose=True):
         super().__init__(model_name=model_name,
                          batch_size=batch_size,
                          frozen_layers=frozen_layers,
@@ -117,20 +126,47 @@ class TrainConfig(BaseConfig):
                          preprocessing=preprocessing,
                          augment_images=augment_images,
                          augmentations=augmentations,
-                         seed=seed)
+                         regularization=regularization,
+                         seed=seed,
+                         verbose=verbose)
         '''
         
         preprocessing : Can be any of [None, 'imagenet']
             If 'imagenet', subtract hard-coded imagenet mean from each of the RGB channels
         
         '''
+
+        
+class ModelConfig(BaseConfig):
+    
+    def __init__(self,
+                 model_name='vgg16',
+                 num_classes=1000,
+                 frozen_layers=(0,-4),
+                 input_shape=(224,224,3),                 
+                 base_learning_rate=0.0001,
+                 grayscale=False,
+                 regularization=None,
+                 seed=3,
+                 verbose=True):
+        super().__init__(model_name=model_name,
+                         num_classes=num_classes,
+                         frozen_layers=frozen_layers,
+                         input_shape=input_shape,
+                         base_learning_rate=base_learning_rate,
+                         regularization=regularization,
+                         seed=seed,
+                         verbose=verbose)
+        
+        
         
         
 class ExperimentConfig(BaseConfig):
     
     def __init__(self, 
-                 dataset_config,
-                 train_config):
+                 dataset_config={},
+                 train_config={}):
+        
         self.dataset_config = dataset_config
         self.train_config = train_config
         

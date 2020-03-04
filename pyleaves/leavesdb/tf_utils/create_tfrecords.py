@@ -171,7 +171,7 @@ def main(config=None):
     tfrecord_root_dir = config.tfrecord_root_dir
     num_shards = config.num_shards
     
-    output_dir = os.path.join(tfrecord_root_dir,dataset_name,f'num_channels-{num_channels}')
+    output_dir = os.path.join(tfrecord_root_dir,dataset_name,f'num_channels-{num_channels}_thresh-{low_count_threshold}')
 
     file_log = check_if_tfrecords_exist(output_dir)
 

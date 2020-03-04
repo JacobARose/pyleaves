@@ -27,7 +27,7 @@ parser.add_argument('-f',default='')
 args = parser.parse_args()    
 
 import tensorflow as tf
-tf.compat.v1.enable_eager_execution()
+# tf.compat.v1.enable_eager_execution()
 
 from pyleaves.utils import ensure_dir_exists, set_visible_gpus
 gpu_ids = [args.gpu_id]
@@ -108,7 +108,6 @@ class TFDSTrainer(BaseTrainer):
         print('total_samples',total_samples)        
         
         
-        
     def load(self):
         dataset_builder = self.dataset_builder
         splits_specification = self.splits_specification
@@ -119,31 +118,27 @@ class TFDSTrainer(BaseTrainer):
         'test': dataset_builder.as_dataset(split=splits_specification['test'])
         }
         
-#         self.metadata_splits = 
-        
-        
     def get_image_resize_function(self):
         height, width = self.config.target_size
         resizer = partial(tf.image.resize_image_with_pad,
                        target_height=height,
                        target_width=width)
         def resizer_func(x, y):
-            return tf.cast(resizer(x), tf.uint8), y
-        
+            return resizer(x), y
         return resizer_func
+#             return tf.cast(resizer(x), tf.uint8), y
+#         return resizer_func
     
     def decode_tfds_example(self, x, y):
-        x = tf.image.convert_image_dtype(x, dtype=tf.uint8)
+        x = tf.image.convert_image_dtype(x, dtype=tf.float32) #uint8)
         y = tf.cast(y, tf.int32)
         y = tf.one_hot(y, depth=self.num_classes)
         return x, y
         
     def get_data_loader(self, subset='train', skip_preprocessing=False):
         assert subset in self.dataloader_splits.keys()
-        
         data = self.dataloader_splits[subset]
         config = self.config
-    
         resizer = self.get_image_resize_function()
         decode_example = self.decode_tfds_example
         
@@ -153,9 +148,8 @@ class TFDSTrainer(BaseTrainer):
                 return data_sample['image'], data_sample['label']
             data = data.map(preprocessing, num_parallel_calls=AUTOTUNE)            
         else:
-            data = data \
-                  .map(self.preprocessing, num_parallel_calls=AUTOTUNE) # \
-#                   .map(resizer, num_parallel_calls=AUTOTUNE)
+            data = data.map(self.preprocessing, num_parallel_calls=AUTOTUNE)
+        
         data = data.map(decode_example, num_parallel_calls=AUTOTUNE) \
                    .map(resizer, num_parallel_calls=AUTOTUNE)
 #         if self.preprocessing == 'imagenet':
@@ -163,12 +157,11 @@ class TFDSTrainer(BaseTrainer):
         
         if subset == 'train':
             data = data.shuffle(buffer_size=config.buffer_size, seed=config.seed)
-            
             if config.augment_images == True:
                 data = data.map(self.augmentors.rotate, num_parallel_calls=AUTOTUNE) \
                            .map(self.augmentors.flip, num_parallel_calls=AUTOTUNE) #\
 #                            .map(self.augmentors.color, num_parallel_calls=AUTOTUNE)
-#         if not skip_preprocessing:
+
         data = data.batch(config.batch_size, drop_remainder=False) \
                    .repeat() \
                    .prefetch(AUTOTUNE)
@@ -181,7 +174,7 @@ class TFDSTrainer(BaseTrainer):
 
     
     
-    
+
 
 
 
@@ -275,7 +268,7 @@ if __name__ == '__main__':
 #     experiment_dir = os.path.join(r'/media/data/jacob/Fossil_Project','experiments',trainer.config.model_name,trainer.config.dataset_name)
 
     train_data = trainer.get_data_loader(subset='train')#, skip_preprocessing=True)
-    val_data = trainer.get_data_loader(subset='val')
+    val_data = trainer.get_data_loader(subset= 'train') #'val')
     test_data = trainer.get_data_loader(subset='test')
     
     model_params = trainer.get_model_params('train')
@@ -304,10 +297,10 @@ if __name__ == '__main__':
     
 
 
-#     for imgs, labels in train_data.take(1):
-#         labels = [np.argmax(label) for label in labels.numpy()]    
-# #         imgs = (imgs.numpy()+1)/2
-#         plot_image_grid(imgs, labels, 4, 8)
+    for imgs, labels in train_data.take(1):
+        labels = [np.argmax(label) for label in labels.numpy()]    
+#         imgs = (imgs.numpy()+1)/2
+        plot_image_grid(imgs, labels, 4, 8)
 
     
     

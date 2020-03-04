@@ -18,6 +18,7 @@ import itertools
 import matplotlib.pyplot as plt
 
 from pyleaves.train.metrics import METRICS
+from pyleaves.models.base_model import add_regularization
 
 def vgg16_base(input_shape=(224,224,3), frozen_layers=(0,-4)):
     print('printing vgg16 base with input_shape=',input_shape)
@@ -63,12 +64,18 @@ def shallow(input_shape=(224,224,3)):
     return model
 
 
-def build_model(name='shallow',
+def build_model(model_name='shallow',
                 num_classes=10000,
                 frozen_layers=(0,-4),
                 input_shape=(224,224,3),
-                base_learning_rate=0.0001):
+                base_learning_rate=0.0001,
+                regularization=None,
+                **kwargs):
 
+    if 'name' in kwargs:
+        print("keyword 'name' is deprecated in function build_model(), please use 'model_name' instead.")
+        return None
+    
     print('building model: ',name)
     
     if name == 'shallow':
@@ -84,14 +91,22 @@ def build_model(name='shallow',
 
     if name != 'shallow':
         global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
-        conv1 = tf.keras.layers.Dense(2048,activation='relu')
-        conv2 = tf.keras.layers.Dense(512,activation='relu')
+#         conv1 = tf.keras.layers.Dense(2048,activation='relu')
+#         conv2 = tf.keras.layers.Dense(512,activation='relu')
+#         prediction_layer = tf.keras.layers.Dense(num_classes,activation='softmax')
+#         model = tf.keras.Sequential([
+#             base,
+#             global_average_layer,conv1,conv2,
+#             prediction_layer
+#             ])
+        conv = tf.keras.layers.Dense(1024,activation='relu')
         prediction_layer = tf.keras.layers.Dense(num_classes,activation='softmax')
         model = tf.keras.Sequential([
             base,
-            global_average_layer,conv1,conv2,
+            global_average_layer,conv,
             prediction_layer
-            ])
+            ])        
+        
     else:
         prediction_layer = tf.keras.layers.Dense(num_classes,activation='softmax')
         model = tf.keras.Sequential([
@@ -99,7 +114,13 @@ def build_model(name='shallow',
             prediction_layer
             ])
 
-#     base_learning_rate = 0.0001
+        
+    if regularization is not None:
+        if 'l2' in regularization:
+            regularizer = tf.keras.regularizers.l2(regularization['l2'])
+            model = add_regularization(model, regularizer)
+        
+        
     model.compile(optimizer=tf.keras.optimizers.Adam(lr=base_learning_rate),
               loss='categorical_crossentropy',
               metrics=METRICS)

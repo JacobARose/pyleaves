@@ -1,18 +1,13 @@
 """
-Created on Mon Feb 10 03:23:32 2019
+Created on Mon Mar 3 11:25:32 2019
 
-script: pyleaves/pyleaves/train/example_train.py
+script: pyleaves/pyleaves/train/grayscale_train.py
 
 @author: JacobARose
 """
 
 
 def main(experiment_config, experiment_dir):
-
-
-    ############################################
-    #TODO: Moving towards defining most or all run parameters in separate config files
-    ############################################
 
 
     trainer = BaseTrainer(experiment_config=experiment_config)
@@ -42,7 +37,7 @@ def main(experiment_config, experiment_dir):
         plot_image_grid(batch_imgs, [np.argmax(l) for l in batch_labels], 8, 8)
         for i in range(64):
             img = batch_imgs[i,...]
-            print(i, f'min = {np.min(img):.2f}, max = {np.max(img):.2f}, mean = {np.mean(img):.2f}, std = {np.std(img):.2f}')            
+            print(i, f'min = {np.min(img):.2f}, max = {np.max(img):.2f}, mean = {np.mean(img):.2f}, std = {np.std(img):.2f}')
             
         #From [-1.0,1.0] to [0,255]
         uint_imgs = np.array(batch_imgs)
@@ -68,7 +63,8 @@ def main(experiment_config, experiment_dir):
 
     print('model_params',model_params)
     
-    model = build_model(**model_params) 
+    model_builder = VGG16Grayscale(model_params)
+    model = model_builder.build_model()
     
     
     history = model.fit(train_data,
@@ -108,7 +104,7 @@ if __name__=='__main__':
     parser.add_argument('-gpu', '--gpu_id', default=0, type=int, help='integer number of gpu to train on')
 
     parser.add_argument('-tfrec', '--tfrecord_dir', default=r'/media/data/jacob/Fossil_Project/tfrecord_data', type=str, help=r"Parent dir above the location that's intended for saving the TFRecords for this dataset")
-    parser.add_argument('-ch', '--num_channels', default=3, type=int, help='Number of input channels, either 1 for grayscale, or 3 for rgb')    
+    parser.add_argument('-ch', '--num_channels', default=1, type=int, help='Number of input channels, either 1 for grayscale, or 3 for rgb')    
     parser.add_argument('-bsz', '--batch_size', default=64, type=int, help='Batch size. What else do you need to know?')
     parser.add_argument('-lr', '--base_learning_rate', default='1e-4', type=str, help="Starting learning rate, <float> for a single value or 'all' to loop through a hardcoded range of values")
     parser.add_argument('-thresh', '--low_class_count_thresh', default=10, type=int) #3
@@ -123,12 +119,12 @@ if __name__=='__main__':
     tf.compat.v1.enable_eager_execution()
 
     from pyleaves.utils import set_visible_gpus, ensure_dir_exists
-#     args.gpu_id=2
+    args.gpu_id=2
     set_visible_gpus([args.gpu_id])
     ####
     from pyleaves.leavesdb.tf_utils.tf_utils import reset_eager_session
     
-    from pyleaves.models.keras_models import build_model
+    from pyleaves.models.vgg16 import VGG16Grayscale
     from pyleaves.train.callbacks import get_callbacks
     from pyleaves.config import DatasetConfig, TrainConfig, ExperimentConfig
     from pyleaves.train.base_train import BaseTrainer, BaseTrainer_v1
@@ -198,7 +194,7 @@ if __name__=='__main__':
                     dataset_config = DatasetConfig(dataset_name=args.dataset_name,
                                                    label_col='family',
                                                    target_size=target_size,
-                                                   num_channels=args.num_channels,
+                                                   num_channels=1,
                                                    grayscale=True,
                                                    low_class_count_thresh=args.low_class_count_thresh,
                                                    data_splits={'val_size':0.2,'test_size':0.2},
@@ -211,7 +207,7 @@ if __name__=='__main__':
                                                base_learning_rate=args.base_learning_rate,
                                                buffer_size=500,
                                                num_epochs=args.num_epochs,
-                                               preprocessing=True,
+                                               preprocessing=True, #'imagenet',
                                                augment_images=True,
                                                augmentations=['rotate','flip'],
                                                regularization={'l2':0.001},

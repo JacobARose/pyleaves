@@ -16,7 +16,7 @@ def set_visible_gpus(gpu_ids=[0]):
     from tensorflow.config import experimental
     gpus = experimental.get_visible_devices('GPU')
     if gpus:
-        print(gpus)
+#         print(gpus)
         gpu_objects = [gpus[i] for i in gpu_ids]
         experimental.set_visible_devices(gpu_objects, 'GPU')
         experimental.set_memory_growth(*gpu_objects, True)
