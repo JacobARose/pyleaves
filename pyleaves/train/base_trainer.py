@@ -1,5 +1,5 @@
 '''
-base_train.py
+base_trainer.py
 
 Script for implementing basic train logic.
 
@@ -16,10 +16,9 @@ import tensorflow as tf
 # tf.compat.v1.enable_eager_execution()
 
 from pyleaves.utils import ensure_dir_exists, set_visible_gpus
-# gpu_ids = [6]
+# gpu_ids = [3]
 # set_visible_gpus(gpu_ids)
 AUTOTUNE = tf.data.experimental.AUTOTUNE
-
 
 
 from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, generate_encoding_map
@@ -33,26 +32,22 @@ from pyleaves.config import DatasetConfig, TrainConfig, ModelConfig, ExperimentC
 
 from stuf import stuf
 
-    
-    
-class BaseTrainer:
-    
-    def __init__(self, experiment_config):
-        
-        self.config = experiment_config
-        self.name = ''
-        self.tfrecord_root_dir = self.config.dirs['tfrecord_root_dir']     
-        if self.config.preprocessing:
-            self.preprocessing = get_keras_preprocessing_function(self.config.model_name, self.config.input_format)
-            
-        self.augmentors = ImageAugmentor(self.config.augmentations, seed=self.config.seed)
-        self.grayscale = self.config.grayscale
-        self.visualize = False#True
 
-        self.extract()
-        self.transform()
-        self.load()
-        
+
+class SQLManager:
+    '''
+    ETL pipeline for preparing data from Leavesdb SQLite database and staging TFRecords for feeding into data loaders.
+    
+    Meant to be subclassed for use with BaseTrainer and future Trainer classes.
+    '''
+    def __init__(self, experiment_config):
+
+        self.config = experiment_config
+        self.configs = {'experiment_config':self.config}
+        self.name = ''
+        self.tfrecord_root_dir = self.config.dirs['tfrecord_root_dir']
+        self.model_dir = self.config.dirs['model_dir']
+
     def extract(self):
         self.db_df = self.db_query(dataset_name=self.config.dataset_name)
         self.target_size = self.config.target_size
@@ -63,14 +58,14 @@ class BaseTrainer:
         self.x, self.y = self.db_filter(self.db_df)
         self.data_splits, self.metadata_splits = self.split_data(self.x, self.y)
         self.num_classes = self.metadata_splits['train']['num_classes']
+        self.config.num_classes = self.num_classes
         self.label_encodings = self.get_label_encodings(self.db_df, label_col=self.config.label_col)
         return self.data_splits
     
     def load(self):
         self.dataset_builder = DatasetBuilder(root_dir=self.tfrecord_root_dir,
-                                              num_classes=self.num_classes) #,
-#                                               batch_size=self.config.batch_size,
-#                                               seed=self.config.seed)
+                                              num_classes=self.num_classes)
+        
         self.coder, self.tfrecord_files = self.stage_tfrecords()
         return self.tfrecord_files
         
@@ -122,7 +117,6 @@ class BaseTrainer:
         print('Getting label_encodings:\n Previous computed num_classes =',self.num_classes,'\n num_classes based on label_encodings =',len(self.label_encodings))
         return self.label_encodings
     
-    
     def stage_tfrecords(self):
         '''
         Looks for tfrecords corresponding to DatasetConfig parameters, if nonexistent then proceeds to create tfrecords.
@@ -134,7 +128,6 @@ class BaseTrainer:
                                                           self.root_dir,
                                                           subdirs=[dataset_name, f'num_channels-3_thresh-{self.config.low_class_count_thresh}']
                                                          )
-#                                                           subdirs=[dataset_name, f'num_channels-{self.num_channels}_thresh-{self.config.low_class_count_thresh}'])
         if tfrecords is None:
             return create_tfrecords(self.config)
         else:
@@ -144,7 +137,26 @@ class BaseTrainer:
                                  num_channels=self.num_channels, 
                                  num_classes=self.num_classes)
             return coder, tfrecords
+
+
     
+    
+class BaseTrainer(SQLManager):
+    
+    def __init__(self, experiment_config):
+        
+        super().__init__(experiment_config)
+
+        if self.config.preprocessing:
+            self.preprocessing = get_keras_preprocessing_function(self.config.model_name, self.config.input_format)
+            
+        self.augmentors = ImageAugmentor(self.config.augmentations, seed=self.config.seed)
+        self.grayscale = self.config.grayscale
+
+        self.extract()
+        self.transform()
+        self.load()
+        
     
     def get_data_loader(self, subset='train'):
         assert subset in self.tfrecord_files.keys()
@@ -157,12 +169,6 @@ class BaseTrainer:
                     .map(self.coder.decode_example, num_parallel_calls=AUTOTUNE) \
                     .map(self.preprocessing, num_parallel_calls=AUTOTUNE)
 
-#         if self.visualize:
-#             def convert_to_uint(x,y):
-#                 return tf.image.convert_image_dtype(x,dtype=tf.uint8),y
-#             print('Converting data to uint8 for visualization')
-#             data = data.map(convert_to_uint, num_parallel_calls=AUTOTUNE)
-
         if self.grayscale == True:
             if self.num_channels==3:
                 data = data.map(rgb2gray_3channel, num_parallel_calls=AUTOTUNE)
@@ -171,25 +177,24 @@ class BaseTrainer:
 #         if self.preprocessing == 'imagenet':
 #             data = data.map(imagenet_mean_subtraction, num_parallel_calls=AUTOTUNE)
         
-        if subset == 'train':
-            data = data.shuffle(buffer_size=config.buffer_size, seed=config.seed)
-            
+        if subset == 'train':            
             if config.augment_images == True:
                 data = data.map(self.augmentors.rotate, num_parallel_calls=AUTOTUNE) \
-                           .map(self.augmentors.flip, num_parallel_calls=AUTOTUNE) #\
-#                            .map(self.augmentors.color, num_parallel_calls=AUTOTUNE)
-            
+                           .map(self.augmentors.flip, num_parallel_calls=AUTOTUNE)
+                
+            data = data.shuffle(buffer_size=config.buffer_size, seed=config.seed)
+    
         data = data.batch(config.batch_size, drop_remainder=False) \
                    .repeat() \
                    .prefetch(AUTOTUNE)
         
         return data
     
-    def get_model_params(self, subset='train'):
+    def get_model_config(self, subset='train'):
         metadata = self.metadata_splits[subset]
         config = self.config
         
-        model_params = ModelConfig(
+        model_config = ModelConfig(
                                    model_name=config.model_name,
                                    num_classes=metadata['num_classes'],
                                    frozen_layers=config.frozen_layers,
@@ -197,24 +202,25 @@ class BaseTrainer:
                                    base_learning_rate=config.base_learning_rate,
                                    regularization=config.regularization
                                    )
-        return model_params
-        
-        
-#         params = {'name':config.model_name,
-#                   'num_classes':metadata['num_classes'],
-#                   'frozen_layers':config.frozen_layers,
-#                   'input_shape':(*config.target_size,config.num_channels),
-#                   'base_learning_rate':config.base_learning_rate,
-#                   'regularization':config.regularization
-#                  }
-        return params
+        self.configs['model_config'] = model_config
+        return model_config
+
+    def update_model(self, model):
+        '''Simply for adding a tf.keras.models.Model for Trainer to manage'''
+        self.model = model
     
     def get_fit_params(self):
         params = {'steps_per_epoch' : self.metadata_splits['train']['num_samples']//self.config.batch_size,
                   'validation_steps' : self.metadata_splits['val']['num_samples']//self.config.batch_size,
                   'epochs' : self.config.num_epochs
                  }
+        self.configs['fit_params'] = params
         return params
+    
+    
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
     
     
 class BaseTrainer_v1(BaseTrainer):

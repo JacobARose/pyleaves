@@ -23,38 +23,28 @@ import itertools
 import matplotlib.pyplot as plt
 
 import pyleaves
+from pyleaves.models.base_model import BaseModel
 from pyleaves.train.metrics import METRICS
 
 
-class VGG16:
+class VGG16(BaseModel):
     '''
     Example usage:
     
     '''
-    
-    def __init__(self, model_config):
 
-        self.config = model_config
-        
-        self.num_classes = model_config.num_classes
-        self.frozen_layers = model_config.frozen_layers
-        self.input_shape = model_config.input_shape
-        self.base_learning_rate = model_config.base_learning_rate
-        self.regularization = model_config.regularization
-        
+    def __init__(self, model_config, name='VGG16'):
+        super().__init__(model_config, name=name)
+            
     def build_base(self):
-        
-        if weights=='imagenet':
-            input_shape=(224,224,3)
-        else:
-            input_shape=self.input_shape
             
         base = tf.keras.applications.vgg16.VGG16(weights='imagenet',
                                                         include_top=False,
-                                                        input_tensor=Input(shape=input_shape))
+                                                        input_tensor=Input(shape=(224,224,3)))
         
-        for layer in base.layers[self.frozen_layers[0]:self.frozen_layers[1]]:
-            layer.trainable = False
+        if self.frozen_layers is not None:
+            for layer in base.layers[self.frozen_layers[0]:self.frozen_layers[1]]:
+                layer.trainable = False
             
         return base
     
@@ -72,44 +62,25 @@ class VGG16:
         
         return model
     
-    def add_regularization(self, model):
-
-        if self.regularization is not None:
-            if 'l2' in self.regularization:
-                regularizer = tf.keras.regularizers.l2(self.regularization['l2'])
-            elif 'l1' in self.regularization:
-                regularizer = tf.keras.regularizers.l1(self.regularization['l1'])
+#     def build_model(self):
         
-        model = pyleaves.models.base_model.add_regularization(model, regularizer)
+#         base = self.build_base()
         
-        return model
-    
-    def build_model(self):
-        
-        base = self.build_base()
-        
-        model = self.build_head(base)
+#         model = self.build_head(base)
             
-        model = self.add_regularization(model)
-        model.compile(optimizer=tf.keras.optimizers.Adam(lr=self.base_learning_rate),
-                      loss='categorical_crossentropy',
-                      metrics=METRICS)        
+#         model = self.add_regularization(model)
+#         model.compile(optimizer=tf.keras.optimizers.Adam(lr=self.base_learning_rate),
+#                       loss='categorical_crossentropy',
+#                       metrics=METRICS)        
         
-        return model
+#         return model
     
     
     
     
-class VGG16Grayscale(VGG16):
-    def __init__(self, model_config):
-        
-        if 'weights_dir' in model_config:
-            self.weights_dir = model_config.weights_dir
-        else:
-            self.weights_dir = os.path.expanduser(r'~/.keras/models/')
-        self.weights_path = os.path.join(self.weights_dir,'vgg16_grayscale.h5')
-        
-        super().__init__(model_config)
+class VGG16GrayScale(VGG16):
+    def __init__(self, model_config, name='vgg16_grayscale'):        
+        super().__init__(model_config, name=name)
         
             
     def build_base(self):
@@ -219,8 +190,7 @@ class VGG16Grayscale(VGG16):
             if 'conv' in layer.name:
                 base_model.get_layer(layer.name).set_weights(vgg16_weights[layer.name])
 
-#         base_model.summary()
-        base_model.save(self.weights_path)
+        base_model.save(self.weights_filepath)
     
         return base_model
         

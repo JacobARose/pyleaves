@@ -152,7 +152,7 @@ class DatasetBuilder:
                 print('num levels left:', num_searches)
 #                 continue
             else:
-                print('TFRecord searching ERROR. Check recusrsive search terms:', '\n\t'.join(_subdirs))
+                print('TFRecord searching ERROR. Check recursive search terms:', '\n\t'.join(_subdirs))
                 return None
                 
         assert ('train' in current_level) | \

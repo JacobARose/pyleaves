@@ -106,6 +106,7 @@ class TrainConfig(BaseConfig):
     
     def __init__(self,
                  model_name='shallow',
+                 model_dir='/media/data_cifs/jacob/Fossil_Project/models',
                  batch_size=32,
                  frozen_layers=(0,-4),
                  base_learning_rate=0.001,
@@ -117,7 +118,11 @@ class TrainConfig(BaseConfig):
                  regularization=None,
                  seed=3,
                  verbose=True):
+        self.dirs = {'model_dir':model_dir}
+        self.init_directories(self.dirs)
+        
         super().__init__(model_name=model_name,
+                         model_dir=model_dir,
                          batch_size=batch_size,
                          frozen_layers=frozen_layers,
                          base_learning_rate=base_learning_rate,
@@ -128,7 +133,8 @@ class TrainConfig(BaseConfig):
                          augmentations=augmentations,
                          regularization=regularization,
                          seed=seed,
-                         verbose=verbose)
+                         verbose=verbose,
+                         dirs=self.dirs)
         '''
         
         preprocessing : Can be any of [None, 'imagenet']
@@ -138,9 +144,10 @@ class TrainConfig(BaseConfig):
 
         
 class ModelConfig(BaseConfig):
-    
+
     def __init__(self,
                  model_name='vgg16',
+                 model_dir='/media/data_cifs/jacob/Fossil_Project/models',
                  num_classes=1000,
                  frozen_layers=(0,-4),
                  input_shape=(224,224,3),                 
@@ -149,7 +156,9 @@ class ModelConfig(BaseConfig):
                  regularization=None,
                  seed=3,
                  verbose=True):
+        
         super().__init__(model_name=model_name,
+                         model_dir=model_dir,
                          num_classes=num_classes,
                          frozen_layers=frozen_layers,
                          input_shape=input_shape,
@@ -157,24 +166,31 @@ class ModelConfig(BaseConfig):
                          regularization=regularization,
                          seed=seed,
                          verbose=verbose)
-        
+        '''
+        Config for feeding to subclasses of BaseModel for building/loading/saving models
+        '''
         
         
         
 class ExperimentConfig(BaseConfig):
     
     def __init__(self, 
-                 dataset_config={},
-                 train_config={}):
+                 dataset_config=DatasetConfig(),
+                 train_config=TrainConfig()):
         
         self.dataset_config = dataset_config
         self.train_config = train_config
+            
+        self.dirs = {**dataset_config.dirs,**train_config.dirs}
+        
+        train_config.dirs.update(dataset_config.pop('dirs'))
         
         super().__init__(**dataset_config, **train_config)
         
         
-        
-        
+
+train_config=TrainConfig()
+dataset_config=DatasetConfig()        
         
 class MLFlowConfig(BaseConfig):
     '''

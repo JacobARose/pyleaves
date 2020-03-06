@@ -24,31 +24,35 @@ def vgg16_base(input_shape=(224,224,3), frozen_layers=(0,-4)):
     print('printing vgg16 base with input_shape=',input_shape)
     vgg16_model = tf.keras.applications.vgg16.VGG16(weights='imagenet',
                         include_top=False, input_tensor=Input(shape=input_shape))
-    for layer in vgg16_model.layers[frozen_layers[0]:frozen_layers[1]]:
-        layer.trainable = False
+    if frozen_layers is not None:
+        for layer in vgg16_model.layers[frozen_layers[0]:frozen_layers[1]]:
+            layer.trainable = False
     return vgg16_model
 def xception_base(num_classes=10000,frozen_layers=(0,-4)):
     xception = tf.keras.applications.xception.Xception(include_top=False,
                        weights='imagenet', input_tensor=None,
                        input_shape=None, pooling=None, classes=num_classes)
-    for layer in xception.layers[frozen_layers[0]:frozen_layers[1]]:
-        layer.trainable = False
+    if frozen_layers is not None:
+        for layer in xception.layers[frozen_layers[0]:frozen_layers[1]]:
+            layer.trainable = False
     return xception
 
 def resnet_50_v2_base(num_classes=10000,frozen_layers=(0,-4)):
     model = tf.keras.applications.resnet_v2.ResNet50V2(include_top=False,
                        weights='imagenet', input_tensor=None,
                        input_shape=None, pooling=None, classes=num_classes)
-    for layer in model.layers[frozen_layers[0]:frozen_layers[1]]:
-        layer.trainable = False
+    if frozen_layers is not None:
+        for layer in model.layers[frozen_layers[0]:frozen_layers[1]]:
+            layer.trainable = False
     return model
 
 def resnet_101_v2_base(num_classes=10000,frozen_layers=(0,-4)):
     model= tf.keras.applications.resnet_v2.ResNet101V2(include_top=False,
                        weights='imagenet', input_tensor=None,
                        input_shape=None, pooling=None, classes=num_classes)
-    for layer in model.layers[frozen_layers[0]:frozen_layers[1]]:
-        layer.trainable = False
+    if frozen_layers is not None:
+        for layer in model.layers[frozen_layers[0]:frozen_layers[1]]:
+            layer.trainable = False
     return model
 
 def shallow(input_shape=(224,224,3)):
@@ -76,36 +80,36 @@ def build_model(model_name='shallow',
         print("keyword 'name' is deprecated in function build_model(), please use 'model_name' instead.")
         return None
     
-    print('building model: ',name)
+    print('building model: ',model_name)
     
-    if name == 'shallow':
+    if model_name == 'shallow':
         base = shallow(input_shape)
-    elif name == 'vgg16':
+    elif model_name == 'vgg16':
         base = vgg16_base(input_shape, frozen_layers)
-    elif name == 'xception':
+    elif model_name == 'xception':
         base = xception_base(num_classes, frozen_layers)
-    elif name == 'resnet_50_v2':
+    elif model_name == 'resnet_50_v2':
         base = resnet_50_v2_base(num_classes, frozen_layers)
-    elif name == 'resnet_101_v2':
+    elif model_name == 'resnet_101_v2':
         base = resnet_101_v2_base(num_classes, frozen_layers)
 
-    if name != 'shallow':
+    if model_name != 'shallow':
         global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
-#         conv1 = tf.keras.layers.Dense(2048,activation='relu')
-#         conv2 = tf.keras.layers.Dense(512,activation='relu')
-#         prediction_layer = tf.keras.layers.Dense(num_classes,activation='softmax')
-#         model = tf.keras.Sequential([
-#             base,
-#             global_average_layer,conv1,conv2,
-#             prediction_layer
-#             ])
-        conv = tf.keras.layers.Dense(1024,activation='relu')
+        conv1 = tf.keras.layers.Dense(2048,activation='relu')
+        conv2 = tf.keras.layers.Dense(512,activation='relu')
         prediction_layer = tf.keras.layers.Dense(num_classes,activation='softmax')
         model = tf.keras.Sequential([
             base,
-            global_average_layer,conv,
+            global_average_layer,conv1,conv2,
             prediction_layer
-            ])        
+            ])
+#         conv = tf.keras.layers.Dense(1024,activation='relu')
+#         prediction_layer = tf.keras.layers.Dense(num_classes,activation='softmax')
+#         model = tf.keras.Sequential([
+#             base,
+#             global_average_layer,conv,
+#             prediction_layer
+#             ])        
         
     else:
         prediction_layer = tf.keras.layers.Dense(num_classes,activation='softmax')

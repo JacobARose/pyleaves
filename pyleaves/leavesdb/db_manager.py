@@ -223,34 +223,6 @@ def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db
     return {'success_count':count}
 
 
-####
-
-# def update_db(json_filepath, db_path):
-    
-#     TOP_LEVEL_KEYS = ['meta','count','results']
-#     json_file = load(json_filepath)
-#     ######
-#     if not os.path.isfile(db_path):
-#         print(f'[ERROR]: {db_path} does not exist. In order to use update_db user must first instantiate db using build_db_from_json()')
-#         raise Exception
-    
-#     for key in json_file.keys():
-#         if key not in TOP_LEVEL_KEYS:
-#             print(f'[ERROR]: JSON format invalid, {key} is not in set of admissable top level keys. Must be one of {TOP_LEVEL_KEYS}')
-#             raise Exception
-            
-#     if len(json_file['results'])==0:
-#         print('[ERROR]: Provided JSON file contains empty list of new entries')
-#         raise Exception
-#     ######        
-    
-#     db_URI = f'sqlite:///{db_path}'
-#     db = dataset.connect(db_URI)
-#     table = db['dataset']
-    
-#     table.upsert()
-
-
 ########
 
 

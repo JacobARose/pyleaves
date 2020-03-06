@@ -6,7 +6,7 @@ from stuf import stuf
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
-from pyleaves.data_pipeline.preprocessing import generate_encoding_map, encode_labels, filter_low_count_labels, one_hot_encode_labels #, one_hot_decode_labels
+from pyleaves.data_pipeline.preprocessing import generate_encoding_map, encode_labels, filter_low_count_labels, one_hot_encode_labels
 from pyleaves import leavesdb
 from pyleaves.utils import ensure_dir_exists
 
@@ -17,7 +17,8 @@ def reset_eager_session():
     Helper function for resetting Tensorflow session and default graph, mainly for scripts that involve multiple experiments.
     Likely could be simplified or scaled down, written to ensure everything is reset.
     '''
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
+#     tf.reset_default_graph()
     K.clear_session()
 
 

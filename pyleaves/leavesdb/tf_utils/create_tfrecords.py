@@ -13,16 +13,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-# import contextlib2
-# from object_detection.dataset_tools import tf_record_creation_util
-# from sklearn.model_selection import train_test_split
 from stuf import stuf
 import sys
 import tensorflow as tf
 # tf.enable_eager_execution()
 
 from tensorflow.data.experimental import AUTOTUNE
-# from pyleaves.data_pipeline.preprocessing import generate_encoding_map #encode_labels, filter_low_count_labels, one_hot_encode_labels, one_hot_decode_labels
 from pyleaves.analysis.img_utils import TFRecordCoder, plot_image_grid
 from pyleaves.config import DatasetConfig
 from pyleaves import leavesdb
@@ -171,7 +167,7 @@ def main(config=None):
     tfrecord_root_dir = config.tfrecord_root_dir
     num_shards = config.num_shards
     
-    output_dir = os.path.join(tfrecord_root_dir,dataset_name,f'num_channels-{num_channels}_thresh-{low_count_threshold}')
+    output_dir = os.path.join(tfrecord_root_dir,dataset_name,f'num_channels-3_thresh-{low_count_threshold}')
 
     file_log = check_if_tfrecords_exist(output_dir)
 
