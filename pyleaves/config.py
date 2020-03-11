@@ -1,6 +1,7 @@
+import json
 import os
 from pyleaves.utils import ensure_dir_exists
-
+from toolz import diff
 
 class Config:
     """DEPRECATED
@@ -52,21 +53,63 @@ class Config:
         return hasattr(self, name)
 
 
+    
+    
+    
 
 class BaseConfig(dict):
     
-    def __init__(self,**kwargs):
+    def __init__(self,*args, **kwargs):
         '''
         Base class for storing experiment configuration parameters
         '''
+#         print('__init__(kwargs): kwargs = ', kwargs)
+#         print('__dict__ = ', self.__dict__)
+        self.args = args
         for k, v in kwargs.items():
-            self.update({k:v})
-            self.__dict__.update({k:v})
+            if (type(v) is dict) and (k in self.keys()):
+                if (type(self.__dict__[k]) is dict):
+                    self.__dict__[k].update(v)
+            else:
+                self.update({k:v})
+                self.__dict__.update({k:v})
+                
+#         print('After initialization:')
+#         print('__dict__ = ', self.__dict__)
         
-    def init_directories(self, dirs):
-        
+    def init_directories(self, dirs):        
         for dir_name, dir_path in dirs.items():
             ensure_dir_exists(dir_path)
+    
+    @classmethod
+    def load_config(cls, filepath):
+        assert os.path.isfile(filepath)
+        assert filepath.endswith('json')
+        with open(filepath, 'r') as file:
+            data = json.load(file)
+            
+        return cls(**data)
+    
+    def save_config(self, filepath):
+        base_dir = os.path.dirname(filepath)
+        ensure_dir_exists(base_dir)
+        with open(filepath, 'w') as file:
+            json.dump(self, file)
+            
+    def __eq__(self, *seqs):
+        return not any(diff(self, *seqs, default=object()))
+
+    def __sub__(self, *args, **kwargs):
+        return diff(self, *args, **kwargs, default=object())
+
+
+
+#     def __eq__(self, other):
+#         return set(self).symmetric_difference(other)
+
+
+
+    
         
         
 class DatasetConfig(BaseConfig):
@@ -79,15 +122,17 @@ class DatasetConfig(BaseConfig):
                  grayscale=False,
                  low_class_count_thresh=3,
                  data_splits={'val_size':0.2,'test_size':0.2},
+                 num_shards=10,                 
                  tfrecord_root_dir=r'/media/data/jacob/Fossil_Project/tfrecord_data',
-                 num_shards=10,
-                 input_format=tuple):
+                 input_format='tuple',
+                 data_db_path=r'/home/jacob/pyleaves/pyleaves/leavesdb/resources/leavesdb.db',
+                 dirs={}):
         '''
         if grayscale==True and num_channels==3:
             Convert to grayscale 1 channel then duplicate to 3 channels for full [batch,h,w,3] shape
         '''
         
-        self.dirs = {'tfrecord_root_dir':tfrecord_root_dir}
+        self.dirs = {'tfrecord_root_dir':tfrecord_root_dir, **dirs}
         self.init_directories(self.dirs)
         
         super().__init__(dataset_name=dataset_name,
@@ -100,6 +145,7 @@ class DatasetConfig(BaseConfig):
                          tfrecord_root_dir=tfrecord_root_dir,
                          num_shards=num_shards,
                          input_format=input_format,
+                         data_db_path=data_db_path,
                          dirs=self.dirs)
         
 class TrainConfig(BaseConfig):
@@ -117,8 +163,9 @@ class TrainConfig(BaseConfig):
                  augmentations=['rotate','flip','color'],
                  regularization=None,
                  seed=3,
-                 verbose=True):
-        self.dirs = {'model_dir':model_dir}
+                 verbose=True,
+                 dirs={}):
+        self.dirs = {'model_dir':model_dir, **dirs}
         self.init_directories(self.dirs)
         
         super().__init__(model_name=model_name,
@@ -155,7 +202,8 @@ class ModelConfig(BaseConfig):
                  grayscale=False,
                  regularization=None,
                  seed=3,
-                 verbose=True):
+                 verbose=True,
+                 dirs={}):
         
         super().__init__(model_name=model_name,
                          model_dir=model_dir,
@@ -165,7 +213,8 @@ class ModelConfig(BaseConfig):
                          base_learning_rate=base_learning_rate,
                          regularization=regularization,
                          seed=seed,
-                         verbose=verbose)
+                         verbose=verbose,
+                         dirs=dirs)
         '''
         Config for feeding to subclasses of BaseModel for building/loading/saving models
         '''
@@ -174,24 +223,61 @@ class ModelConfig(BaseConfig):
         
 class ExperimentConfig(BaseConfig):
     
-    def __init__(self, 
+    def __init__(self,
                  dataset_config=DatasetConfig(),
-                 train_config=TrainConfig()):
+                 train_config=TrainConfig(),
+                 *args,
+                 **kwargs):
         
         self.dataset_config = dataset_config
         self.train_config = train_config
             
         self.dirs = {**dataset_config.dirs,**train_config.dirs}
         
-        train_config.dirs.update(dataset_config.pop('dirs'))
+        dataset_config.pop('dirs',{})
+        train_config.pop('dirs',{})
         
-        super().__init__(**dataset_config, **train_config)
+#         self.update(**dataset_config.__dict__, **train_config.__dict__)
         
+#         print('dataset_config = ', dataset_config)
+#         print('---'*20)
+#         print('train_config = ', train_config)
+        
+        super().__init__(**dataset_config, **train_config, **kwargs)
+
         
 
-train_config=TrainConfig()
-dataset_config=DatasetConfig()        
-        
+# train_config=TrainConfig()
+# dataset_config=DatasetConfig()
+
+
+# loaded_train_config == train_config #dataset_config
+
+
+# config = ExperimentConfig(dataset_config, train_config)
+
+
+# train_config.save_config(os.path.expanduser('~/experiments/configs/experiment_0/train_config.json'))
+# dataset_config.save_config(os.path.expanduser('~/experiments/configs/experiment_0/dataset_config.json'))
+# config.save_config(os.path.expanduser('~/experiments/configs/experiment_0/experiment_config.json'))
+
+
+# loaded_train_config = train_config.load_config(os.path.expanduser('~/experiments/configs/experiment_0/train_config.json'))
+# loaded_dataset_config = dataset_config.load_config(os.path.expanduser('~/experiments/configs/experiment_0/dataset_config.json'))
+# loaded_config = config.load_config(os.path.expanduser('~/experiments/configs/experiment_0/experiment_config.json'))
+
+
+# a=set(train_config).symmetric_difference(loaded_train_config)
+
+# list(loaded_train_config - train_config)
+# list(loaded_train_config - dataset_config)
+
+
+
+
+
+
+
 class MLFlowConfig(BaseConfig):
     '''
     Config for packaging parameters used in managing MLFlow servers/loggers
@@ -201,3 +287,14 @@ class MLFlowConfig(BaseConfig):
                  tracking_uri=r'/media/data/jacob/Fossil_Project/mlflow',
                  artifact_uri=r'/media/data/jacob/Fossil_Project/tfrecord_data'):
         self.experiment_name = experiment_name
+        
+        
+        
+        
+        
+
+        
+        
+        
+        
+        
