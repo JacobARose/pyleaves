@@ -71,9 +71,10 @@ class ResNet(BaseModel):
         base = self.base_model(weights='imagenet',
                                include_top=False,
                                input_tensor=Input(shape=(224,224,3)))
-        
-        for layer in base.layers[self.frozen_layers[0]:self.frozen_layers[1]]:
-            layer.trainable = False
+
+        if self.frozen_layers is not None:
+            for layer in base.layers[self.frozen_layers[0]:self.frozen_layers[1]]:
+                layer.trainable = False
             
         return base
     

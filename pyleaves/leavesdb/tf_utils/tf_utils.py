@@ -40,26 +40,38 @@ def reset_keras_session():
     K.set_session(sess)
 
 
-def train_val_test_split(image_paths, labels, test_size=0.3, val_size=0.3, random_seed=2376, verbose=True):
+def train_val_test_split(x, y, test_size=0.3, val_size=0.3, random_seed=2376, verbose=True):
+    #TO DO Refactor in order to get arbitrary k splits
+    train_x, train_y = x, y
+    val_x, test_x = [],[]
+    val_y, test_y = [],[]
+    
+    if test_size>0.0:
+        train_x, test_x, train_y, test_y  = train_test_split(x, y, test_size=test_size, random_state=random_seed, shuffle=True, stratify=y)
+    if val_size>0.0:
+        train_x, val_x, train_y, val_y = train_test_split(train_x, train_y, test_size=val_size, random_state=random_seed, shuffle=True, stratify=train_y)
 
-    train_paths, test_paths, train_labels, test_labels  = train_test_split(image_paths, labels, test_size=test_size, random_state=random_seed, shuffle=True, stratify=labels)
-    train_paths, val_paths, train_labels, val_labels = train_test_split(train_paths, train_labels, test_size=val_size, random_state=random_seed, shuffle=True, stratify=train_labels)
-
-    train_data = {'path': train_paths, 'label': train_labels}
-    val_data = {'path': val_paths, 'label': val_labels}
-    test_data = {'path': test_paths, 'label': test_labels}
-
-    data_splits = {'train': train_data,
-                   'val': val_data,
-                   'test': test_data}
+    data_splits = {
+                    'train':
+                            {'path': train_x, 
+                             'label': train_y},
+                    'val':
+                            {'path': val_x,
+                             'label': val_y},
+                    'test':
+                            {'path': test_x, 
+                             'label': test_y}
+                  }
 
     return data_splits
 
 
-def get_data_splits_metadata(data_splits, data_df, class_mode='max', verbose=True):
+def get_data_splits_metadata(data_splits, data_df, encoder=None, class_mode='encoder', verbose=True):
     '''
     
-    class_mode, str: {'max', 'min'}
+    class_mode, str: {'encoder', max', 'min'}
+        if 'encoder':
+            Set num_classes equal to the length of the provided encoder
         if 'max':
             Set num_classes equal to the total number of unique classes expected to be seen in all splits
         if 'min':
@@ -70,8 +82,17 @@ def get_data_splits_metadata(data_splits, data_df, class_mode='max', verbose=Tru
     
     
     metadata_splits = {}
-    metadata_splits['label_map'] = generate_encoding_map(data_df, text_label_col='family', int_label_col='label')
+    if encoder is None:
+        metadata_splits['label_map'] = generate_encoding_map(data_df, text_label_col='family', int_label_col='label')
+    else:
+        metadata_splits['label_map'] = encoder.get_encodings()
     
+    if class_mode=='encoder':
+        if encoder is None:
+            class_mode='max'
+        else:
+            num_classes=len(encoder)
+        
     if class_mode == 'max':
         num_classes=0
         for subset, data in data_splits.items():

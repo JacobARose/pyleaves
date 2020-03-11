@@ -27,60 +27,60 @@ def main(experiment_config, experiment_dir):
     val_data = trainer.get_data_loader(subset= 'val')
     test_data = trainer.get_data_loader(subset='test')
 
-    debug=False
-    if debug:
-        if tf.executing_eagerly():
-            batch_imgs, batch_labels = next(iter(val_data))
-        else:
-            validation_iterator = val_data.make_one_shot_iterator()
-            val_data_next = validation_iterator.get_next()
-            sess = tf.compat.v1.Session()
-            batch_imgs, batch_labels = sess.run(val_data_next)
+#     debug=False
+#     if debug:
+#         if tf.executing_eagerly():
+#             batch_imgs, batch_labels = next(iter(val_data))
+#         else:
+#             validation_iterator = val_data.make_one_shot_iterator()
+#             val_data_next = validation_iterator.get_next()
+#             sess = tf.compat.v1.Session()
+#             batch_imgs, batch_labels = sess.run(val_data_next)
 
-        from pyleaves.analysis.img_utils import plot_image_grid
+#         from pyleaves.analysis.img_utils import plot_image_grid
 
-        plot_image_grid(batch_imgs, [np.argmax(l) for l in batch_labels], 8, 8)
-        for i in range(64):
-            img = batch_imgs[i,...]
-            print(i, f'min = {np.min(img):.2f}, max = {np.max(img):.2f}, mean = {np.mean(img):.2f}, std = {np.std(img):.2f}')            
+#         plot_image_grid(batch_imgs, [np.argmax(l) for l in batch_labels], 8, 8)
+#         for i in range(64):
+#             img = batch_imgs[i,...]
+#             print(i, f'min = {np.min(img):.2f}, max = {np.max(img):.2f}, mean = {np.mean(img):.2f}, std = {np.std(img):.2f}')            
             
-        #From [-1.0,1.0] to [0,255]
-        uint_imgs = np.array(batch_imgs)
-        uint_imgs += 1
-        uint_imgs /= 2
-        uint_imgs *= 255
-        uint_imgs = uint_imgs.astype(np.uint8)
+#         #From [-1.0,1.0] to [0,255]
+#         uint_imgs = np.array(batch_imgs)
+#         uint_imgs += 1
+#         uint_imgs /= 2
+#         uint_imgs *= 255
+#         uint_imgs = uint_imgs.astype(np.uint8)
 
-        print(f'min = {np.min(batch_imgs):.2f}, max = {np.max(batch_imgs):.2f}, mean = {np.mean(batch_imgs):.2f}, std = {np.std(batch_imgs):.2f}')
-        print(f'min = {np.min(uint_imgs)}, max = {np.max(uint_imgs)}, mean = {np.mean(uint_imgs):.2f}, std = {np.std(uint_imgs):.2f}')
+#         print(f'min = {np.min(batch_imgs):.2f}, max = {np.max(batch_imgs):.2f}, mean = {np.mean(batch_imgs):.2f}, std = {np.std(batch_imgs):.2f}')
+#         print(f'min = {np.min(uint_imgs)}, max = {np.max(uint_imgs)}, mean = {np.mean(uint_imgs):.2f}, std = {np.std(uint_imgs):.2f}')
 
-        plot_image_grid(uint_imgs, [np.argmax(l) for l in batch_labels], 8, 8)
+#         plot_image_grid(uint_imgs, [np.argmax(l) for l in batch_labels], 8, 8)
     
+    trainer.init_model_builder()
     
-    
-    model_config = trainer.get_model_config('train')
+#     model_config = trainer.get_model_config('train')
     fit_params = trainer.get_fit_params()
     callbacks = get_callbacks(weights_best=os.path.join(experiment_dir,'weights_best.h5'), 
                               logs_dir=os.path.join(experiment_dir,'tensorboard_logs'), 
                               restore_best_weights=False,
                               val_data=None)
 
-    model_name = model_config.model_name
-    print('model_config:\n',json.dumps(model_config,indent=4))
+#     model_name = model_config.model_name
+#     print('model_config:\n',json.dumps(model_config,indent=4))
     
-    if model_name is 'vgg16':
-        model_builder = VGG16GrayScale(model_config)
-        model = model_builder.build_model()
+#     if model_name is 'vgg16':
+#         model_builder = VGG16GrayScale(model_config)
+#         model = model_builder.build_model()
     
-    elif model_name.startswith('resnet'):
-        model_builder = VGG16(model_config)
-        model = model_builder.build_model()
+#     elif model_name.startswith('resnet'):
+#         model_builder = ResNet(model_config)
+#         model = model_builder.build_model()
     
-    else:
-        model = build_model(**model_config)
+#     else:
+#         model = build_model(**model_config)
     
     
-    history = model.fit(train_data,
+    history = trainer.model.fit(train_data,
                  steps_per_epoch = fit_params['steps_per_epoch'],
                  epochs= fit_params['epochs'],
                  validation_data=val_data,
@@ -97,8 +97,9 @@ def main(experiment_config, experiment_dir):
 if __name__=='__main__':
     '''
     Example:
-    python /home/jacob/pyleaves/pyleaves/train/example_train.py -d all -m all -gpu 3 -bsz 64 -lr 1e-4 --color_type grayscale -thresh 20 -r l2 -r_p 0.001 --experiment BaselinesGrayScale
+    python /home/jacob/pyleaves/pyleaves/train/example_train.py -d all -m all -gpu 3 -bsz 64 -lr 1e-4 --color_type grayscale -thresh 20 -r l2 -r_p 0.001 --experiment BaselinesGrayScale --data_db_path /home/jacob/pyleaves/pyleaves/leavesdb/resources/leavesdb.db
 
+    python /home/jacob/pyleaves/pyleaves/train/example_train.py -d Leaves2020 -m resnet_50_v2 -gpu 3 -bsz 64 -lr 1e-4 --color_type grayscale -thresh 20 -r l2 -r_p 0.001 --experiment BaselinesGrayScale --data_db_path /home/jacob/pyleaves/pyleaves/leavesdb/resources/converted_updated_leavesdb.db
 
     python example_train.py -d PNAS -m resnet_50_v2 -gpu 3 -bsz 64
 
@@ -127,7 +128,8 @@ if __name__=='__main__':
     parser.add_argument('-r', '--regularizations', default='l2', type=str, help='comma separated list of regularizers to search through. Enter combinations of l1 and l2, enter anything else for None.') #3
     parser.add_argument('-r_p', '--r_params', default='0.001', type=str, help='comma separated list of regularizer strengths to search through. Enter combinations of floats.') #3
     parser.add_argument('-epochs', '--num_epochs', default=200, type=int, help='Number of epochs')
-    parser.add_argument('-exp', '--experiment', default='Baselines', type=str, help=r"Name of new or existing MLFlow experiment to log results into. TODO: Add None option")    
+    parser.add_argument('-exp', '--experiment', default='Baselines', type=str, help=r"Name of new or existing MLFlow experiment to log results into. TODO: Add None option")
+    parser.add_argument('--data_db_path', default=r'/home/jacob/pyleaves/pyleaves/leavesdb/resources/leavesdb.db', type=str, help='Directory in which to save/load models and/or model weights')
     parser.add_argument('--model_dir', default=r'/media/data_cifs/jacob/Fossil_Project/models', type=str, help='Directory in which to save/load models and/or model weights')
     parser.add_argument('-tfrec', '--tfrecord_dir', default=r'/media/data/jacob/Fossil_Project/tfrecord_data', type=str, help=r"Parent dir above the location that's intended for saving the TFRecords for this dataset")
     parser.add_argument('-f',default='')
@@ -192,7 +194,7 @@ if __name__=='__main__':
         model_names=[args.model_name]
     #########################################
     if args.dataset_name == 'all':
-        dataset_names = ['PNAS', 'Fossil', 'Leaves']
+        dataset_names = ['PNAS', 'Fossil', 'Leaves2020'] #'Leaves']
     else:
         dataset_names = [args.dataset_name]
         
@@ -300,6 +302,7 @@ if __name__=='__main__':
                                             low_class_count_thresh=args.low_class_count_thresh,
                                             data_splits={'val_size':0.2,'test_size':0.2},
                                             tfrecord_root_dir=args.tfrecord_dir,
+                                            data_db_path=args.data_db_path,
                                             num_shards=10)
 
             train_config = TrainConfig(model_name=args.model_name,
@@ -317,7 +320,7 @@ if __name__=='__main__':
                                        verbose=True)
 
             experiment_config = ExperimentConfig(dataset_config=dataset_config,
-                                                                     train_config=train_config)            
+                                                 train_config=train_config)            
 
             mlflow.tensorflow.autolog()
 

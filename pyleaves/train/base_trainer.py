@@ -15,13 +15,14 @@ import pandas as pd
 import tensorflow as tf
 # tf.compat.v1.enable_eager_execution()
 
-from pyleaves.utils import ensure_dir_exists, set_visible_gpus
+from pyleaves.utils import ensure_dir_exists, set_visible_gpus, validate_filepath
 # gpu_ids = [3]
 # set_visible_gpus(gpu_ids)
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
-from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, generate_encoding_map
+from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, generate_encoding_map, LabelEncoder, get_class_counts
+import pyleaves
 from pyleaves import leavesdb
 from pyleaves.data_pipeline.tf_data_loaders import DatasetBuilder
 from pyleaves.analysis.img_utils import TFRecordCoder, plot_image_grid, imagenet_mean_subtraction, ImageAugmentor, get_keras_preprocessing_function, rgb2gray_3channel, rgb2gray_1channel
@@ -29,7 +30,8 @@ from pyleaves.leavesdb.tf_utils.tf_utils import train_val_test_split, get_data_s
 from pyleaves.leavesdb.tf_utils.create_tfrecords import main as create_tfrecords
 
 from pyleaves.config import DatasetConfig, TrainConfig, ModelConfig, ExperimentConfig
-
+from pyleaves.models.resnet import ResNet, ResNetGrayScale
+from pyleaves.models.vgg16 import VGG16, VGG16GrayScale
 from stuf import stuf
 
 
@@ -40,13 +42,29 @@ class SQLManager:
     
     Meant to be subclassed for use with BaseTrainer and future Trainer classes.
     '''
-    def __init__(self, experiment_config):
+    def __init__(self, experiment_config, label_encoder=None, src_db=pyleaves.DATABASE_PATH):
 
         self.config = experiment_config
         self.configs = {'experiment_config':self.config}
         self.name = ''
-        self.tfrecord_root_dir = self.config.dirs['tfrecord_root_dir']
-        self.model_dir = self.config.dirs['model_dir']
+        self.tfrecord_root_dir = self.config['tfrecord_root_dir']
+        self.model_dir = self.config['model_dir']
+        self.data_db_path = self.config['data_db_path']
+        self.init_dirs()
+        if label_encoder is None:
+            self.encoder = LabelEncoder()
+        else:
+            self.encoder = label_encoder
+        self.src_db = src_db
+        
+    def init_dirs(self):
+        if 'label_encodings_filepath' in self.config:
+            assert validate_filepath(self.config['label_encodings_filepath'],file_type='json')
+            self.label_encodings_filepath = self.config['label_encodings_filepath']
+        else:
+            self.label_encodings_filepath = os.path.join(self.model_dir,f'{self.name}-label_encodings.json')
+
+        self.config['label_encodings_filepath'] = self.label_encodings_filepath        
 
     def extract(self):
         self.db_df = self.db_query(dataset_name=self.config.dataset_name)
@@ -54,12 +72,12 @@ class SQLManager:
         self.num_channels = self.config.num_channels
         return self.db_df
     
-    def transform(self):
-        self.x, self.y = self.db_filter(self.db_df)
+    def transform(self, verbose=False):
+        self.x, self.y = self.db_filter(self.db_df, verbose=verbose)
         self.data_splits, self.metadata_splits = self.split_data(self.x, self.y)
         self.num_classes = self.metadata_splits['train']['num_classes']
         self.config.num_classes = self.num_classes
-        self.label_encodings = self.get_label_encodings(self.db_df, label_col=self.config.label_col)
+        self.label_encodings = self.encoder.get_encodings()
         return self.data_splits
     
     def load(self):
@@ -78,61 +96,102 @@ class SQLManager:
             self.db_df, pd.DataFrame:
                 DataFrame containing columns ['path','label']
         '''
-        self.local_db = leavesdb.init_local_db()
+#         import pdb; pdb.set_trace()
+        self.local_db = leavesdb.init_local_db(src_db=self.src_db)
         self.db = dataset.connect(f'sqlite:///{self.local_db}', row_type=stuf)
         self.db_df = pd.DataFrame(leavesdb.db_query.load_data(self.db, y_col=label_col, dataset=dataset_name))
         
         return self.db_df
     
-    def db_filter(self, db_df):
+    def db_filter(self, db_df, label_col='family', verbose=False):
         '''
         Function to apply preprocessing to output of db_query, prior to conversion of images to TFRecord. 
         
         '''
+#         print('FILTERING: DB_DF.COLUMNS = ',db_df.columns)
         threshold = self.config.low_class_count_thresh
-        db_df = filter_low_count_labels(db_df, threshold=threshold, verbose=self.config.verbose)
-        db_df = encode_labels(db_df)
+        db_df = filter_low_count_labels(db_df, threshold=threshold, verbose=verbose)
+#         if os.path.isfile(self.config['label_encodings_filepath']):
+#             filepath=self.config['label_encodings_filepath']
+#         else:
+#             filepath=None
+        if len(self.encoder)==0:
+            self.encoder.merge_labels(labels=list(db_df[label_col]))
+        self.encoder.save_labels(self.config['label_encodings_filepath'])
+        
+        db_df = self.encoder.filter(db_df, label_col=label_col)
+        
         self.x = db_df['path'].values.reshape((-1,1))
-        self.y = db_df['label'].values
+        self.y = np.array(self.encoder.transform(db_df[label_col]))
+        
+#         self.db_df['label']=self.y
+#         db_df = encode_labels(db_df)
+#         self.x = db_df['path'].values.reshape((-1,1))
+#         self.y = db_df['label'].values
         
         return self.x, self.y
         
-    def split_data(self, x, y):
+    def split_data(self, x, y, verbose=False):
         '''
         Function to split data ino k-splits. Currently, default is to simply split into train/val/test sets
         '''
         val_size = self.config.data_splits['val_size']
         test_size = self.config.data_splits['test_size']
         
-        self.data_splits = train_val_test_split(x, y, val_size, test_size)
+        self.data_splits = train_val_test_split(x, y, val_size=val_size, test_size=test_size)
             
-        self.metadata_splits = get_data_splits_metadata(self.data_splits, self.db_df, verbose=self.config.verbose)
+        self.metadata_splits = get_data_splits_metadata(self.data_splits, self.db_df, encoder=self.encoder, verbose=verbose)
         return self.data_splits, self.metadata_splits
+
+    def get_class_counts(self):
+        class_count_splits = {}
+        for subset, subset_data in self.data_splits.items():
+            print(subset)
+            if type(subset_data['path'])==np.ndarray:
+                subset_data['path'] = subset_data['path'].flatten().tolist()
+            labels, label_counts = get_class_counts(pd.DataFrame.from_dict(subset_data))
+            class_count_splits[subset] = {l:c for l,c in zip(labels, label_counts)}
+        return class_count_splits
     
-    def get_label_encodings(self, db_df, label_col='family'):
-        self.label_encodings = leavesdb.db_query.get_label_encodings(db_df,
-                                                                     y_col=label_col, 
-                                                                     low_count_thresh=self.config.low_class_count_thresh, 
-                                                                     verbose=self.config.verbose)
-        print('Getting label_encodings:\n Previous computed num_classes =',self.num_classes,'\n num_classes based on label_encodings =',len(self.label_encodings))
+    def get_label_encodings(self, db_df, label_col='family', verbose=False):
+        if 'label_encodings_filepath' in self.config:
+            self.label_encodings.merge_labels()
+            # Load encodings from file
+#             self.label_encodings = leavesdb.db_query.load_label_encodings_from_file()
+        if True:
+            self.label_encodings = leavesdb.db_query.get_label_encodings(db_df,
+                                                                         y_col=label_col, 
+                                                                         low_count_thresh=self.config.low_class_count_thresh, 
+                                                                         verbose=verbose) #self.config.verbose)
+        if verbose: print('Getting label_encodings:\n Previous computed num_classes =',self.num_classes,'\n num_classes based on label_encodings =',len(self.label_encodings))
         return self.label_encodings
     
-    def stage_tfrecords(self):
+    def stage_tfrecords(self, verbose=False):
         '''
         Looks for tfrecords corresponding to DatasetConfig parameters, if nonexistent then proceeds to create tfrecords.
         '''
         self.root_dir = self.tfrecord_root_dir
         dataset_name = self.config.dataset_name
+        val_size = self.config.data_splits['val_size']
+        test_size = self.config.data_splits['test_size']
         
-        tfrecords = self.dataset_builder.recursive_search(
-                                                          self.root_dir,
-                                                          subdirs=[dataset_name, f'num_channels-3_thresh-{self.config.low_class_count_thresh}']
-                                                         )
+        #Store records in subdirectories labeled with relevant metadata
+        record_subdirs = [dataset_name, 
+                          f'num_channels-3_thresh-{self.config.low_class_count_thresh}',
+                          f'val_size={val_size}-test_size={test_size}']
+        
+        tfrecords = self.dataset_builder.recursive_search(self.root_dir,
+                                                          subdirs=record_subdirs,
+                                                          verbose=verbose)
         if tfrecords is None:
-            return create_tfrecords(self.config)
+            return create_tfrecords(self.config,
+                                    record_subdirs,
+                                    data_splits=self.data_splits,
+                                    metadata_splits=self.metadata_splits)
         else:
             coder = TFRecordCoder(self.data_splits['train'],
                                  self.root_dir,
+                                 record_subdirs=record_subdirs,
                                  target_size=self.target_size, 
                                  num_channels=self.num_channels, 
                                  num_classes=self.num_classes)
@@ -143,9 +202,9 @@ class SQLManager:
     
 class BaseTrainer(SQLManager):
     
-    def __init__(self, experiment_config):
+    def __init__(self, experiment_config, label_encoder=None, src_db=pyleaves.DATABASE_PATH):
         
-        super().__init__(experiment_config)
+        super().__init__(experiment_config, label_encoder=label_encoder, src_db=src_db)
 
         if self.config.preprocessing:
             self.preprocessing = get_keras_preprocessing_function(self.config.model_name, self.config.input_format)
@@ -190,13 +249,15 @@ class BaseTrainer(SQLManager):
         
         return data
     
-    def get_model_config(self, subset='train'):
-        metadata = self.metadata_splits[subset]
+    def get_model_config(self, subset='train', num_classes=None):
+        if num_classes is None:
+            metadata = self.metadata_splits[subset]
+            num_classes = metadata['num_classes']
         config = self.config
         
         model_config = ModelConfig(
                                    model_name=config.model_name,
-                                   num_classes=metadata['num_classes'],
+                                   num_classes=num_classes,
                                    frozen_layers=config.frozen_layers,
                                    input_shape=(*config.target_size,config.num_channels),
                                    base_learning_rate=config.base_learning_rate,
@@ -205,9 +266,25 @@ class BaseTrainer(SQLManager):
         self.configs['model_config'] = model_config
         return model_config
 
-    def update_model(self, model):
-        '''Simply for adding a tf.keras.models.Model for Trainer to manage'''
-        self.model = model
+    def init_model_builder(self, subset='train', num_classes=None):
+        model_config = self.get_model_config(subset=subset, num_classes=num_classes)
+        self.model_name = model_config.model_name
+        if self.model_name == 'vgg16':
+            self.add_model_manager(VGG16GrayScale(model_config))
+        elif self.model_name.startswith('resnet'):
+            self.add_model_manager(ResNet(model_config))
+        self.model = self.model_manager.build_model()
+    
+    def add_model_manager(self, model_manager):
+        '''Simply for adding a subclass of BaseModel for trainer to keep track of, in order to
+        extend model building/saving/loading/importing/exporting functionality to trainer.'''
+        self.model_manager = model_manager    
+   
+
+        
+#     def update_model(self, model):
+#         '''Simply for adding a tf.keras.models.Model for Trainer to manage'''
+#         self.model = model
     
     def get_fit_params(self):
         params = {'steps_per_epoch' : self.metadata_splits['train']['num_samples']//self.config.batch_size,

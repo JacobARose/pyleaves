@@ -14,20 +14,24 @@ Script for defining a class to manage a multi-stage training process for transfe
 '''
 
 import dataset
+import datetime
 from functools import partial
 import numpy as np
 import os
 import pandas as pd
 
+gpu_ids = '0,1'
 import tensorflow as tf
-# tf.compat.v1.enable_eager_execution()
+os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_ids)
+tf.compat.v1.enable_eager_execution()
 
-from pyleaves.utils import ensure_dir_exists, set_visible_gpus
-# gpu_ids = [3]
-# set_visible_gpus(gpu_ids)
 AUTOTUNE = tf.data.experimental.AUTOTUNE
+from pyleaves.utils import ensure_dir_exists, get_visible_devices
+
+get_visible_devices('GPU')
 
 
+import pyleaves
 from pyleaves.data_pipeline.preprocessing import encode_labels, filter_low_count_labels, generate_encoding_map
 from pyleaves import leavesdb
 from pyleaves.data_pipeline.tf_data_loaders import DatasetBuilder
@@ -36,193 +40,286 @@ from pyleaves.leavesdb.tf_utils.tf_utils import train_val_test_split, get_data_s
 from pyleaves.leavesdb.tf_utils.create_tfrecords import main as create_tfrecords
 
 from pyleaves.config import DatasetConfig, TrainConfig, ModelConfig, ExperimentConfig
-
+from pyleaves.train.base_trainer import BaseTrainer
+from pyleaves.models.resnet import ResNet, ResNetGrayScale
+from pyleaves.models.vgg16 import VGG16, VGG16GrayScale
 from stuf import stuf
 
 
 
-class SQLManager:
-    '''
-    ETL pipeline for preparing data from Leavesdb SQLite database and staging TFRecords for feeding into data loaders.
-    
-    Meant to be subclassed for use with BaseTrainer and future Trainer classes.
-    '''
-    def __init__(self, experiment_config):
 
-        self.config = experiment_config
-        self.configs = {'experiment_config':self.config}
-        self.name = ''
-        self.tfrecord_root_dir = self.config.dirs['tfrecord_root_dir']
-        self.model_dir = self.config.dirs['model_dir']
+        
+        
+        
+        
+    
+class TransferTrainer:
+    
+    def __init__(self, experiment_configs=[], model_builder=None, src_db=pyleaves.DATABASE_PATH):
+        self.model_builder = model_builder
+        self.num_domains = len(experiment_configs) # Number of pipeline stages
 
-    def extract(self):
-        self.db_df = self.db_query(dataset_name=self.config.dataset_name)
-        self.target_size = self.config.target_size
-        self.num_channels = self.config.num_channels
-        return self.db_df
+        self.domains = {'source':BaseTrainer(experiment_configs[0], src_db=src_db)}
+        encoder = self.domains['source'].encoder
+        self.domains.update({'target':BaseTrainer(experiment_configs[1], label_encoder=encoder, src_db=src_db)})
+        self.configs = {'source':experiment_configs[0],
+                        'target':experiment_configs[1]}
+        self.histories = {}
+        
+        
+    def init_model_builder(self, domain='source',subset='train',num_classes=None):
+#         import pdb; pdb.set_trace()
+        model_config = self.get_model_config(domain=domain, subset=subset, num_classes=num_classes)
+        self.model_name = model_config.model_name
+        if self.model_name == 'vgg16':
+            self.add_model_manager(VGG16GrayScale(model_config))
+        elif self.model_name.startswith('resnet'):
+            self.add_model_manager(ResNet(model_config))
+        self.model = self.model_manager.build_model()
+        
+    def get_data_loader(self, domain='source', subset='train'):
+        '''
+        Get the proper trainer instance for specified domain ('source' or 'target'), then from that return the data loader for the specified subset ('train', 'val', or 'test').
+        '''
+        trainer = self.domains[domain]
+        return trainer.get_data_loader(subset=subset)
     
-    def transform(self):
-        self.x, self.y = self.db_filter(self.db_df)
-        self.data_splits, self.metadata_splits = self.split_data(self.x, self.y)
-        self.num_classes = self.metadata_splits['train']['num_classes']
-        self.config.num_classes = self.num_classes
-        self.label_encodings = self.get_label_encodings(self.db_df, label_col=self.config.label_col)
-        return self.data_splits
+    def get_model_config(self, domain='source', subset='train', num_classes=None):
+        trainer = self.domains[domain]
+        return trainer.get_model_config(subset=subset, num_classes=num_classes)
+
+    def get_fit_params(self, domain='source'):
+        trainer = self.domains[domain]
+        return trainer.get_fit_params()
     
-    def load(self):
-        self.dataset_builder = DatasetBuilder(root_dir=self.tfrecord_root_dir,
-                                              num_classes=self.num_classes)
-        
-        self.coder, self.tfrecord_files = self.stage_tfrecords()
-        return self.tfrecord_files
-        
-        
-    def db_query(self, dataset_name='Fossil', label_col='family'):
-        '''
-        Query all filenames and labels associated with dataset_name
-        
-        Return:
-            self.db_df, pd.DataFrame:
-                DataFrame containing columns ['path','label']
-        '''
-        self.local_db = leavesdb.init_local_db()
-        self.db = dataset.connect(f'sqlite:///{self.local_db}', row_type=stuf)
-        self.db_df = pd.DataFrame(leavesdb.db_query.load_data(self.db, y_col=label_col, dataset=dataset_name))
-        
-        return self.db_df
+    def add_model_manager(self, model_manager):
+        '''Simply for adding a subclass of BaseModel for trainer to keep track of, in order to
+        extend model building/saving/loading/importing/exporting functionality to trainer.'''
+        self.model_manager = model_manager
     
-    def db_filter(self, db_df):
-        '''
-        Function to apply preprocessing to output of db_query, prior to conversion of images to TFRecord. 
+    def save_weights(self, filepath):
+        self.model_manager.save_weights(filepath=filepath)
         
-        '''
-        threshold = self.config.low_class_count_thresh
-        db_df = filter_low_count_labels(db_df, threshold=threshold, verbose=self.config.verbose)
-        db_df = encode_labels(db_df)
-        self.x = db_df['path'].values.reshape((-1,1))
-        self.y = db_df['label'].values
+    def load_weights(self, filepath):
+        self.model_manager.load_weights(filepath=filepath)        
+        self.model = self.model_manager.model
         
-        return self.x, self.y
+    def save_model(self, filepath):
+        self.model_manager.save(filepath=filepath)
         
-    def split_data(self, x, y):
-        '''
-        Function to split data ino k-splits. Currently, default is to simply split into train/val/test sets
-        '''
-        val_size = self.config.data_splits['val_size']
-        test_size = self.config.data_splits['test_size']
+    def load_model(self, filepath):
+        self.model_manager.load(filepath=filepath)        
+        self.model = self.model_manager.model
         
-        self.data_splits = train_val_test_split(x, y, val_size, test_size)
-            
-        self.metadata_splits = get_data_splits_metadata(self.data_splits, self.db_df, verbose=self.config.verbose)
-        return self.data_splits, self.metadata_splits
+        
+        
     
-    def get_label_encodings(self, db_df, label_col='family'):
-        self.label_encodings = leavesdb.db_query.get_label_encodings(db_df,
-                                                                     y_col=label_col, 
-                                                                     low_count_thresh=self.config.low_class_count_thresh, 
-                                                                     verbose=self.config.verbose)
-        print('Getting label_encodings:\n Previous computed num_classes =',self.num_classes,'\n num_classes based on label_encodings =',len(self.label_encodings))
-        return self.label_encodings
+
+# from pyleaves.train.callbacks import get_callbacks
+# import json
     
-    def stage_tfrecords(self):
-        '''
-        Looks for tfrecords corresponding to DatasetConfig parameters, if nonexistent then proceeds to create tfrecords.
-        '''
-        self.root_dir = self.tfrecord_root_dir
-        dataset_name = self.config.dataset_name
-        
-        tfrecords = self.dataset_builder.recursive_search(
-                                                          self.root_dir,
-                                                          subdirs=[dataset_name, f'num_channels-3_thresh-{self.config.low_class_count_thresh}']
-                                                         )
-        if tfrecords is None:
-            return create_tfrecords(self.config)
-        else:
-            coder = TFRecordCoder(self.data_splits['train'],
-                                 self.root_dir,
-                                 target_size=self.target_size, 
-                                 num_channels=self.num_channels, 
-                                 num_classes=self.num_classes)
-            return coder, tfrecords
+# model_name = 'vgg16'
+# dataset_names = ['PNAS','Fossil']
+# base_learning_rate=1e-4
+# batch_size=128
+# num_epochs=200
+# regularizer={'l2':0.001}
+# target_size =(224,224)    
+# num_channels = 1
+# color_type='grayscale'
+# low_class_count_thresh=20
+# tfrecord_dir=r'/media/data/jacob/Fossil_Project/tfrecord_data'
+# model_dir = r'/media/data_cifs/jacob/Fossil_Project/models'
 
 
-    
-    
-class BaseTrainer(SQLManager):
-    
-    def __init__(self, experiment_config):
-        
-        super().__init__(experiment_config)
+# dataset_config_source_domain = DatasetConfig(dataset_name=dataset_names[0],
+#                                 label_col='family',
+#                                 target_size=target_size,
+#                                 num_channels=num_channels,
+#                                 grayscale=(color_type=='grayscale'),
+#                                 low_class_count_thresh=low_class_count_thresh,
+#                                 data_splits={'val_size':0.2,'test_size':0.0},
+#                                 tfrecord_root_dir=tfrecord_dir,
+#                                 num_shards=10)
 
-        if self.config.preprocessing:
-            self.preprocessing = get_keras_preprocessing_function(self.config.model_name, self.config.input_format)
-            
-        self.augmentors = ImageAugmentor(self.config.augmentations, seed=self.config.seed)
-        self.grayscale = self.config.grayscale
+# dataset_config_target_domain = DatasetConfig(dataset_name=dataset_names[1],
+#                                 label_col='family',
+#                                 target_size=target_size,
+#                                 num_channels=num_channels,
+#                                 grayscale=(color_type=='grayscale'),
+#                                 low_class_count_thresh=low_class_count_thresh,
+#                                 data_splits={'val_size':0.2,'test_size':0.2},
+#                                 tfrecord_root_dir=tfrecord_dir,
+#                                 num_shards=10)
 
-        self.extract()
-        self.transform()
-        self.load()
-        
-    
-    def get_data_loader(self, subset='train'):
-        assert subset in self.tfrecord_files.keys()
-        
-        tfrecord_paths = self.tfrecord_files[subset]
-        config = self.config
-    
-        data = tf.data.Dataset.from_tensor_slices(tfrecord_paths) \
-                    .apply(lambda x: tf.data.TFRecordDataset(x)) \
-                    .map(self.coder.decode_example, num_parallel_calls=AUTOTUNE) \
-                    .map(self.preprocessing, num_parallel_calls=AUTOTUNE)
 
-        if self.grayscale == True:
-            if self.num_channels==3:
-                data = data.map(rgb2gray_3channel, num_parallel_calls=AUTOTUNE)
-            elif self.num_channels==1:
-                data = data.map(rgb2gray_1channel, num_parallel_calls=AUTOTUNE)
-#         if self.preprocessing == 'imagenet':
-#             data = data.map(imagenet_mean_subtraction, num_parallel_calls=AUTOTUNE)
-        
-        if subset == 'train':            
-            if config.augment_images == True:
-                data = data.map(self.augmentors.rotate, num_parallel_calls=AUTOTUNE) \
-                           .map(self.augmentors.flip, num_parallel_calls=AUTOTUNE)
-                
-            data = data.shuffle(buffer_size=config.buffer_size, seed=config.seed)
-    
-        data = data.batch(config.batch_size, drop_remainder=False) \
-                   .repeat() \
-                   .prefetch(AUTOTUNE)
-        
-        return data
-    
-    def get_model_config(self, subset='train'):
-        metadata = self.metadata_splits[subset]
-        config = self.config
-        
-        model_config = ModelConfig(
-                                   model_name=config.model_name,
-                                   num_classes=metadata['num_classes'],
-                                   frozen_layers=config.frozen_layers,
-                                   input_shape=(*config.target_size,config.num_channels),
-                                   base_learning_rate=config.base_learning_rate,
-                                   regularization=config.regularization
-                                   )
-        self.configs['model_config'] = model_config
-        return model_config
+# train_config = TrainConfig(model_name=model_name,
+#                            model_dir=model_dir,
+#                            batch_size=batch_size,
+#                            frozen_layers=None,
+#                            base_learning_rate=base_learning_rate,
+#                            buffer_size=500,
+#                            num_epochs=num_epochs,
+#                            preprocessing=True,
+#                            augment_images=True,
+#                            augmentations=['rotate','flip'],
+#                            regularization=regularizer,
+#                            seed=5,
+#                            verbose=True)
 
-    def update_model(self, model):
-        '''Simply for adding a tf.keras.models.Model for Trainer to manage'''
-        self.model = model
+# current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+# experiment_dir = os.path.join(r'/media/data/jacob/Fossil_Project',
+#                                           'experiments',
+#                                           'domain_transfer',
+#                                           '-'.join([model_name,color_type]),
+#                                           '-'.join(dataset_names),
+#                                           f'lr-{base_learning_rate}-bsz_{batch_size}',
+#                                           current_time)
+
+
+# configs = [ExperimentConfig(dataset_config_source_domain, train_config),
+#            ExperimentConfig(dataset_config_target_domain, train_config)]
+
+
+
+# trainer = TransferTrainer(configs)
+
+
+# source_trainer = trainer.domains['source']
+# # source_trainer.extract()
+# # source_trainer.transform()
+# # source_trainer.load()
+
+# target_trainer = trainer.domains['target']
+# # target_trainer.extract()
+# # target_trainer.transform()
+# # target_trainer.load()
+
+
+# source_counts = source_trainer.get_class_counts()
+# target_counts = target_trainer.get_class_counts()
+
+# #Build Model
+
+# model_config = trainer.get_model_config(domain='source',subset='train')
+
+# if model_config.model_name is 'vgg16':
+#     trainer.add_model_manager(VGG16GrayScale(model_config))
     
-    def get_fit_params(self):
-        params = {'steps_per_epoch' : self.metadata_splits['train']['num_samples']//self.config.batch_size,
-                  'validation_steps' : self.metadata_splits['val']['num_samples']//self.config.batch_size,
-                  'epochs' : self.config.num_epochs
-                 }
-        self.configs['fit_params'] = params
-        return params
+# elif model_config.model_name.startswith('resnet'):
+#     trainer.add_model_manager(ResNet(model_config))
+
+# trainer.model = trainer.model_manager.build_model()
+
+
+# #Get source domain data
+
+# train_data = trainer.get_data_loader(domain='source', subset='train')
+# val_data = trainer.get_data_loader(domain='source', subset= 'val')
+
+# #Get parameters for fitting and callbacks
+# fit_params = trainer.get_fit_params(domain='source')#, subset='train')
+# callbacks = get_callbacks(weights_best=os.path.join(experiment_dir,'source_domain_weights_best.h5'), 
+#                               logs_dir=os.path.join(experiment_dir,'tensorboard_logs'), 
+#                               restore_best_weights=True)
+
+
+# print('model_config:\n',json.dumps(model_config,indent=4))
+
+# # TRAIN ON SOURCE DOMAIN
+
+# history = trainer.model.fit(train_data,
+#                  steps_per_epoch = fit_params['steps_per_epoch'],
+#                  epochs=1,#fit_params['epochs'],
+#                  validation_data=val_data,
+#                  validation_steps=fit_params['validation_steps'],
+#                  callbacks=callbacks
+#                  )
+
+
+# # trainer.save_weights(filepath=trainer.model_manager.weights_filepath)
+# trainer.save_model(filepath=os.path.join(trainer.model_manager.model_dir,model_config.model_name,'source_model.h5'))
+
+
+
+# trainer.load_model(filepath=os.path.join(trainer.model_manager.model_dir,model_config.model_name,'source_model.h5'))
+
+
+# target_train_data = trainer.get_data_loader(domain='target', subset='train')
+# target_val_data = trainer.get_data_loader(domain='target', subset= 'val')
+# target_test_data = trainer.get_data_loader(domain='target', subset='test')
+
+
+# # model_config = trainer.get_model_config(domain='target',subset='train')
+# fit_params = trainer.get_fit_params(domain='target')
+# callbacks = get_callbacks(weights_best=os.path.join(experiment_dir,'target_domain_weights_best.h5'), 
+#                               logs_dir=os.path.join(experiment_dir,'tensorboard_logs'), 
+#                               restore_best_weights=True)
+
+# num_test_samples = trainer.domains['target'].metadata_splits['test']['num_samples']
+# num_steps = num_test_samples//batch_size
+
+# zero_shot_test_results = trainer.model.evaluate(target_test_data, steps=num_steps)
+
+# # FINETUNE ON TARGET DOMAIN
+
+# history = trainer.model.fit(target_train_data,
+#                  steps_per_epoch = fit_params['steps_per_epoch'],
+#                  epochs=fit_params['epochs'],
+#                  validation_data=target_val_data,
+#                  validation_steps=fit_params['validation_steps'],
+#                  callbacks=callbacks
+#                  )
+
+
+
+
+
+
+
+
+
+
+
+# train_config.save_config(os.path.expanduser('~/experiments/configs/experiment_0/train_config.json'))
+# dataset_config.save_config(os.path.expanduser('~/experiments/configs/experiment_0/dataset_config.json'))
+# config.save_config(os.path.expanduser('~/experiments/configs/experiment_0/experiment_config.json'))
+
+
+# loaded_train_config = train_config.load_config(os.path.expanduser('~/experiments/configs/experiment_0/train_config.json'))
+# loaded_dataset_config = dataset_config.load_config(os.path.expanduser('~/experiments/configs/experiment_0/dataset_config.json'))
+# loaded_config = config.load_config(os.path.expanduser('~/experiments/configs/experiment_0/experiment_config.json'))
+
+
+# a=set(train_config).symmetric_difference(loaded_train_config)
+
+# list(loaded_train_config - train_config)
+# list(loaded_train_config - dataset_config)
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
 #########################################################################################################

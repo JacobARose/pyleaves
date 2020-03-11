@@ -12,18 +12,28 @@ def ensure_dir_exists(dir_path):
     
     
     
+    
+def get_visible_devices(device_type='GPU'):
+    '''
+    device_type can be either 'GPU' or 'CPU'
+    '''
+    from tensorflow.config import experimental_list_devices
+    gpus = [dev for dev in experimental_list_devices() if 'GPU:' in dev]    
+    return gpus
+
 def set_visible_gpus(gpu_ids=[0]):
-    from tensorflow.config import experimental
+    print('DEPRECATED FUNCTION set_visible_gpus()')
+    return None
+    from tensorflow.config import experimental, experimental_list_devices
 #     import pdb; pdb.set_trace()
 #     gpus = experimental.get_visible_devices('GPU')
-    gpus = tf.config.list_physical_devices('GPU') 
+    gpus = [dev for dev in experimental_list_devices() if 'GPU:' in dev]
 
     if gpus:
 #         print(gpus)
-        gpu_objects = [gpus[i] for i in gpu_ids]
-
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_ids).strip('[]')
+#         gpu_objects = [gpus[i] for i in gpu_ids]
         
-        experimental.set_visible_devices(gpu_objects, 'GPU')    
 #         experimental.set_memory_growth(*gpu_objects, True)
 #         experimental.set_visible_devices(gpu_objects, 'GPU')
 #         experimental.set_memory_growth(*gpu_objects, True)

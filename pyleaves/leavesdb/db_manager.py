@@ -134,6 +134,9 @@ def dict2json(data, prefix, filename):
 #     print(f'committed {file_count} row entries for data from {filepath}')
 
 def archivedb_to_json(db_path, exist_ok):
+    '''
+    POSSIBLY FOR DEPRECATION: This may implement functionality that's already covered by freeze_full_database()
+    '''
     temp_db_path = ''
     archive_json = ''
     if exist_ok:
@@ -153,7 +156,7 @@ def archivedb_to_json(db_path, exist_ok):
     return archive_json, temp_db_path
 
 
-def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db', exist_ok=False):
+def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db', json_records=None, exist_ok=False, temp_backup=True):
     '''
     Reconstruct database .db file from collection of individual json records, each of which may contain one or more data samples.
 
@@ -182,38 +185,45 @@ def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db
     
     temp_db_path=''
     archive_json=''
-    
+#     import pdb; pdb.set_trace()
     if db_exists:
+        os.remove(db_path)
+        
+#         and temp_backup:
         #Temporarily store current database as a json archive
-        archive_json, temp_db_path = archivedb_to_json(db_path, exist_ok)
+#         archive_json, temp_db_path = archivedb_to_json(db_path, exist_ok)
         
     db_URI = f'sqlite:///{db_path}'
-    db = dataset.connect(db_URI)
-    table = db.create_table('dataset', primary_id='id')
+#     db = dataset.connect(db_URI)
+#     table = db.create_table('dataset', primary_id='id')
     
+    
+    db = dataset.connect(db_URI)
+    table = db.create_table('dataset', primary_id='id')    
     count = 0
     for filepath in frozen_json_filepaths:
         try:
-            # db.begin()
-            print(f'Loading {filepath}')
-            json_file = load(filepath)
-            table.insert_many(json_file['results'], ensure=True)
+                # db.begin()
+            if json_records is None:
+                print(f'Loading {filepath}')
+                json_records = load(filepath)
+            
+            table.insert_many(json_records['results'], ensure=True)
             db.commit()
-            file_count = len(json_file['results'])
+            file_count = len(json_records['results'])
             count += file_count
             print(f'committed {file_count} row entries for data from {filepath}')
         except Exception as e:
             print(e)
-            db.rollback()
-            print('[Error] : Error encountered, rolling back changes')
-            os.remove(db_path)
-            if db_exists:
-                print('restoring previous db')
-                os.rename(temp_db_path,db_path)
-            print('restored db in its previous state')
-            return {'success_count': 0}
-
-        
+#                 db.rollback()
+#                 print('[Error] : Error encountered, rolling back changes')
+#                 os.remove(db_path)
+#                 if db_exists:
+#                     print('restoring previous db')
+#                     os.rename(temp_db_path,db_path)
+#                 print('restored db in its previous state')
+#                 return {'success_count': 0}
+    
     if os.path.isfile(temp_db_path):
         os.remove(temp_db_path)
     if os.path.isfile(archive_json):
@@ -343,7 +353,12 @@ def remove_invalid_images_from_db(invalid_paths: list, path_col='path', db=None,
     
 
 
-def clear_duplicates_from_db(db=None, local_db=None, prefix = None, json_filename='database_records.json'):
+def clear_duplicates_from_db(db=None,
+                             local_db=None,
+                             output_db=None,
+                             prefix = None,
+                             json_filename='database_records.json',
+                             find_unique_in='path'):
     '''
     Function checks db file for duplicate filenames in 'path' column, recreates JSON and db without duplicates.
     
@@ -371,7 +386,7 @@ def clear_duplicates_from_db(db=None, local_db=None, prefix = None, json_filenam
         print(PATH)
     
     data = pd.DataFrame(db['dataset'].all())
-    paths, indices, counts = np.unique(data['path'], return_index=True, return_counts=True)
+    paths, indices, counts = np.unique(data[find_unique_in], return_index=True, return_counts=True)
     #SELECT only rows with unique file paths
     unique_data = data.iloc[indices,:]
     #CONVERT DataFrame to list of dict records
@@ -379,7 +394,9 @@ def clear_duplicates_from_db(db=None, local_db=None, prefix = None, json_filenam
     #CREATE & WRITE JSON records file containing previous file info combined with new file paths
     dict2json(data_records, prefix=prefix, filename=json_filename)
     db_json_path = os.path.join(prefix,json_filename)
-    db_path = os.path.join(prefix,'leavesdb.db')
+    if output_db is None:
+        db_path = local_db
+#     db_path = os.path.join(prefix,'leavesdb.db')
     #CREATE & WRITE new SQLite .db file from newly created JSON
     build_db_from_json(frozen_json_filepaths=[db_json_path], db_path=db_path)
 
@@ -389,14 +406,14 @@ def clear_duplicates_from_db(db=None, local_db=None, prefix = None, json_filenam
     return unique_data
 
 
-def analyze_db_contents():
+def analyze_db_contents(local_db=None, find_unique_in='path'):
     
-    local_db = leavesdb.init_local_db()
+    if not local_db:
+        local_db = leavesdb.init_local_db()
             
     db = dataset.connect(f"sqlite:///{local_db}", row_type=stuf)    
-    
     data = pd.DataFrame(db['dataset'].all())
-    paths, indices, counts = np.unique(data['path'], return_index=True, return_counts=True)
+    paths, indices, counts = np.unique(data[find_unique_in], return_index=True, return_counts=True)
 
     count_number, duplicate_counts = np.unique(counts, return_counts=True)
 

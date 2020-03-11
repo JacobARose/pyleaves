@@ -116,6 +116,8 @@ def save_trainvaltest_tfrecords(dataset_name='PNAS',
                                 val_size=0.3,
                                 test_size=0.3,
                                 num_shards=10,
+                                data_splits=None,
+                                metadata_splits=None,
                                 verbose=True):
     '''
     Load images from dataset_name, split into train, val, and test sets.
@@ -124,29 +126,33 @@ def save_trainvaltest_tfrecords(dataset_name='PNAS',
     where each process writes its shard to an individual TFRecord.
 
     '''
-    data_splits, metadata_splits = load_and_format_dataset_from_db(dataset_name=dataset_name, low_count_threshold=low_count_threshold, val_size=val_size, test_size=test_size)
+    if (not data_splits) or (not metadata_splits):
+        data_splits, metadata_splits = load_and_format_dataset_from_db(dataset_name=dataset_name, low_count_threshold=low_count_threshold, val_size=val_size, test_size=test_size)
 
     os.makedirs(output_dir, exist_ok=True)
     file_logs = {}
+    coders = {}
 #     file_log = {'label_map':metadata_splits['label_map']}
     for split_name, split_data in data_splits.items():
         num_samples = len(split_data['label'])
         num_classes = metadata_splits[split_name]['num_classes']
-        print(f'Starting to split {split_name} subset with {num_samples} total samples into {num_shards} shards')
-        
-        coder = TFRecordCoder(split_data, output_dir, subset=split_name, target_size=target_size, num_channels=num_channels, num_shards=num_shards, num_classes=num_classes)
-        coder.execute_convert()        
-        coder.label_map = metadata_splits['label_map']
-        file_logs.update({split_name:coder.filepath_log})
+        if num_samples > 0:
+            print(f'Starting to split {split_name} subset with {num_samples} total samples into {num_shards} shards')        
+            coder = TFRecordCoder(split_data, output_dir, subset=split_name, target_size=target_size, num_channels=num_channels, num_shards=num_shards, num_classes=num_classes)
+            coder.execute_convert()        
+            coder.label_map = metadata_splits['label_map']
+            file_logs.update({split_name:coder.filepath_log})
+#             coders.update({split_name:coder})
     
     coder.file_logs = file_logs
+    coder.tfrecord_dir_tree = output_dir
 #         file_log.update({split_name:coder.filepath_log})
     return coder #file_log
 
 
 
 
-def main(config=None):
+def main(config=None,  record_subdirs=None, data_splits=None, metadata_splits=None):
     '''
     Example Jupyter notebook command:
 
@@ -167,7 +173,12 @@ def main(config=None):
     tfrecord_root_dir = config.tfrecord_root_dir
     num_shards = config.num_shards
     
-    output_dir = os.path.join(tfrecord_root_dir,dataset_name,f'num_channels-3_thresh-{low_count_threshold}')
+    print(f'running main in {__file__}, tfrecord_root_dir = {tfrecord_root_dir}, record_subdirs = {record_subdirs}')
+    
+    if record_subdirs is None:
+        output_dir = os.path.join(tfrecord_root_dir,dataset_name,f'num_channels-3_thresh-{low_count_threshold}',f'val_size={val_size}-test_size={test_size}')
+    else:
+        output_dir = os.path.join(tfrecord_root_dir, *record_subdirs)
 
     file_log = check_if_tfrecords_exist(output_dir)
 
@@ -183,7 +194,9 @@ def main(config=None):
                                                    low_count_threshold=low_count_threshold,
                                                    val_size=val_size,
                                                    test_size=test_size,
-                                                   num_shards=num_shards)
+                                                   num_shards=num_shards,
+                                                   data_splits=data_splits,
+                                                   metadata_splits=metadata_splits)
         label_map = coder.label_map
 
         for subset, records in coder.file_logs.items():

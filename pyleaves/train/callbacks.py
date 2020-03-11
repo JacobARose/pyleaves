@@ -99,7 +99,7 @@ def get_callbacks(weights_best=r'./model_ckpt.h5',
     
     tfboard = TensorBoard(log_dir=logs_dir)#, write_images=True)
     csv = CSVLogger(os.path.join(logs_dir,'training_log.csv'))
-    early = EarlyStopping(monitor='val_loss', patience=30, verbose=1)
+    early = EarlyStopping(monitor='val_loss', patience=25, verbose=1)
     
     callback_list = [checkpoint,tfboard,early,csv]
     

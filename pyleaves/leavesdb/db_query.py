@@ -9,6 +9,7 @@ from stuf import stuf
 
 from pyleaves.data_pipeline.preprocessing import generate_encoding_map, encode_labels, filter_low_count_labels
 from pyleaves import leavesdb
+from pyleaves.utils import ensure_dir_exists
 
 def get_label_encodings(data_df=None, dataset='Fossil', y_col='family', low_count_thresh=0, verbose=True):
     '''
@@ -40,13 +41,6 @@ def get_label_encodings(data_df=None, dataset='Fossil', y_col='family', low_coun
 
     return label_maps
 
-def load_all_data(db, x_col='path', y_col='family'):
-    '''
-    Function to load x_col and y_col for each row in db from all datasets
-    '''
-#     paths_labels = list(db['dataset'].distinct(x_col, y_col, 'dataset'))
-    data = pd.DataFrame(db['dataset'].distinct(x_col, y_col, 'dataset'))
-    return data
 
 #     data_by_dataset = data.groupby(by='dataset')
 #     data_by_dataset_dict = {k:v for k,v in data_by_dataset}

@@ -92,7 +92,7 @@ class BaseModel:
         model.compile(optimizer=tf.keras.optimizers.Adam(lr=self.base_learning_rate),
                       loss='categorical_crossentropy',
                       metrics=METRICS)        
-        
+        self.model = model
         return model    
 
     
@@ -122,7 +122,7 @@ class BaseModel:
                                    overwrite=True,
                                    include_optimizer=True,
                                    save_format='h5')
-        print('Saved model {self.name} at path: {filepath}')
+        print(f'Saved model {self.name} at path: {filepath}')
         
     def load(self, filepath = './saved_model.h5'):
         '''
@@ -131,7 +131,7 @@ class BaseModel:
         model = tf.keras.models.load_model(filepath=filepath,
                                    compile=True)
         
-        print('Loaded model {self.name} from path: {filepath}')
+        print(f'Loaded model {self.name} from path: {filepath}')
         
     def add_regularization(self, model):
 
@@ -143,7 +143,7 @@ class BaseModel:
         
             model = add_regularization(model, regularizer)
         
-        return model        
+        return model
 
 
     def init_dirs(self):
@@ -154,13 +154,13 @@ class BaseModel:
             assert validate_filepath(self.config['weights_filepath'],file_type='h5')
             self.weights_filepath = self.config['weights_filepath']
         else:
-            self.weights_filepath = join(self.model_dir,f'{self.name}-weights.h5')
+            self.weights_filepath = join(self.model_dir,f'{self.name}-model_weights.h5')
         if 'config_filepath' in self.config:
             assert validate_filepath(self.config['config_filepath'],file_type='json')
             self.config_filepath = self.config['config_filepath']
         else:
             self.config_filepath = join(self.model_dir,f'{self.name}-model_config.json')
-            
+
         self.config['weights_filepath'] = self.weights_filepath
         self.config['config_filepath'] = self.config_filepath
         
