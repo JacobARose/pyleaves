@@ -244,7 +244,7 @@ def load_and_encode_example(path, label, target_size = (224,224)):
 
 class TFRecordCoder(JPGCoder):
 
-    def __init__(self, data, root_dir, subset='train', target_size=(224,224), num_channels=3, num_shards=10, num_classes=1000):
+    def __init__(self, data, root_dir, record_subdirs=[], subset='train', target_size=(224,224), num_channels=3, num_shards=10, num_classes=1000):
         '''
         Example usage:
         
@@ -256,11 +256,13 @@ class TFRecordCoder(JPGCoder):
                 dict with keys ['path', 'label']
             root_dir:
                 Root of experiment, contains subdir for each subset containing sequence of TFRecord shards
+            record_subdirs:
+                List of strings representing each level of subdirectory beneath root_dir to search before expecting train/val/test dirs.
         '''
         
         
 #         ensure_dir_exists(join(output_dir,subset))
-        self.root_dir = root_dir
+        self.root_dir = os.path.join(root_dir, *record_subdirs)
         self.subset = subset
         self.target_size = target_size
         self.num_channels = num_channels
@@ -432,7 +434,7 @@ def get_keras_preprocessing_function(model_name: str, input_format=tuple):
     else:
         preprocess_input = lambda x: x
     
-    if input_format==dict:
+    if input_format=='dict':
         def preprocess_func(input_example):
             x = input_example['image']
             y = input_example['label']
@@ -440,7 +442,7 @@ def get_keras_preprocessing_function(model_name: str, input_format=tuple):
         _temp = {'image':tf.zeros([4, 32, 32, 3]), 'label':tf.zeros(())}
         preprocess_func(_temp)
         
-    elif input_format==tuple:
+    elif input_format=='tuple':
         def preprocess_func(x, y):
             return preprocess_input(x), y
         _temp = ( tf.zeros([4, 32, 32, 3]), tf.zeros(()) )        
@@ -679,7 +681,7 @@ def process_file(src_fpath, target_fpath):
 
 
 class DaskCoder:
-    def __init__(self, data, output_dir):
+    def __init__(self, data, output_dir=None, columns={'source_path':'source_path','target_path':'path'}):
         '''
         Dask version
         Class for managing different conversion functions depending on source and target image formats.
@@ -687,22 +689,24 @@ class DaskCoder:
         self.output_ext = 'jpg'
 
         labels = set(list(data['label']))
-        [ensure_dir_exists(join(output_dir,label)) for label in labels]
+        
+        if output_dir:
+            [ensure_dir_exists(join(output_dir,label)) for label in labels]
 
         self.indices = len(data['source_path'])
         self.data = data
 
-        self.input_dataset = self.stage_converter(data)
+        self.input_dataset = self.stage_converter(data, columns=columns)
 
 
-    def stage_dataset(self, data_df):
-        src_paths = list(data_df['source_path'])
+    def stage_dataset(self, data_df, columns={'source_path':'source_path','target_path':'path'}):
+        src_paths = list(data_df[columns['source_path']])
 #         src_labels = list(data_df['label'])
-        target_paths = list(data_df['path'])
+        target_paths = list(data_df[columns['target_path']])
         mappings_dataset = zip(src_paths, target_paths) #, src_labels)
         return mappings_dataset
 
-    def stage_converter(self, data_df):
+    def stage_converter(self, data_df, columns={'source_path':'source_path','target_path':'path'}):
         '''
         Arguments:
             data_df, pd.DataFrame:
@@ -713,7 +717,7 @@ class DaskCoder:
 
         '''
         output_ext = self.output_ext
-        mappings_dataset = self.stage_dataset(data_df)
+        mappings_dataset = self.stage_dataset(data_df, columns=columns)
 
         converted_dataset = [process_file(src, target) for src, target in mappings_dataset]
         return converted_dataset

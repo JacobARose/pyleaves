@@ -15,21 +15,25 @@ import mlflow
 #         mlflow.log_para
 
 
-def mlflow_log_history(history):
+def mlflow_log_history(history, history_name=''):
     '''
     Log full metric history per each epoch
     
     Arguments:
         history:
             history object returned from tensorflow training callback
+        history_name:
+            optional str to append to each metric label
     
     '''
         
     epochs = history.epoch    
-    
+    if len(history_name)>0: 
+        history_name+='_'
+        
     for k,v in history.history.items():
         for epoch in epochs:
-            mlflow.log_metric(k, v[epoch], epoch)
+            mlflow.log_metric(history_name+k, v[epoch], epoch)
 
 
 def mlflow_log_best_history(history):
