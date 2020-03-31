@@ -85,3 +85,20 @@ To modify and push changes to git:
     4. git push
 
     5. '[Enter GitHub login credentials]'
+
+
+### Versions and Updates:
+Major updates and plans that may break functionality
+
+3/30/2020: Beginning to refactor project format to more closely align with the template found here: https://github.com/Mrgemy95/Tensorflow-Project-Template
+Key differences include:
+    -Separating train and trainer scripts contained in pyleaves/train into 2 separate directories: pyleaves/trainers and pyleaves/mains
+    -Better isolating data_loader functionality from trainer classes
+
+
+
+
+
+
+
+
