@@ -19,7 +19,7 @@ Full project repo containing sub-packages for database, dataloaders, models, tra
         
     4. Install pyleaves with pip, include -e option to make sure it's an editable installation:
         >> pip install -e .
-
+        
 ### ENVIRONMENT MANAGEMENT:
 This can be used as a base reference, but individual packages may need to be installed in a largely trial and error fashion atm. Creating a minimum environment specification is TBD.
 
@@ -33,6 +33,10 @@ This can be used as a base reference, but individual packages may need to be ins
     
     4. Install latest version of pyleaves:
         >> git pull
+        
+    5. To update your existing environment when pulling new changes to the repo:
+        >> conda env update -n pyleaves --file environment.yml  --prune
+
 
 Note, where it says "-n pyleaves' above, you can replace 'pyleaves" with your preferred choice of env name.
 
@@ -81,3 +85,20 @@ To modify and push changes to git:
     4. git push
 
     5. '[Enter GitHub login credentials]'
+
+
+### Versions and Updates:
+Major updates and plans that may break functionality
+
+3/30/2020: Beginning to refactor project format to more closely align with the template found here: https://github.com/Mrgemy95/Tensorflow-Project-Template
+Key differences include:
+    -Separating train and trainer scripts contained in pyleaves/train into 2 separate directories: pyleaves/trainers and pyleaves/mains
+    -Better isolating data_loader functionality from trainer classes
+
+
+
+
+
+
+
+

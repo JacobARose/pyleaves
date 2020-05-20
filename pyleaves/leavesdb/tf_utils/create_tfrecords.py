@@ -1,3 +1,9 @@
+# @Author: Jacob A Rose
+# @Date:   Tue, March 31st 2020, 12:36 am
+# @Email:  jacobrose@brown.edu
+# @Filename: create_tfrecords.py
+
+
 '''
 TBD
 
@@ -16,52 +22,109 @@ import pandas as pd
 from stuf import stuf
 import sys
 import tensorflow as tf
+# import tensorflow as tf
+# os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
+
 # tf.enable_eager_execution()
 
 from tensorflow.data.experimental import AUTOTUNE
-from pyleaves.analysis.img_utils import TFRecordCoder, plot_image_grid
-from pyleaves.config import DatasetConfig
+from pyleaves.utils.img_utils import TFRecordCoder, plot_image_grid
+from pyleaves.configs.config_v1 import DatasetConfig
 from pyleaves import leavesdb
 from pyleaves.leavesdb.tf_utils.tf_utils import (train_val_test_split,
                                                 load_and_format_dataset_from_db,
                                                 check_if_tfrecords_exist)
 from pyleaves.utils import ensure_dir_exists, set_visible_gpus
+from pyleaves.leavesdb.tf_utils.tf_utils import bytes_feature, int64_feature, float_feature
 from pyleaves.tests.test_utils import timeit, timelined_benchmark, draw_timeline, map_decorator
+from pyleaves.leavesdb.experiments_db import DataBase, Table, TFRecordsTable, EXPERIMENTS_DB, EXPERIMENTS_SCHEMA, TFRecordItem
 
-# gpu_ids = [0]
-# set_visible_gpus(gpu_ids)
+def save_tfrecords(data: list,
+                   output_dir,
+                   file_prefix,
+                   target_size=(224,224),
+                   num_channels=3,
+                   num_classes=100,
+                   num_shards=10,
+                   TFRecordItem_factory=None,
+                   tfrecords_table=TFRecordsTable(db_path=EXPERIMENTS_DB),
+                   verbose=True):
+    """
+    Input data as a list of tuples containing (filepath, label) pairs to be split into
+    {num_shards} shards, then loaded in parallel and saved to each shard.
 
-def _bytes_feature(value):
-    """Returns a bytes_list from a string / byte."""
-    # If the value is an eager tensor BytesList won't unpack a string from an EagerTensor.
-    if isinstance(value, type(tf.constant(0))):
-        value = value.numpy()
-    if not isinstance(value, list):
-        value = [value]
-    return tf.train.Feature(bytes_list=tf.train.BytesList(value=value))
+    Note: This differs from save_trainvaltest_tfrecords() mainly by moving some of the original functionality
+    outside the function, requiring the user to configure how the data is saved with more manual control.
 
-def _float_feature(value):
-    """Returns a float_list from a float / double."""
-    if not isinstance(value, list):
-        value = [value]
-    return tf.train.Feature(float_list=tf.train.FloatList(value=value))
+    Parameters
+    ----------
+    data : list
+        List of tuples representing image file paths and their encoded labels.
+    output_dir : type
+        Directory in which to save TFRecord shards.
+    file_prefix : str
+        The string that should serve as filename prefix to distinguish these shards from
+        any others in the same directory
+    target_size : type
+        Description of parameter `target_size`.
+    num_channels : type
+        Description of parameter `num_channels`.
+    num_classes : type
+        Description of parameter `num_classes`.
+    num_shards : type
+        Description of parameter `num_shards`.
+    verbose : type
+        Description of parameter `verbose`.
 
-def _int64_feature(value):
-    """Returns an int64_list from a bool / enum / int / uint."""
-    if not isinstance(value, list):
-        value = [value]
-    return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
+    Returns
+    -------
+    pyleaves.utils.img_utils.TFRecordCoder
+        The coder object used to encode the shards, containings a file_logs attribute
+        referencing all created TFRecord files.
+
+    Examples
+    -------
+    Examples should be written in doctest format, and
+    should illustrate how to use the function/class.
+    >>>
+
+    """
+    file_logs = {}
+    coders = {}
+    num_samples=len(data)
+    print(f'Starting to split {file_prefix} subset with {num_samples} total samples into {num_shards} shards')
+    coder = TFRecordCoder(data,
+                          output_dir,
+                          subset=file_prefix,
+                          target_size=target_size,
+                          num_channels=num_channels,
+                          num_shards=num_shards,
+                          num_classes=num_classes,
+                          TFRecordItem_factory=TFRecordItem_factory,
+                          tfrecords_table=tfrecords_table)
+    coder.execute_convert()
+    file_logs.update({file_prefix:coder.filepath_log})
+
+    coder.file_logs = file_logs
+    coder.tfrecord_dir_tree = output_dir
+    return coder
+
+
+
+
+
 ##################################################################
+#TODO Remove these functions from script, their functionality should be defined elsewhere (likely img_utils or tf_utils)
 def encode_example(img, label_int):
     shape = img.shape
     img_buffer = encode_image(img).tostring()
 
     features = {
-        'image/height': _int64_feature(shape[0]),
-        'image/width': _int64_feature(shape[1]),
-        'image/channels': _int64_feature(shape[2]),
-        'image/bytes': _bytes_feature(img_buffer),
-        'label': _int64_feature(label_int)
+        'image/height': int64_feature(shape[0]),
+        'image/width': int64_feature(shape[1]),
+        'image/channels': int64_feature(shape[2]),
+        'image/bytes': bytes_feature(img_buffer),
+        'label': int64_feature(label_int)
     }
     example_proto = tf.train.Example(features=tf.train.Features(feature=features))
     return example_proto.SerializeToString()
@@ -82,12 +145,7 @@ def decode_example(serialized_example):
 
     return img, label
 ##################################################################
-# def encode_image(img):
-#     '''
-#     Encode image array as jpg prior to constructing Examples for TFRecords for compressed file size.
-#     '''
-#     img = tf.image.encode_jpeg(img, optimize_size=True, chroma_downsampling=False)
-#     return cv2.imencode('.jpg', img)[1]
+
 def encode_image(img):
     '''
     Encode image array as jpg prior to constructing Examples for TFRecords for compressed file size.
@@ -100,14 +158,18 @@ def decode_image(img_string, channels=3):
 def load_and_encode_example(path, label, target_size = (224,224)):
     img = load_image(path, target_size=target_size)
     return encode_example(img,label)
+
 ##################################################################
-def save_labels_int2text_tfrecords(labels):
-    '''TBD: Save dict mapping of int2text labels in separate tfrecord to reduce size of records'''
+
+
+
+
+
+
 
 ##################################################################
 ##################################################################
-##################################################################
-
+# Rename this malarkey
 def save_trainvaltest_tfrecords(dataset_name='PNAS',
                                 output_dir = os.path.expanduser(r'~/data'),
                                 target_size=(224,224),
@@ -132,22 +194,24 @@ def save_trainvaltest_tfrecords(dataset_name='PNAS',
     os.makedirs(output_dir, exist_ok=True)
     file_logs = {}
     coders = {}
+
 #     file_log = {'label_map':metadata_splits['label_map']}
     for split_name, split_data in data_splits.items():
-        num_samples = len(split_data['label'])
+        y_col = 'label'
+        if 'y' in split_data.keys(): y_col = 'y'
+        num_samples = len(split_data[y_col])
         num_classes = metadata_splits[split_name]['num_classes']
         if num_samples > 0:
-            print(f'Starting to split {split_name} subset with {num_samples} total samples into {num_shards} shards')        
+            print(f'Starting to split {split_name} subset with {num_samples} total samples into {num_shards} shards')
             coder = TFRecordCoder(split_data, output_dir, subset=split_name, target_size=target_size, num_channels=num_channels, num_shards=num_shards, num_classes=num_classes)
-            coder.execute_convert()        
+            coder.execute_convert()
             coder.label_map = metadata_splits['label_map']
             file_logs.update({split_name:coder.filepath_log})
 #             coders.update({split_name:coder})
-    
+
     coder.file_logs = file_logs
     coder.tfrecord_dir_tree = output_dir
-#         file_log.update({split_name:coder.filepath_log})
-    return coder #file_log
+    return coder
 
 
 
@@ -159,83 +223,72 @@ def main(config=None,  record_subdirs=None, data_splits=None, metadata_splits=No
         %run create_tfrecords.py -d Fossil -o /home/jacob/data -thresh 3 -val 0.3 -test 0.3
 
     '''
-#     config=None
     if config is None:
-        config = DatasetConfig() #dataset_name='PNAS')
-    
-    dataset_name = config.dataset_name
-    target_size = config.target_size
-    #TODO add ability to save TFRecords with configurable num_channels, currently just saves rgb
-    num_channels = config.num_channels
-    low_count_threshold = config.low_class_count_thresh
-    val_size = config.data_splits['val_size']
-    test_size = config.data_splits['test_size']
-    tfrecord_root_dir = config.tfrecord_root_dir
-    num_shards = config.num_shards
-    
-    print(f'running main in {__file__}, tfrecord_root_dir = {tfrecord_root_dir}, record_subdirs = {record_subdirs}')
-    
-    if record_subdirs is None:
-        output_dir = os.path.join(tfrecord_root_dir,dataset_name,f'num_channels-3_thresh-{low_count_threshold}',f'val_size={val_size}-test_size={test_size}')
-    else:
-        output_dir = os.path.join(tfrecord_root_dir, *record_subdirs)
+        config = DatasetConfig()
 
-    file_log = check_if_tfrecords_exist(output_dir)
+    #TODO add ability to save TFRecords with configurable num_channels, currently just saves rgb
+
+    print(f'running main in {__file__}, tfrecord_root_dir = {config.tfrecord_root_dir}, record_subdirs = {record_subdirs}')
+
+    if record_subdirs is None:
+        config.output_dir = os.path.join(tfrecord_root_dir,config.dataset_name,f'num_channels-3_thresh-{config.low_class_count_threshold}',f"val_size={config.data_splits['val_size']}-test_size={config.data_splits['test_size']}")
+    else:
+        config.output_dir = os.path.join(config.tfrecord_root_dir, *record_subdirs)
+
+    file_log = check_if_tfrecords_exist(config.output_dir)
 
     print('filename_log = ', file_log)
 #     if file_log == None:
     if True:
         file_log = {'train':[],'val':[],'test':[]}
         print('Entering save_trainvaltest_tfrecords')
-        coder = save_trainvaltest_tfrecords(dataset_name=dataset_name,
-                                                   output_dir=output_dir,
-                                                   target_size=target_size,
-                                                   num_channels=num_channels,
-                                                   low_count_threshold=low_count_threshold,
-                                                   val_size=val_size,
-                                                   test_size=test_size,
-                                                   num_shards=num_shards,
+        coder = save_trainvaltest_tfrecords(dataset_name=config.dataset_name,
+                                                   output_dir=config.output_dir,
+                                                   target_size=config.target_size,
+                                                   num_channels=config.num_channels,
+                                                   low_count_threshold=config.low_class_count_thresh,
+                                                   val_size=config.data_splits['val_size'],
+                                                   test_size=config.data_splits['test_size'],
+                                                   num_shards=config.num_shards,
                                                    data_splits=data_splits,
                                                    metadata_splits=metadata_splits)
-        label_map = coder.label_map
+#         label_map = coder.label_map
 
         for subset, records in coder.file_logs.items():
-            file_log[subset] = [os.path.join(output_dir,subset,record_fname) for record_fname in sorted(records)]
-            
+            file_log[subset] = [os.path.join(config.output_dir,subset,record_fname) for record_fname in sorted(records)]
+
         return coder, file_log
-            
-    
+
+
     else:
         print(f'Found {len(file_log.keys())} subsets of tfrecords already saved, skipping creation process.')
 
-#     return file_log
+# def read():
+#
+#     coder, file_log = main(DatasetConfig(dataset_name='Leaves'))#, target_size=(768,768))
+#
+# #     tfrecord_paths = file_log['train']
+# #     tfrecord_paths = file_log['val']
+#     tfrecord_paths = file_log['test']
+#
+# #     data = coder.read_tfrecords(tfrecord_paths)
+# #     label_map = coder.label_map
+#
+#     data = tf.data.Dataset.from_tensor_slices(tfrecord_paths) \
+#             .apply(lambda x: tf.data.TFRecordDataset(x)) \
+#             .map(self.decode_example,num_parallel_calls=AUTOTUNE) \
+#             .batch(batch_size,drop_remainder=drop_remainder) \
+#             .prefetch(AUTOTUNE)
+#
+# #     for imgs, labels in data.take(1):
+# #         labels = [coder.label_map[label] for label in labels.numpy()]
+# #         plot_image_grid(imgs, labels, 4, 8)
+#
+#     for i, (imgs, labels) in enumerate(data):
+#         print(i, imgs.shape, len(labels))
+#
+#     return coder
 
-def read():
-    
-    coder, file_log = main(DatasetConfig(dataset_name='Leaves'))#, target_size=(768,768))
-    
-#     tfrecord_paths = file_log['train']
-#     tfrecord_paths = file_log['val']
-    tfrecord_paths = file_log['test']
-    
-#     data = coder.read_tfrecords(tfrecord_paths)        
-#     label_map = coder.label_map
-    
-    data = tf.data.Dataset.from_tensor_slices(tfrecord_paths) \
-            .apply(lambda x: tf.data.TFRecordDataset(x)) \
-            .map(self.decode_example,num_parallel_calls=AUTOTUNE) \
-            .batch(batch_size,drop_remainder=drop_remainder) \
-            .prefetch(AUTOTUNE)    
-
-#     for imgs, labels in data.take(1):
-#         labels = [coder.label_map[label] for label in labels.numpy()]
-#         plot_image_grid(imgs, labels, 4, 8)
-
-    for i, (imgs, labels) in enumerate(data):        
-        print(i, imgs.shape, len(labels))
-            
-    return coder
-            
 
 if __name__ == "__main__":
 

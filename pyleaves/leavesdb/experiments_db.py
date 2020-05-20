@@ -277,7 +277,40 @@ class TFRecordsTable(Table):
         return [(item in self.logs) for item in tfrecord_items]
 
 
+<<<<<<< HEAD
 
+=======
+#
+#
+#     def __init__(self,
+#                  file_path,
+#                  file_group,
+# 	             run_id,
+#     	         experiment_type,
+#         	     dataset_name,
+#                  resolution,
+#                  num_channels,
+#                  num_classes,
+#                  num_shards):
+#         self._metadata = {
+#                          'file_path':file_path,
+#                          'file_group':file_group,
+#         	             'run_id':run_id,
+#             	         'experiment_type':experiment_type,
+#                 	     'dataset_name':dataset_name,
+#                          'resolution':resolution,
+#                          'num_channels':num_channels,
+#                          'num_classes':num_classes,
+#                          'num_shards':num_shards
+#         }
+#
+# def log_tfrecord(run_id, log_params, db_path=EXPERIMENTS_DB):
+#
+#     db = dataset.connect('sqlite:///'+db_path+'?charset=utf8')
+#     run_view = select_by_col(table=tables['tfrecords'],column='run_id',value=run_id)
+#
+#
+>>>>>>> 06e408527b3b58968a2186ffd520fac1534a0215
 #     log_params = {
 #     	'file_path':r'/media/data/jacob/Fossil_Project/data/tfrecord_data/A_train_val_test/Leaves/train-00000-of-00010.tfrecord',
 #         'file_group':'train',
@@ -289,10 +322,26 @@ class TFRecordsTable(Table):
 #         'num_classes':190,
 #         'num_shards':10
 #         }
+<<<<<<< HEAD
 
 
 def query_tfrecords():
     print("Not implemented")
+=======
+#
+#     db.query(
+#     '''
+#     INSERT INTO tfrecords (file_path,file_group,subrun_id,run_id,experiment_type,dataset_name,resolution,num_channels,num_classes,num_shards)
+#     VALUES ()
+#         ''')
+#
+#     return
+
+def query_tfrecords():
+
+
+
+>>>>>>> 06e408527b3b58968a2186ffd520fac1534a0215
     return
 
 if __name__=='__main__':
