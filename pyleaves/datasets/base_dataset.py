@@ -1,343 +1,507 @@
+# @Author: Jacob A Rose
+# @Date:   Tue, March 31st 2020, 12:34 am
+# @Email:  jacobrose@brown.edu
+# @Filename: base_dataset.py
+
+
 '''
 Script for defining base class BaseDataset for managing information about a particular subset or collection of datasets during preparation for a particular experiment.
 
 '''
-
-import cv2
+from boltons.dictutils import OneToOne
+from collections import OrderedDict
 import dataset
-from itertools import starmap
-from more_itertools import chunked, collapse, unzip
-from functools import partial
+import json
+import numpy as np
 import os
+import pandas as pd
+import random
 from stuf import stuf
-import time
-from multiprocessing import Pool
-from multiprocessing.dummy import Pool as ThreadPool
-from multiprocessing import dummy
-
-import tensorflow as tf
-
-from pyleaves.analysis.img_utils import load_image
-from pyleaves.config import Config
-from pyleaves.data_pipeline.tf_data_loaders import DatasetBuilder
+from toolz.itertoolz import frequencies
 from pyleaves import leavesdb
-from pyleaves.leavesdb.db_query import load_from_db
-from pyleaves.leavesdb.tf_utils.tf_utils import bytes_feature, float_feature, int64_feature, train_val_test_split, get_data_splits_metadata
-from pyleaves.data_pipeline.preprocessing import generate_encoding_map, encode_labels, filter_low_count_labels, one_hot_encode_labels
-from pyleaves.utils import ensure_dir_exists
-
-
-def encode_image(img):
-    '''
-    JPEG COMPRESS BEFORE SAVING IN TFRECORD
-    Encode image array as jpg prior to constructing Examples for TFRecords for compressed file size.
-    '''
-    return cv2.imencode('.jpg', img)[1].tostring()
+import pyleaves
 
 
 
 
-class BaseDataset:
-    
-    def __init__(self,
-                 name = 'Fossil', 
-                 img_size = (224,224),
-                 loss_function = 'categorical_crossentropy',
-                 preprocess = [None],
-                 batch_size = 64,
-                 low_count_threshold=0,
-                 local_db=None,
-                 verbose=False):
+
+class BaseDataset(object):
+
+    __version__ = '1.1'
+
+    def __init__(self, name='', src_db=pyleaves.DATABASE_PATH):
+        """
+        Base class meant to be subclassed for unique named datasets. Implements some property setters/getters for maintaining consistency
+        of data and filters (like min class count threshold).
+
+
+        Examples
+        -------
+        Examples should be written in doctest format, and
+        should illustrate how to use the function/class.
+        >>> dataset = BaseDataset()
+
+        >>> leaves_dataset = LeavesDataset()
+        ... fossil_dataset = FossilDataset()
+        ... pnas_dataset = PNASDataset()
+        ... pnas_fossil_data = pnas_data+fossil_data
+        ... pnas_leaves_data = pnas_data+leaves_data
+
+
+        >>>
+
+        """
         self.name = name
-        self.img_size = img_size
-        self.loss_function = loss_function
-        self.preprocess = preprocess # preprocessing before conversion to TFRecords
-        self.config = Config(dataset_name=name)
-        self.seed = self.config.seed
-        self.dataset_root_dir = os.path.join(self.config.tfrecords, self.name)
-        ensure_dir_exists(self.dataset_root_dir)
-        self.batch_size = batch_size
-        self.low_count_threshold = low_count_threshold
-        self.verbose= verbose
-        
-        if local_db == None:
-            self.local_db = os.path.abspath(os.path.join('..','leavesdb','resources','leavesdb.db'))
+        self.columns = ['path','family']
+        if src_db:
+            self.local_db = leavesdb.init_local_db(src_db = src_db, verbose=False)
+        self._threshold = 0
+        self._data = pd.DataFrame(columns=self.columns)
+
+    def load_from_db(self, x_col='path', y_col='family', all_cols=False):
+        """
+        Load a dataframe from the SQLite db with 2 columns, paths and labels.
+        Subclasses should use this function in their __init__ method to instantiate self._data
+
+        -set all_cols=True in order to ignore x_col and y_col and instead load all columns in table
+
+        Returns
+        -------
+        pd.DataFrame
+            Description of returned object.
+
+        Examples
+        -------
+        Examples should be written in doctest format, and
+        should illustrate how to use the function/class.
+        >>>
+
+        """
+        db = dataset.connect(f"sqlite:///{self.local_db}", row_type=stuf)
+        if all_cols:
+            data = pd.DataFrame(db['dataset'].all())
         else:
-            self.local_db = local_db
-            
-#         self.dataset_builder = DatasetBuilder(root_dir=self.dataset_root_dir,
-#                                               num_classes=self.num_classes,
-#                                               batch_size=self.batch_size,
-#                                               seed=self.seed)
-        
-        self.feature_encoders = {
-        'image/height': int64_feature,
-        'image/width': int64_feature,
-        'image/channels': int64_feature,
-        'image/bytes': bytes_feature,
-        'label': int64_feature
-                                }
-        self.feature_decoders = {
-        'image/height': tf.io.FixedLenFeature([], tf.int64, default_value=0),
-        'image/width': tf.io.FixedLenFeature([], tf.int64, default_value=0),
-        'image/channels': tf.io.FixedLenFeature([], tf.int64, default_value=0),
-        'image/bytes': tf.io.FixedLenFeature([], tf.string),
-        'label': tf.io.FixedLenFeature([], tf.int64, default_value=-1)
-                                }
-
-
-    def extract(self, name):
-        '''
-        Query filenames and labels from SQLiteDb
-        '''
-        self.db = dataset.connect(f'sqlite:///{self.local_db}', row_type=stuf)
-        data = leavesdb.db_query.load_data(self.db, dataset=name)
+            data = pd.DataFrame(leavesdb.db_query.load_data(db=db, x_col=x_col, y_col=y_col, dataset=self.name))
         return data
-        
-    def encode(self, data, low_count_threshold):
-        data_df = encode_labels(data)
-        data_df = filter_low_count_labels(data_df, threshold=low_count_threshold, verbose=self.verbose)
-        data_df = encode_labels(data_df) #Re-encode numeric labels after removing sub-threshold classes so that max(labels) == len(labels)
-        self.data_df = data_df
-        image_paths = data_df['path'].values.reshape((-1,1))
-        labels = data_df['label'].values
-        
-        return image_paths, labels
-    
-    def create_splits(self, image_paths, labels, val_size, test_size):
-        data_splits = train_val_test_split(image_paths, labels, val_size=val_size, test_size=test_size)
-        metadata_splits = get_data_splits_metadata(data_splits, self.data_df)
-        return data_splits, metadata_splits
-        
-    def load(self, name, low_count_threshold, val_size, test_size):
-        
-        data = self.extract(name)
-        image_paths, labels = self.encode(data, low_count_threshold)
-        data_splits, metadata_splits = self.create_splits(image_paths, labels, val_size, test_size)
-        return data_splits, metadata_splits
-    
-    
-class BaseTFRecordDataset(BaseDataset):
-    
-    def __init__(self,
-                 name = 'Fossil', 
-                 img_size = (224,224),
-                 loss_function = 'categorical_crossentropy',
-                 preprocess = [None],
-                 batch_size = 64,
-                 low_count_threshold = 3,
-                 val_size = 0.2, 
-                 test_size = 0.2,
-                 num_shards = 10,
-                 verbose=False):
-        super().__init__(name = name, 
-                         img_size = img_size,
-                         loss_function = loss_function,
-                         preprocess = preprocess,
-                         batch_size = batch_size,
-                         low_count_threshold = low_count_threshold,
-                         verbose=verbose)
-        self.val_size = val_size
-        self.test_size = test_size
-        self.num_shards = num_shards
-        
-        self.load_image = partial(load_image, target_size=self.img_size)
-        
-#         self.data_splits, self.metadata_splits = self.load(name, low_count_threshold, val_size, test_size)
-        
-    def shard_data(self, file_paths, labels, num_shards, all_equal=True):
+
+    def load_from_csv(self, filepath):
+        """Load a dataframe from a CSV file with 2 columns, paths and labels.
+
+        Returns
+        -------
+        pd.DataFrame
+            Description of returned object.
+
+        Examples
+        -------
+        Examples should be written in doctest format, and
+        should illustrate how to use the function/class.
+        >>>
+
+        """
+        data = pd.read_csv(filepath, drop_index=True)
+        return data
+
+    @classmethod
+    def from_dataframe(cls, df: pd.DataFrame, name='', threshold=0):
+        new_dataset = cls(name=name, src_db=None)
+        new_dataset._threshold = threshold
+        new_dataset.data = df
+        return new_dataset
+
+    def exclude_rare_classes(self, threshold):
+        """
+        Uses helper function filter_low_count_labels to keep only classes with the number of samples equal to or greater than threshold.
+
+        Updates the self._data dataframe in place
+
+        Parameters
+        ----------
+        threshold : int
+            Keep classes with num_samples >= threshold
+
+        Examples
+        -------
+        Examples should be written in doctest format, and
+        should illustrate how to use the function/class.
+        >>>
+
+        """
+        self._data = pyleaves.data_pipeline.preprocessing.filter_low_count_labels(self.data,threshold,'family',verbose=False)
+        self._threshold = threshold
+
+    def merge_with(self, other):
+        #TODO: combine this with __add__ method, since it's just a wrapper
+        assert issubclass(type(other), BaseDataset)
+
+        merged_dataset = BaseDataset()
+        #Keep highest threshold between the 2 instances
+        merged_dataset._threshold = max([self.threshold,other.threshold])
+        #Use the Base class setter method for self.data to concatenate the 2 instances' dataframes then performing a round of
+        #filtering out duplicates and class thresholding
+        merged_dataset.data = pd.concat({self.name:self.data,
+                                other.name:other.data})
+        merged_dataset.name = '+'.join([self.name, other.name])
+
+        return merged_dataset
+
+    def __add__(self, other):
+        return self.merge_with(other)
+
+    def __eq__(self, other):
+        if self.name != other.name:
+            return False
+        elif self.threshold != other.threshold:
+            return False
+        elif not np.all(self.data == other.data):
+            return False
+        elif not np.all(self.classes == other.classes):
+            return False
+        return True
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, new_data: pd.DataFrame):
+        # import pdb; pdb.set_trace()
+        self._data = new_data.drop_duplicates(subset='path')
+        self.exclude_rare_classes(self.threshold)
+        if len(self._data) != len(new_data):
+            print(f'dropped {len(new_data)-len(self._data)} duplicate rows')
+
+    @property
+    def class_counts(self):
         '''
-        all_equal, bool : default = True
-            If True:
-                discard the remaining samples that don't fit neatly into the desired set of num_shards shards. Ensures total number of samples divides evenly by num_shards.
+        Returns
+        -------
+        dict
+            mapping {class_name:class_count} values
         '''
-        if all_equal:
-            num_samples = len(labels)
-            remainder = num_samples%num_shards
-            if remainder > 0:
-                file_paths = file_paths[:-remainder]
-                labels = labels[:-remainder]
-                print(f'Removing last {remainder} samples before sharding')
-        num_samples = len(labels)
-        
-        zipped_data = zip(file_paths, labels)
-        sharded_data = chunked(zipped_data, num_samples//num_shards)
-#         shard_dict = {shard_i : shard_data for shard_i, shard_data in enumerate(sharded_data)}
-#         return shard_dict
-        return sharded_data
-    
-    ##################################################################
-    def encode_example(self, img_w_int_label):
+        y_col = self.columns[1]
+        return frequencies(self.data[y_col])
+
+    @property
+    def classes(self):
         '''
-        Arguments:
-            img_w_int_label, tuple(np.ndarray, int) :
-                Contains input image x with integer label y for args = ((x, y),)
-                
-        Return:
-            Serialized_example_proto, string or something :
-                example ready to be written to TFRecord
+        Returns
+        -------
+        list
+            Sorted list of class names
         '''
-        img, label = img_w_int_label
-        shape = img.shape
-        img_buffer = encode_image(img)
+        return sorted(self.class_counts.keys())
+        # return pyleaves.data_pipeline.preprocessing.get_class_counts(self.data,'family', verbose=False)[0]
 
-        features = {
-            'image/height': int64_feature(shape[0]),
-            'image/width': int64_feature(shape[1]),
-            'image/channels': int64_feature(shape[2]),
-            'image/bytes': bytes_feature(img_buffer),
-            'label': int64_feature(label)
-        }
- 
-        example_proto = tf.train.Example(features=tf.train.Features(feature=features))
-        return example_proto.SerializeToString()
-    
-    def load_example(self, sample):
-        img_filepath, label, sample_id = sample
-        
-        print(f'Loading img # : {sample_id}')
-        print(f'current thread : {dummy.threading.get_ident()}, total # : {dummy.threading.active_count()}')
-        
-        img = self.load_image(img_filepath)
-        return self.encode_example((img, label))
-        
-    def create_tfrecord_shard(self, 
-                              shard_filepath,
-                              shard,
-                              shard_id=0,
-                              target_size = (224,224),
-                              verbose=True):
+    @property
+    def num_samples(self):
+        return len(self.data)
+
+    @property
+    def num_classes(self):
+        return len(self.classes)
+
+    @property
+    def threshold(self):
+        return self._threshold
+
+    def __repr__(self):
+        return f'''{self.name}:
+    num_samples: {self.num_samples}
+    num_classes: {self.num_classes}
+    class_count_threshold: {self.threshold}
         '''
-        Function for passing a list of image filpaths and labels to be saved in a single TFRecord file
-        located at shard_filepath.
-        '''
-        
-        img_filepaths, labels = shard
-        
-        load_example = self.load_example
-        writer = tf.io.TFRecordWriter(shard_filepath)
-        img_filepaths = list(img_filepaths)
-        labels = list(labels)
-        num_samples = len(labels)
-        
-        sample_ids = list(range(shard_id*num_samples,(shard_id+1)*num_samples))
-        samples = list(zip(img_filepaths, labels, sample_ids))
 
-        thread_start_time = time.process_time()
-        with ThreadPool(os.cpu_count()//4) as pool:
-#         with Pool(os.cpu_count()) as pool:
-            loaded_samples = pool.map(load_example, samples, chunksize=64)
-#             loaded_samples = pool.apply(load_example, samples)
-        thread_end_time = time.process_time()
-        thread_time = thread_end_time-thread_start_time
-        print(f'{len(samples)} samples loaded in {thread_time:.4f} sec : {len(samples)/thread_time:.2f} samples/sec')
-            
-        print(f'Loaded samples for shard {shard_filepath}')
-        print(f'Writing to {len(labels)} shard')
-        for sample in loaded_samples:
-            writer.write(sample)
-        writer.close()
 
-        print('Finished saving TFRecord at: ', shard_filepath, '\n')
-        
-    def export_tfrecords(self):
-        output_dir = self.dataset_root_dir
-        num_shards = self.num_shards
-        self.data_splits, self.metadata_splits = self.load(name=self.name, low_count_threshold=self.low_count_threshold, val_size=self.val_size, test_size=self.test_size)
-        
-        for split_name, split_data in self.data_splits.items():
-#             split_name='train', split_data = self.data_splits['train']
+    def select_data_by_source_dataset(self, source_name):
+        """
+        Returns a pd.DataFrame containing rows from data that originate from the dataset indicated by source_name.
 
-            split_filepaths = list(collapse(split_data['path']))
-            split_labels = split_data['label']
-            num_samples = len(split_labels)
-            print('Splitting',split_name, f'with {num_samples} total samples into {num_shards} shards')
-            sharded_data = self.shard_data(split_filepaths, split_labels, num_shards)
-#             shards = {}
-            multiprocess_data = []
-            for i, shard in enumerate(sharded_data):
-                shard_fname = f'{split_name}-{str(i).zfill(5)}-of-{str(num_shards).zfill(5)}.tfrecord'
-                multiprocess_data.append((i, split_name, num_shards, output_dir, list(shard), self.img_size))
-            
-            create_tfrecord_shard = self.create_tfrecord_shard
-            def shard_worker(data_input):
-                i, split_name, num_shards, output_dir, shard, target_size = data_input
+        data must be the result of at least one addition of 2 or more datasets.
+        e.g. pnas_dataset + leaves_dataset.
+        The output of this addition results in a new dataframe with a multiIndex, where index level 0 is the
+        dataset source name and index level 1 is the row number within the original dataset
 
-                print('Creating shard : ', shard_fname)
-                shard_filepath = os.path.join(output_dir,shard_fname)
-                unzipped_shard = [list(i) for i in unzip(shard)]
-                create_tfrecord_shard(shard_filepath,
-                                      shard=unzipped_shard,
-                                      shard_id=i,
-                                      target_size = target_size)#self.img_size)
-                
-                
-#             print('Initiating multiprocessing')
-#             with Pool(os.cpu_count()//3) as pool:
-#                 loaded_samples = pool.map(shard_worker, multiprocess_data)#, chunksize=64)
-#             print('Finished multiprocessing')
-                
-#                 shard_fname = f'{split_name}-{str(i).zfill(5)}-of-{str(num_shards).zfill(5)}.tfrecord'
-#                 print('Creating shard : ', shard_fname)
+        Parameters
+        ----------
+        data : pd.DataFrame
+            Should be extracted from a subclass of BaseDataset, by accessing the .data property, after combining
+            2 or more datasets
+        source_name : str
+            Should refer to one of the 2 or more datasets used to construct data
 
-#                 shard_filepath = os.path.join(output_dir,shard_fname)
-                
-#                 shards[i] = list(shard)
-#                 unzipped_shard = [list(i) for i in unzip(shards[i])]
-#                 self.create_tfrecord_shard(shard_filepath,
-#                                       shard=unzipped_shard,
-#                                       shard_id=i,
-#                                       target_size = self.img_size)
-            
-            break
-                
-                
-#         from multiprocessing import Pool
-#         from multiprocessing.dummy import Pool as ThreadPool
-            
-            
-#         with ThreadPool() as pool:
-#             pool.map(func, iterable)
-            
-            
-            
-        filename_log = check_if_tfrecords_exist(output_dir)
+        Returns
+        -------
+        pd.DataFrame
+            Contains only rows belonging to source_name's dataset, same columns and index levels as self.data previously
 
-#         if filename_log == None:
-#             filename_log = save_trainvaltest_tfrecords(dataset_name=self.name,
-#                                                        output_dir=output_dir,
-#                                                        target_size=self.img_size,
-#                                                        low_count_threshold=self.low_count_threshold,
-#                                                        val_size=self.val_size,
-#                                                        test_size=self.test_size,
-#                                                        num_shards=self.num_shards)
-#             label_map = filename_log.pop('label_map', None)
+        Examples
+        -------
+        Examples should be written in doctest format, and
+        should illustrate how to use the function/class.
+        >>>
 
-        for key, records in filename_log.items():
-            filename_log[key] = [os.path.join(output_dir,key,record_fname) for record_fname in sorted(records)]
-        
-        self.filename_log = filename_log
-        
-        return filename_log
-    
-    
-    
-    
-    
-if __name__ == '__main__':
+        """
+        idx = np.where(self.data.index.get_level_values(0)==source_name)[0]
+
+        return self.data.iloc[idx,:]
+
+    def leave_one_class_out(self, class_name: str):
+        """
+        LEAVE-ONE-OUT EXPERIMENT helper function
+
+        Returns a tuple with length==2. The first item is a DataFrame where every row comes from self.data, but does not
+        belong to the class indicated by class_name. The second item is a DataFrame containing all the rows that do
+        belong to class_name.
+
+        Parameters
+        ----------
+        class_name : str
+            The class to be separated out
+
+        Returns
+        -------
+        tuple(pd.DataFrame, pd.DataFrame)
+            tuple corresponding to (included classes, excluded class)
+
+        Examples
+        -------
+        Examples should be written in doctest format, and
+        should illustrate how to use the function/class.
+        >>>
+
+        """
+        label_col = self.columns[1]
+
+        include = self.data[self.data[label_col]!=class_name]
+        exclude = self.data[self.data[label_col]==class_name]
+
+        return (BaseDataset.from_dataframe(include, threshold=self.threshold),
+                BaseDataset.from_dataframe(exclude, threshold=self.threshold))
+
+        # assert include.shape[0]+exclude.shape[0]==self.data.shape[0]
+        # return (include, exclude)
+
+    def enforce_class_whitelist(self, class_names: list):
+        """
+        Similar task as leave_one_class_out, but opposite approach. User provides a list of classes to include, while
+        the rest are excluded.
+
+        Useful for limiting a dataset to only classes that exist in another
+
+        Parameters
+        ----------
+        class_names : list
+            The classes to be kept
+
+        Returns
+        -------
+        tuple(pd.DataFrame, pd.DataFrame)
+            tuple corresponding to (included classes, excluded class)
+
+        Examples
+        -------
+        Examples should be written in doctest format, and
+        should illustrate how to use the function/class.
+        >>>
+
+        """
+
+        label_col = self.columns[1]
+
+        idx = self.data[label_col].isin(class_names)
+
+        include = self.data[idx]
+        exclude = self.data[~idx]
+
+        return (BaseDataset.from_dataframe(include, threshold=self.threshold),
+                BaseDataset.from_dataframe(exclude, threshold=self.threshold))
+
+        # assert include.shape[0]+exclude.shape[0]==self.data.shape[0]
+        # return (include, exclude)
+
+
+#############################################################################################
+
+
+
+
+class LabelEncoder:
+
+    fname = 'label_encoder.json'
+
+    def __init__(self, labels):
+        self.classes = tuple(np.unique(sorted(labels)))
+        self._encoder = OneToOne(enumerate(self.classes)).inv
+        self.fname = 'label_encoder.json'
+
+    @property
+    def num_classes(self):
+        return len(self.classes)
+
+    @property
+    def encoder(self):
+        return self._encoder
+
+    @encoder.setter
+    def encoder(self, data):
+        if type(data)==list:
+            self._encoder = OneToOne(enumerate(data)).inv
+        elif type(data) in [dict, OrderedDict]:
+            self._encoder = OneToOne(data)
+        else:
+            assert False
+
+
+    @property
+    def decoder(self):
+        return self.encoder.inv
+
+
+    def encode(self, labels):
+        '''str->int'''
+        return [self.encoder[l] for l in list(labels)]
+
+    def decode(self, labels):
+        '''int->str'''
+        return [self.decoder[l] for l in labels]
+
+
+    @classmethod
+    def load_config(cls, label_dir):
+        with open(os.path.join(label_dir, cls.fname), 'r') as file:
+            data = json.load(file)
+        # cls(**data)
+        loaded = cls(list(data.keys()))
+        loaded.encoder = data
+        return loaded
+
+    def save_config(self, out_dir):
+        with open(os.path.join(out_dir, self.fname), 'w') as file:
+            json.dump(self.encoder, file)
+
+
+
+
+
+
+def partition_data(data, partitions=OrderedDict({'train':0.5,'test':0.5})):
     '''
-    
-    
+    Split data into named partitions by fraction
+
+    Example:
+    --------
+    #split_data will be a dict with the same keys as partitions, and the values will be the corresponding samples from data.
+    #i.e. 'train' will get the first 40% of samples, 'val' the next 10%, and 'test' the last 50%
+
+    >> split_data = partition_data(data, partitions=OrderedDict({'train':0.4,'val':0.1,'test':0.5}))
     '''
-#     test_dataset = BaseTFRecordDataset()
+    num_rows = len(data)
+    output={}
+    taken = 0.0
+    for k,v in partitions.items():
+        idx = (int(taken*num_rows),int((taken+v)*num_rows))
+        print(k, v, idx)
+        output.update({k:data[idx[0]:idx[1]]})
+        taken+=v
+    assert taken <= 1.0
+    return output
 
-#     # data = test_dataset.extract(test_dataset.name)
-#     # a = next(data)
+def preprocess_data(dataset, encoder, config):
+    """
+    Function to perform 4 preprocessing steps:
+        1. Exclude classes below minimum threshold defined in config.threshold
+        2. Exclude all classes that are not referenced in encoder.classes
+        3. Encode and normalize data into (path: str, label: int) tuples
+        4. Partition data samples into fractional splits defined in config.data_splits_meta
 
-#     data_splits, metadata_splits = test_dataset.load(test_dataset.name,
-#                       test_dataset.low_count_threshold,
-#                       test_dataset.val_size, 
-#                       test_dataset.test_size)
+    Parameters
+    ----------
+    dataset : BaseDataset
+        Any instance of BaseDataset or its subclasses
+    encoder : LabelEncoder
+        Description of parameter `encoder`.
+    config : Namespace or stuf.stuf
+        Config object containing the attributes/properties:
+            config.threshold
+            config.data_splits_meta
 
+    Returns
+    -------
+    dict
+        Dictionary mapping from keys defined in config.data_splits_meta.keys(), to lists of tuples representing each sample.
 
-#     filename_log = test_dataset.export_tfrecords()
+    Examples
+    -------
+    Examples should be written in doctest format, and
+    should illustrate how to use the function/class.
+    >>> dataset = LeavesDataset()
+    ... encoder = LabelEncoder(dataset.data.family)
+    ... data_splits = preprocess_data(dataset, encoder, config)
+
+    """
+
+    dataset.exclude_rare_classes(threshold=config.threshold)
+
+    dataset, _ = dataset.enforce_class_whitelist(class_names=encoder.classes)
+
+    x = list(dataset.data['path'].values)#.reshape((-1,1))
+    y = np.array(encoder.encode(dataset.data['family']))
+
+    # import pdb;pdb.set_trace()
+    shuffled_data = list(zip(x,y))
+    random.shuffle(shuffled_data)
+
+    return partition_data(data=shuffled_data,
+                          partitions=OrderedDict(config.data_splits_meta)
+                          )
+
+def calculate_class_counts(y_data : list):
+    labels, label_counts = np.unique(y_data, return_counts=True)
+    if type(labels[0])!=str:
+        labels = [int(label) for label in labels]
+    label_counts = [int(count) for count in label_counts]
+    return {label: count for label,count in zip(labels, label_counts)}
+
+def calculate_class_weights(y_data : list):
+    """
+    Calculate class weights as w[i] = <total # of samples>/(<total # of classes>*<class[i] count>)
+
+    Parameters
+    ----------
+    y_data : list
+        List of y labels to be counted per class for calculating class weights
+
+    Returns
+    -------
+    dict
+        Contains key:value pairs corresponding to unique class labels: corresponding weights
+        e.g. {0:1.0,
+              1:2.344,
+              2:5.456}
+
+    """
+
+    # labels, label_counts = np.unique(y_data, return_counts=True)
+
+    class_counts_dict = calculate_class_counts(y_data)
+
+    total = sum(class_counts_dict.values())
+    num_classes = len(class_counts_dict)
+
+    calc_weight = lambda count: total / (num_classes * count)
+
+    class_weights = {label:calc_weight(count) for label, count in class_counts_dict.items()}
+
+    # class_weights = {k: v/np.min(list(class_weights.values())) for k,v in class_weights.items()}
+    # class_weights = {k: v/np.max(list(class_weights.values())) for k,v in class_weights.items()}
+    return class_weights
+    # total = sum(label_counts)
+    # num_classes = len(labels)
+
+    # class_weights = {}
+    # for label, c in zip(labels,label_counts):
+    #     if type(label) != str:
+    #         label = int(label)
+    #     class_weights[label] = total / (num_classes * c)
+    # return class_weights
