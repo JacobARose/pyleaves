@@ -21,6 +21,10 @@ Full project repo containing sub-packages for database, dataloaders, models, tra
         >> pip install -e .
         
 ### ENVIRONMENT MANAGEMENT:
+
+    -pyleaves.yml -> Tensorflow 1.15 version
+    -pyleaves2.yml -> Tensorflow 2.1 version (experimental)
+
 This can be used as a base reference, but individual packages may need to be installed in a largely trial and error fashion atm. Creating a minimum environment specification is TBD.
 
     1. Locate up-to-date environment spec file 'pyleaves.yml', usually in root pyleaves directory
@@ -44,7 +48,7 @@ Note, where it says "-n pyleaves' above, you can replace 'pyleaves" with your pr
 Only relevant when making changes to repo that require additional dependencies
 
     5a. Export conda environment spec file (Only do this if making major changes to requirements or working on new git branch):
-        >> conda env export > pyleaves.yml
+        >> conda env export --no-builds > pyleaves.yml
         
     5b. Export conda environment spec file using env history rather than list of specific versions
         >> conda env export --from-history > pyleaves_from_history.yml
