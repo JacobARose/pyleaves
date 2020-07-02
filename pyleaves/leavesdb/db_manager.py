@@ -152,7 +152,20 @@ def archivedb_to_json(db_path, exist_ok):
     return archive_json, temp_db_path
 
 
-def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db', json_records=None, exist_ok=False, temp_backup=True):
+import sqlalchemy as sa
+
+SQL_DTYPES = {str:sa.types.TEXT,
+              int:sa.types.INT,
+              float:sa.types.FLOAT}
+
+
+
+def build_db_from_json(frozen_json_filepaths=[],
+                       db_path=r'resources/leavesdb.db',
+                       json_records=None,
+                       column_schema=None,
+                       exist_ok=False,
+                       temp_backup=False):
     '''
     Reconstruct database .db file from collection of individual json records, each of which may contain one or more data samples.
 
@@ -162,10 +175,14 @@ def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db
         All significant data should be contained in json files, whose path location is pointed to by each str in list.
     db_path : str
         File path in which to create database.
-    exist_ok : bool
+    exist_ok : bool DEPRECATED
+        DEPRECATED, Will be removed in future update.
         If False and the db exists, deletes db and constructs solely with data contained in provided json.
         If True and the db exists, create temporary backup json, delete db, then recreate from list of
         archived + new JSON archives
+    temp_backup : bool DEPRECATED
+        DEPRECATED, Will be removed in future update.
+
 
     Returns
     -------
@@ -174,33 +191,89 @@ def build_db_from_json(frozen_json_filepaths=[], db_path=r'resources/leavesdb.db
 
     '''
     assert type(frozen_json_filepaths)==list
+    if json_records: print('json_records input to function will be ignored. Please refactor function.')
     db_exists = os.path.isfile(db_path)
+
+    types = None
+    if type(column_schema) is dict:
+        types = {col:SQL_DTYPES[type(col)] for col in column_schema}
 
     if db_exists:
         os.remove(db_path)
 
     db_URI = f'sqlite:///{db_path}'
 
-    db = dataset.connect(db_URI)
-    table = db.create_table('dataset', primary_id='id')
-    count = 0
-    for filepath in frozen_json_filepaths:
-        try:
-            if json_records is None:
+    with dataset.connect(db_URI) as db:
+        table = db.create_table('dataset', primary_id='id')#, types=types)
+        count = 0
+        for filepath in frozen_json_filepaths:
+            try:
+                # if json_records is None:
                 print(f'Loading {filepath}')
                 json_records = load(filepath)
 
-            table.insert_many(json_records['results'], ensure=True)
-            db.commit()
-            file_count = len(json_records['results'])
-            count += file_count
-            print(f'committed {file_count} row entries for data from {filepath}')
-        except Exception as e:
-            print(e)
+                table.insert_many(json_records['results'], ensure=True, types=types)
+                db.commit()
+                file_count = len(json_records['results'])
+                count += file_count
+                print(f'committed {file_count} row entries for data from {filepath}')
+            except Exception as e:
+                import pdb; pdb.set_trace()
+                print(e)
 
     print(f'[SUCCESS]: Database created at {db_path} with {count} added samples')
 
     return {'success_count':count}
+
+
+    # db = dataset.connect(db_URI)
+    # table = db.create_table('dataset', primary_id='id')
+    # count = 0
+    # for filepath in frozen_json_filepaths:
+    #     try:
+    #         # if json_records is None:
+    #         print(f'Loading {filepath}')
+    #         json_records = load(filepath)
+    #
+    #         table.insert_many(json_records['results'], ensure=True, types=types)
+    #         db.commit()
+    #         file_count = len(json_records['results'])
+    #         count += file_count
+    #         print(f'committed {file_count} row entries for data from {filepath}')
+    #     except Exception as e:
+    #         import pdb; pdb.set_trace()
+    #         print(e)
+    #
+    # print(f'[SUCCESS]: Database created at {db_path} with {count} added samples')
+    #
+    # return {'success_count':count}
+##############
+
+def create_new_db(data, db_dir, data_tag = 'raw_Leaves_data', column_schema = None):
+
+    raw_data_json_path = os.path.join(db_dir, data_tag + '.json')
+    raw_data_db_path = os.path.join(db_dir, data_tag + '.db')
+
+    print('-'*50,'\n', f'Updating database with dataframe containing {data.shape[0]} rows')
+
+#     data = data.sort_index(axis=1)
+
+    data_records = data.to_dict('records')
+    db_data_as_json = dict2json(data = data_records,
+                                prefix = db_dir,
+                                filename = data_tag + '.json')
+
+    success_count = build_db_from_json(frozen_json_filepaths=[raw_data_json_path],
+                                       db_path=raw_data_db_path,
+                                       column_schema=column_schema)
+#                        json_records=updated_db_json)
+
+    print(db_data_as_json['count'])
+    print(success_count, 'successes')
+
+    return {'success_count':success_count}
+
+
 
 
 ########

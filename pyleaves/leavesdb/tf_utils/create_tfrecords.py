@@ -27,7 +27,8 @@ import tensorflow as tf
 
 # tf.enable_eager_execution()
 
-from tensorflow.data.experimental import AUTOTUNE
+# from tensorflow.data.experimental import AUTOTUNE
+AUTOTUNE = tf.data.experimental.AUTOTUNE
 from pyleaves.utils.img_utils import TFRecordCoder, plot_image_grid
 from pyleaves.configs.config_v1 import DatasetConfig
 from pyleaves import leavesdb

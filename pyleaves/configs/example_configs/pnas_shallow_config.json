@@ -1,0 +1,33 @@
+{
+    "dataset_name": "PNAS",
+    "model_name": "shallow",
+    "num_epochs": 150,
+    "batch_size": 32,
+    "optimizer": "SGD",
+    "loss": "categorical_crossentropy",
+    "lr": 0.0001,
+    "regularization": null,
+    "num_classes": 19,
+    "random_jitter":{
+        "resize":[
+            338,
+            338
+        ],
+        "crop_size":[
+            224,
+            224,
+            3
+        ]
+    },
+    "image_size": [
+        224,
+        224
+    ],
+    "num_channels": 1,
+    "train_size": 0.4,
+    "val_size": 0.1,
+    "test_size": 0.5,
+    "data_threshold": 10,
+    "frozen_layers": null,
+    "seed": 29384
+}

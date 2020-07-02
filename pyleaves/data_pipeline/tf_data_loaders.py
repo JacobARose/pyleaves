@@ -1,3 +1,8 @@
+# @Author: Jacob A Rose
+# @Date:   Tue, March 31st 2020, 12:34 am
+# @Email:  jacobrose@brown.edu
+# @Filename: tf_data_loaders.py
+
 
 import copy
 from functools import partial
@@ -5,7 +10,8 @@ import os
 join = os.path.join
 
 import tensorflow as tf
-from tensorflow.data.experimental import AUTOTUNE
+# from tensorflow.data.experimental import AUTOTUNE
+AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 from pyleaves.leavesdb.tf_utils.create_tfrecords import decode_example
 from pyleaves.utils import ensure_dir_exists
@@ -21,10 +27,10 @@ def build_train_dataset(filenames, num_classes=None, batch_size=32, buffer_size=
         img, label = decode_example(example_proto)
         label = tf.one_hot(label, num_classes)
         return img, label
-    
+
     dataset_generator_fun = lambda x: tf.data.TFRecordDataset(x)
     __parse_function = partial(_parse_function, num_classes=num_classes)
-    
+
     optimized_dataset = tf.data.Dataset.from_tensor_slices(filenames) \
         .apply(dataset_generator_fun) \
         .map(__parse_function,num_parallel_calls=AUTOTUNE) \
@@ -41,7 +47,7 @@ def build_test_dataset(filenames, num_classes=None, batch_size=32, num_parallel_
         img, label = decode_example(example_proto)
         label = tf.one_hot(label, num_classes)
         return img, label
-    
+
     dataset_generator_fun = lambda x: tf.data.TFRecordDataset(x)
     __parse_function = partial(_parse_function, num_classes=num_classes)
 
@@ -118,7 +124,7 @@ class DatasetBuilder:
         '''
         Built to allow more flexible TFRecord storage, specifically allowing more than 1 level of subdir to specify a particular dataset
         e.g.
-        
+
         root_dir\
                 |dataset_root_dir\
                                  |num_channels=1\
@@ -129,25 +135,25 @@ class DatasetBuilder:
                                                  |train\
                                                  |val\
                                                  |test\
-        
+
         if subdirs list is empty, then all directories below root_dir should either correspond to different data subsets (i.e. train/val/test) or only contain a single possible subdir themselves (e.g. the example above would only have one of either num_channels=1 or num_channels=3)
-        
-        
+
+
         subdirs=['Leaves','num_channels-3']
         '''
         subdirs = [str(d) for d in subdirs]
         filepath_subsets = {}
-        
+
         num_searches = len(subdirs)
         current_dir = root_dir
         current_level = os.listdir(root_dir)
         assert len(current_level) > 0
         print('recursively searching ', current_dir)
-        
+
         while num_searches > 0:
             if subdirs[0] in current_level:
                 current_dir = join(current_dir, subdirs.pop(0))
-#                 print('recursively searching ', current_dir)
+                print('recursively searching ', current_dir)
                 current_level = os.listdir(current_dir)
                 num_searches -= 1
 #                 print('num levels left:', num_searches)
@@ -155,18 +161,18 @@ class DatasetBuilder:
             else:
                 print('TFRecord searching IN VAIN. Check recursive search terms:', '\n\t'.join(subdirs))
                 return None
-                
+
         assert ('train' in current_level) | \
                 ('val' in current_level) | \
                 ('test' in current_level)
-        
+
         if verbose: print('Recursive search for TFRecords found subset directories in ', current_dir)
         for subset in current_level:
-            subset_dir = os.path.join(current_dir,subset)          
+            subset_dir = os.path.join(current_dir,subset)
 #             print(subset, subset_dir, '\n'.join(file_list))
             filepath_subsets.update({subset:self.list_files(subset_dir)})
         return filepath_subsets
-    
+
     def get_dataset(self, subset=None, batch_size=None, num_classes=None):
         if subset is None:
             subset = self.subset
@@ -174,8 +180,8 @@ class DatasetBuilder:
             batch_size = self.batch_size
         if num_classes is None:
             num_classes = self.num_classes
-            
-            
+
+
         if subset == 'train':
             return build_train_dataset(filenames=self.subsets[subset],
                                        num_classes=num_classes,
@@ -191,6 +197,3 @@ class DatasetBuilder:
         else:
             print('Subset type not recognized, returning None.')
             return None
-
-        
-        

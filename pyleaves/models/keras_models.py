@@ -1,6 +1,13 @@
+# @Author: Jacob A Rose
+# @Date:   Tue, March 31st 2020, 12:36 am
+# @Email:  jacobrose@brown.edu
+# @Filename: keras_models.py
+
+
 '''
 Model definitions for tensorflow.keras model architectures
 '''
+import pdb;pdb.set_trace();print(__file__)
 
 import numpy as np
 import os
@@ -18,7 +25,8 @@ import itertools
 import matplotlib.pyplot as plt
 
 from pyleaves.train.metrics import METRICS
-from pyleaves.models.base_model import add_regularization
+from pyleaves.base.base_model import add_regularization
+# from pyleaves.models.base_model import add_regularization
 
 def vgg16_base(input_shape=(224,224,3), frozen_layers=(0,-4)):
     print('printing vgg16 base with input_shape=',input_shape)
@@ -79,9 +87,9 @@ def build_model(model_name='shallow',
     if 'name' in kwargs:
         print("keyword 'name' is deprecated in function build_model(), please use 'model_name' instead.")
         return None
-    
+
     print('building model: ',model_name)
-    
+
     if model_name == 'shallow':
         base = shallow(input_shape)
     elif model_name == 'vgg16':
@@ -109,8 +117,8 @@ def build_model(model_name='shallow',
 #             base,
 #             global_average_layer,conv,
 #             prediction_layer
-#             ])        
-        
+#             ])
+
     else:
         prediction_layer = tf.keras.layers.Dense(num_classes,activation='softmax')
         model = tf.keras.Sequential([
@@ -118,13 +126,13 @@ def build_model(model_name='shallow',
             prediction_layer
             ])
 
-        
+
     if regularization is not None:
         if 'l2' in regularization:
             regularizer = tf.keras.regularizers.l2(regularization['l2'])
             model = add_regularization(model, regularizer)
-        
-        
+
+
     model.compile(optimizer=tf.keras.optimizers.Adam(lr=base_learning_rate),
               loss='categorical_crossentropy',
               metrics=METRICS)

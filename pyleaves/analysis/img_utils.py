@@ -1,4 +1,12 @@
+# @Author: Jacob A Rose
+# @Date:   Tue, March 31st 2020, 12:34 am
+# @Email:  jacobrose@brown.edu
+# @Filename: img_utils.py
+
+
 '''
+DEPRECATED (4/16/20): Moved pyleaves/analysis/img_utils.py to pyleaves/utils/img_utils.py
+
 Functions for managing images
 '''
 
@@ -34,7 +42,10 @@ splitext = os.path.splitext
 basename = os.path.basename
 
 from pyleaves.utils import ensure_dir_exists
-from pyleaves.config import DatasetConfig
+import pyleaves
+# print(type(pyleaves.config))
+# import pdb; pdb.set_trace()
+DatasetConfig = pyleaves.config.DatasetConfig
 # from pyleaves import leavesdb
 from pyleaves.leavesdb.tf_utils.tf_utils import bytes_feature, int64_feature, float_feature
 
@@ -124,18 +135,30 @@ class Coder:
         '''
         self.output_ext = 'jpg'
 
-        labels = set(list(data['label']))
-        [ensure_dir_exists(join(output_dir,label)) for label in labels]
+        self.labels = set(list(data['label']))
+        [ensure_dir_exists(join(output_dir,label)) for label in self.labels]
+
+        is_tiff = data['source_path'].str.endswith('.tif')
 
         self.indices = {
-                        'tiff':np.where(data['source_path'].str.endswith('.tif')),
-                        'non_tiff':np.where(~(data['source_path'].str.endswith('.tif')))
+                        'tiff':np.where(is_tiff),
+                        'non_tiff':np.where(~is_tiff)
                        }
 
         self.data = {
-                    'tiff':data[data['source_path'].str.endswith('.tif')],
-                    'non_tiff':data[~(data['source_path'].str.endswith('.tif'))]
+                    'tiff':data[self.indices['tiff']], #data['source_path'].str.endswith('.tif')],
+                    'non_tiff':data[self.indices['non_tiff']] #~(data['source_path'].str.endswith('.tif'))]
                     }
+
+    @property
+    def subset(self):
+        return self._subset
+
+    @subset.setter
+    def subset(self, new_subset):
+        self._subset = new_subset
+        self.output_dir = join(self.root_dir,self._subset)
+        ensure_dir_exists(self.output_dir)
 
     def set_image_reader(self,output_ext='png', from_tiff=False):
         if from_tiff:
@@ -244,13 +267,21 @@ def load_and_encode_example(path, label, target_size = (224,224)):
 
 class TFRecordCoder(JPGCoder):
 
-    def __init__(self, data, root_dir, record_subdirs=[], subset='train', target_size=(224,224), num_channels=3, num_shards=10, num_classes=1000):
+    def __init__(self,
+                 data,
+                 root_dir,
+                 record_subdirs=[],
+                 subset='train',
+                 target_size=(224,224),
+                 num_channels=3,
+                 num_shards=10,
+                 num_classes=1000):
         '''
         Example usage:
-        
+
             coder = TFRecordCoder(data, output_dir, subset='train', target_size=(224,224), num_shards=10)
             coder.execute_convert()
-        
+
         Arguments:
             data, dict:
                 dict with keys ['path', 'label']
@@ -259,35 +290,31 @@ class TFRecordCoder(JPGCoder):
             record_subdirs:
                 List of strings representing each level of subdirectory beneath root_dir to search before expecting train/val/test dirs.
         '''
-        
-        
-#         ensure_dir_exists(join(output_dir,subset))
+
         self.root_dir = os.path.join(root_dir, *record_subdirs)
         self.subset = subset
         self.target_size = target_size
         self.num_channels = num_channels
         self.num_shards = num_shards
         self.num_classes = num_classes
-        
-        self.num_samples = len(data['label'])
+
+        if 'y' in data.keys():
+            self.y_col = 'y'
+        else:
+            self.y_col = 'label'
+        if 'x' in data.keys():
+            self.x_col = 'x'
+        else:
+            self.x_col = 'path'
+        self.num_samples = len(data[self.y_col])
         self.indices = np.arange(self.num_samples)
         self.data = data
         self.output_ext='tfrecord'
         self.filepath_log = []
-        
-        temp = tf.zeros([4, 32, 32, 3])  # Or tf.zeros
-        tf.keras.applications.vgg16.preprocess_input(temp)
 
-    @property
-    def subset(self):
-        return self._subset
-    
-    @subset.setter
-    def subset(self, new_subset):
-        self._subset = new_subset
-        self.output_dir = join(self.root_dir,self._subset)
-        ensure_dir_exists(self.output_dir) 
-        
+#         temp = tf.zeros([4, 32, 32, 3])  # Or tf.zeros
+#         tf.keras.applications.vgg16.preprocess_input(temp)
+
     def gen_shard_filepath(self, shard_key, output_dir):
         '''
         e.g. shard_filepath = self.gen_shard_filepth(shard_key=0, output_dir)
@@ -305,7 +332,7 @@ class TFRecordCoder(JPGCoder):
 
     def encode_example(self, img, label):
         img = tf.image.encode_jpeg(img, optimize_size=True, chroma_downsampling=False)
-        
+
         features = {
                     'image/bytes': bytes_feature(img),
                     'label': int64_feature(label)
@@ -322,26 +349,26 @@ class TFRecordCoder(JPGCoder):
 
         img = tf.image.decode_jpeg(features['image/bytes'], channels=3) # * 255.0
         img = tf.compat.v1.image.resize_image_with_pad(img, *self.target_size)
-        
+
         label = tf.cast(features['label'], tf.int32)
         label = tf.one_hot(label, depth=self.num_classes)
 
-        return img, label       
-            
-    def _get_sharded_dataset(self, paths, labels, shard_size):
+        return img, label
+
+    def _get_shards(self, paths, labels, shard_size):
         return tf.data.Dataset.from_tensor_slices((paths, labels)) \
                 .map(self.parse_image,num_parallel_calls=AUTOTUNE) \
                 .batch(shard_size) \
                 .prefetch(AUTOTUNE)
 
     def stage_dataset(self, data):
-        paths = [path[0] for path in data['path']]
-        labels = [label for label in data['label']]
+        paths = [path[0] for path in data[self.x_col]]
+        labels = [label for label in data[self.y_col]]
 
         shard_size = self.num_samples//self.num_shards
         print('self.num_shards',self.num_shards)
-        return self._get_sharded_dataset(paths, labels, shard_size)
-    
+        return self._get_shards(paths, labels, shard_size)
+
     def execute_batch(self, shard_id, images, labels):
         try:
             shard_filepath = self.gen_shard_filepath(shard_key=shard_id, output_dir = self.output_dir)
@@ -358,7 +385,7 @@ class TFRecordCoder(JPGCoder):
                     recordfile.write(example)
                 end_time = time.perf_counter()
                 print(f'Finished {shard_filepath}')
-                print(f'Wrote {len(labels)} in {end_time-start_time:.2f}')            
+                print(f'Wrote {len(labels)} in {end_time-start_time:.2f}')
         except Exception as e:
             print("Unexpected error:", sys.exc_info())
             print(f'[ERROR] {e}')
@@ -370,22 +397,22 @@ class TFRecordCoder(JPGCoder):
 
         for shard_id, (images, labels) in enumerate(staged_data):
             self.execute_batch(shard_id, images, labels)
-        
-    def read_tfrecords(self, tfrecord_paths=None, buffer_size=100, seed=17, batch_size=16, drop_remainder=False):
-        if tfrecord_paths is None:
-            tfrecord_paths = self.filepath_log
-        return tf.data.Dataset.from_tensor_slices(tfrecord_paths) \
-            .apply(lambda x: tf.data.TFRecordDataset(x)) \
-            .map(self.decode_example,num_parallel_calls=AUTOTUNE) \
-            .shuffle(buffer_size=buffer_size, seed=seed) \
-            .batch(batch_size,drop_remainder=drop_remainder) \
-            .repeat() \
-            .prefetch(AUTOTUNE)
-            
+
+    # def read_tfrecords(self, tfrecord_paths=None, buffer_size=100, seed=17, batch_size=16, drop_remainder=False):
+    #     if tfrecord_paths is None:
+    #         tfrecord_paths = self.filepath_log
+    #     return tf.data.Dataset.from_tensor_slices(tfrecord_paths) \
+    #         .apply(lambda x: tf.data.TFRecordDataset(x)) \
+    #         .map(self.decode_example,num_parallel_calls=AUTOTUNE) \
+    #         .shuffle(buffer_size=buffer_size, seed=seed) \
+    #         .batch(batch_size,drop_remainder=drop_remainder) \
+    #         .repeat() \
+    #         .prefetch(AUTOTUNE)
+
 _R_MEAN = 123.68 / 255.0
 _G_MEAN = 116.78 / 255.0
 _B_MEAN = 103.94 / 255.0
-        
+
 def imagenet_mean_subtraction(image, label):
     """
     Subtracts the given means from each image channel.
@@ -403,13 +430,13 @@ def imagenet_mean_subtraction(image, label):
         than three or if the number of channels in `image` doesn't match the
         number of values in `means`.
     """
-    
+
 
     means = tf.reshape(
                         tf.constant([_R_MEAN, _G_MEAN, _B_MEAN]),
                         [1,1,3]
                        )
-    
+
     if image.get_shape().ndims != 3:
         raise ValueError('Input must be of size [height, width, C>0]')
 
@@ -420,7 +447,7 @@ def imagenet_mean_subtraction(image, label):
 
 
 
-def get_keras_preprocessing_function(model_name: str, input_format=tuple):
+def get_keras_preprocessing_function(model_name: str, input_format=tuple, x_col='path', y_col='label'):
     '''
     if input_dict_format==True:
         Includes value unpacking in preprocess function to accomodate TFDS {'image':...,'label':...} format
@@ -433,19 +460,19 @@ def get_keras_preprocessing_function(model_name: str, input_format=tuple):
         from tensorflow.keras.applications.resnet_v2 import preprocess_input
     else:
         preprocess_input = lambda x: x
-    
+
     if input_format=='dict':
         def preprocess_func(input_example):
-            x = input_example['image']
-            y = input_example['label']
+            x = input_example[x_col]
+            y = input_example[y_col]
             return preprocess_input(x), y
-        _temp = {'image':tf.zeros([4, 32, 32, 3]), 'label':tf.zeros(())}
+        _temp = {x_col:tf.zeros([4, 32, 32, 3]), y_col:tf.zeros(())}
         preprocess_func(_temp)
-        
+
     elif input_format=='tuple':
         def preprocess_func(x, y):
             return preprocess_input(x), y
-        _temp = ( tf.zeros([4, 32, 32, 3]), tf.zeros(()) )        
+        _temp = ( tf.zeros([4, 32, 32, 3]), tf.zeros(()) )
         preprocess_func(*_temp)
     else:
         print('''input_format must be either dict or tuple, corresponding to data organized as:
@@ -454,7 +481,7 @@ def get_keras_preprocessing_function(model_name: str, input_format=tuple):
               dict: {'image':x, 'label':y}
               ''')
         return None
-    
+
     return preprocess_func
 
 
@@ -475,7 +502,7 @@ def get_keras_preprocessing_function(model_name: str, input_format=tuple):
 #         from tensorflow.keras.applications.resnet_v2 import preprocess_input
 #     else:
 #         preprocess_input = lambda x: x
-    
+
 #     if input_format==dict:
 #         def preprocess_func(input_example):
 
@@ -484,12 +511,12 @@ def get_keras_preprocessing_function(model_name: str, input_format=tuple):
 #             return preprocess_input(x), y
 #         _temp = {'image':tf.zeros([4, 32, 32, 3]), 'label':tf.zeros(())}
 #         preprocess_func(_temp)
-        
+
 #     elif input_format==tuple:
 #         def preprocess_func(x, y):
 #             x = tf.cast(x, tf.float32)
 #             return preprocess_input(x), y
-#         _temp = ( tf.zeros([4, 32, 32, 3]), tf.zeros(()) )        
+#         _temp = ( tf.zeros([4, 32, 32, 3]), tf.zeros(()) )
 #         preprocess_func(*_temp)
 #     else:
 #         print('''input_format must be either dict or tuple, corresponding to data organized as:
@@ -498,42 +525,50 @@ def get_keras_preprocessing_function(model_name: str, input_format=tuple):
 #               dict: {'image':x, 'label':y}
 #               ''')
 #         return None
-    
+
 #     return preprocess_func
 
-    
-    
+
+
 class ImageAugmentor:
-    
+
     def __init__(self,
                  augmentations=['rotate',
                                 'flip',
                                 'color'],
+                 augmentation_probability=1.0,
                  seed=12):
-        self.augmentations = augmentations        
+
+        self.augmentations = augmentations
+        self.p = augmentation_probability
         self.seed = seed
+
+        self.maps = {'rotate':self.rotate,
+                      'flip':self.flip,
+                      'color':self.color}
+
     def rotate(self, x: tf.Tensor, label: tf.Tensor) -> tf.Tensor:
         """Rotation augmentation
 
         Args:
-            x: Image
+            x,     tf.Tensor: Image
+            label, tf.Tensor: arbitrary tensor, passes through unchanged
 
         Returns:
-            Augmented image
+            Augmented image, label
         """
 
         # Rotate 0, 90, 180, 270 degrees
         return tf.image.rot90(x, tf.random.uniform(shape=[], minval=0, maxval=4, dtype=tf.int32,seed=self.seed)), label
 
-
     def flip(self, x: tf.Tensor, label: tf.Tensor) -> tf.Tensor:
         """Flip augmentation
 
         Args:
-            x: Image to flip
-
+            x,     tf.Tensor: Image to flip
+            label, tf.Tensor: arbitrary tensor, passes through unchanged
         Returns:
-            Augmented image
+            Augmented image, label
         """
         x = tf.image.random_flip_left_right(x, seed=self.seed)
         x = tf.image.random_flip_up_down(x, seed=self.seed)
@@ -544,10 +579,11 @@ class ImageAugmentor:
         """Color augmentation
 
         Args:
-            x: Image
+            x,     tf.Tensor: Image
+            label, tf.Tensor: arbitrary tensor, passes through unchanged
 
         Returns:
-            Augmented image
+            Augmented image, label
         """
         x = tf.image.random_hue(x, 0.08, seed=self.seed)
         x = tf.image.random_saturation(x, 0.6, 1.6, seed=self.seed)
@@ -555,8 +591,28 @@ class ImageAugmentor:
         x = tf.image.random_contrast(x, 0.7, 1.3, seed=self.seed)
         return x, label
 
-    
-    
+    def apply_augmentations(self, dataset: tf.data.Dataset) -> tf.data.Dataset: #x: tf.Tensor, label: tf.Tensor) -> tf.Tensor:
+        """
+        Call this function to apply all of the augmentation in the order of specification
+        provided to the constructor __init__() of ImageAugmentor.
+
+        Args:
+            dataset, tf.data.Dataset: must yield individual examples of form (x, y)
+        Returns:
+            Augmented dataset
+        """
+
+        for f in self.augmentations:
+            # Apply an augmentation only in 25% of the cases.000000
+            aug = self.maps[f]
+            dataset = dataset.map(lambda x,y: tf.cond(tf.random_uniform([], 0, 1) > (1 - self.p)), lambda: (aug(x),y), lambda: (x,y), num_parallel_calls=4)
+
+        return dataset
+
+
+
+## TODO: Integrate color conversions rgb2gray and gray2rgb into ImageAugmentor
+
 def rgb2gray_3channel(img, label):
     '''
     Convert rgb image to grayscale, but keep num_channels=3
@@ -570,12 +626,8 @@ def rgb2gray_1channel(img, label):
     Convert rgb image to grayscale, num_channels from 3 to 1
     '''
     img = tf.image.rgb_to_grayscale(img)
-    return img, label    
+    return img, label
 
-    
-    
-
-    
 # def augment(x: tf.Tensor) -> tf.Tensor:
 #     """Some augmentation
 
@@ -588,65 +640,20 @@ def rgb2gray_1channel(img, label):
 #     x = .... # augmentation here
 #     return x
 
-        
-        
-        
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
 ##############################################################################
-##############################################################################        
-        
+##############################################################################
+
 
 class CorruptJPEGError(Exception):
     corrupted_files = []
     def __init__(self, *args):
         '''
-        Custom exception 
+        Custom exception
         '''
         print(f'FOUND Corrupt JPEG: {args}')
         if args:
             type(self).corrupted_files.append(*args)
-        
+
 
 
 ##############################################################################
@@ -689,7 +696,7 @@ class DaskCoder:
         self.output_ext = 'jpg'
 
         labels = set(list(data['label']))
-        
+
         if output_dir:
             [ensure_dir_exists(join(output_dir,label)) for label in labels]
 
@@ -1013,3 +1020,4 @@ def load_image(filepath, target_size=(224,224)):
     img = resize(img, target_size, interpolation=cv2.INTER_CUBIC)
 
     return img
+# import pdb;pdb.set_trace();print(__file__)

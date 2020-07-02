@@ -13,7 +13,7 @@ python /home/jacob/projects/pyleaves/pyleaves/train/tf_parameterized_train_main.
 
 python /home/jacob/projects/pyleaves/pyleaves/train/tf_parameterized_train_main.py --neptune_project_name 'jacobarose/sandbox' --experiment_name pnas_minimal_example --config_path '/home/jacob/projects/pyleaves/pyleaves/configs/example_configs/pnas_shallow_config.json' --gpu_id 6
 
-python /home/jacob/projects/pyleaves/pyleaves/train/tf_parameterized_train_main.py --neptune_project_name 'jacobarose/sandbox' --experiment_name pnas_minimal_example --config_path '/home/jacob/projects/pyleaves/pyleaves/configs/example_configs/pnas_vgg16_config_50-50.json' --gpu_id 7 -tags '50-50_split'
+python /home/jacob/projects/pyleaves/pyleaves/train/tf_parameterized_train_main.py --neptune_project_name 'jacobarose/sandbox' --experiment_name pnas_minimal_example --config_path '/home/jacob/projects/pyleaves/pyleaves/configs/example_configs/pnas_vgg16_config_50-50.json' --gpu_id 5 -tags '50-50_split'
 
 
 python /home/jacob/projects/pyleaves/pyleaves/train/tf_parameterized_train_main.py --neptune_project_name 'jacobarose/sandbox' --experiment_name pnas_minimal_example --config_path '/home/jacob/projects/pyleaves/pyleaves/configs/example_configs/pnas_resnet_config.json' --gpu_id 6
@@ -68,30 +68,6 @@ def main(**kwargs):
 
 
 
-
-
-    # try:
-    #     physical_devices = tf.config.list_physical_devices('GPU')#'XLA_GPU')
-    #     pprint(physical_devices)
-    #     gpus = [d for d in physical_devices if args.gpu_id in d.name]
-    #     pprint(gpus)
-    #     # tf.config.set_logical_device_configuration(gpus[0],[tf.config.LogicalDeviceConfiguration()])
-    #
-    #     # tf.config.experimental.set_virtual_device_configuration(gpus[0])
-    #     # tf.config.set_visible_devices(physical_devices, 'XLA_GPU')
-    #     logical_devices = tf.config.list_logical_devices('GPU')
-    #     # Logical device was not created for first GPU
-    #     pprint(f'physical_devices: {physical_devices}')
-    #     pprint(f'logical_devices: {logical_devices}')
-    # except Exception as e:
-    #     print(e)
-    #     print('NEVERMIND')
-    #     pass
-
-
-
-
-
     import arrow
     import numpy as np
     import pandas as pd
@@ -116,13 +92,13 @@ def main(**kwargs):
     from tensorflow.keras import metrics
     from tensorflow.keras.preprocessing.image import load_img, img_to_array
     from tensorflow.keras import layers
+    from tensorflow.keras import backend as K
     import tensorflow_datasets as tfds
     import neptune_tensorboard as neptune_tb
 
     seed = 346
     # set_random_seed(seed)
     # reset_keras_session()
-    # import pdb;pdb.set_trace()
     def get_preprocessing_func(model_name):
         if model_name.startswith('resnet'):
             from tensorflow.keras.applications.resnet_v2 import preprocess_input
@@ -132,17 +108,7 @@ def main(**kwargs):
             def preprocess_input(x):
                 return x/255.0 # ((x/255.0)-0.5)*2.0
 
-        return lambda x,y: (preprocess_input(x),y)
-
-    # preprocess_input = get_preprocessing_func(PARAMS['model_name'])
-    # preprocess_input(tf.zeros([4, 32, 32, 3]), tf.zeros([4, 32]))
-
-    # def _load_img(image_path, img_size=(224,224)):
-    #     img = tf.io.read_file(image_path)
-    #     img = tf.image.decode_jpeg(img, channels=3)
-    #     # Use `convert_image_dtype` to convert to floats in the [0,1] range.
-        # img = tf.image.convert_image_dtype(img, tf.float32)
-    #     return tf.compat.v1.image.resize_image_with_pad(img, *img_size)
+        return preprocess_input #lambda x,y: (preprocess_input(x),y)
 
     def _load_img(image_path):#, img_size=(224,224)):
         img = tf.io.read_file(image_path)
@@ -157,7 +123,12 @@ def main(**kwargs):
         return label
 
     def _load_example(image_path, label, num_classes=19):
-        img = _load_img(image_path)#, img_size=img_size)
+        img = _load_img(image_path)
+        one_hot_label = _encode_label(label, num_classes=num_classes)
+        return img, one_hot_label
+
+    def _load_uint8_example(image_path, label, num_classes=19):
+        img = tf.image.convert_image_dtype(_load_img(image_path)*255.0, dtype=tf.uint8)
         one_hot_label = _encode_label(label, num_classes=num_classes)
         return img, one_hot_label
 
@@ -175,115 +146,6 @@ def main(**kwargs):
         '''
         img = tf.image.rgb_to_grayscale(img)
         return img, label
-
-    #
-
-
-    # set project and start integration with keras
-    # neptune.init(project_qualified_name=args.neptune_project_name)#minimal_working_examples')
-    # neptune_tb.integrate_with_tensorflow()
-    # # neptune_tb.integrate_with_keras()
-    # experiment_dir = '/media/data/jacob/sandbox_logs'
-    # experiment_name = args.experiment_name
-    #
-    #
-    #
-    #
-    # #CALLBACKS
-    # experiment_start_time = arrow.utcnow().format('YYYY-MM-DD_HH-mm-ss')
-    # log_dir =os.path.join(experiment_dir, experiment_name, 'log_dir',PARAMS['loss'], experiment_start_time)
-    # weights_best = os.path.join(log_dir, 'model_ckpt.h5')
-    # restore_best_weights=False
-    # histogram_freq=0
-    # patience=25
-    #
-    # num_epochs = PARAMS['num_epochs']
-    # shuffle=True
-    # initial_epoch=0
-
-    # src_db = pyleaves.DATABASE_PATH
-    # datasets = {
-    #             'PNAS': pnas_dataset.PNASDataset(src_db=src_db),
-    #             'Leaves': leaves_dataset.LeavesDataset(src_db=src_db),
-    #             'Fossil': fossil_dataset.FossilDataset(src_db=src_db)
-    #             }
-    # data = datasets[PARAMS['dataset_name']]
-    # data_config = stuf(threshold=PARAMS['data_threshold'],
-    #                    num_classes=PARAMS['num_classes']    ,
-    #                    data_splits_meta={
-    #                                      'train':PARAMS['train_size'],
-    #                                      'val':PARAMS['val_size'],
-    #                                      'test':PARAMS['test_size']
-    #                                     }
-    #                    )
-    #
-    # preprocess_input = get_preprocessing_func(PARAMS['model_name'])
-    # preprocess_input(tf.zeros([4, 32, 32, 3]), tf.zeros([4, 32]))
-    # load_example = partial(_load_example, img_size=PARAMS['image_size'], num_classes=data_config.num_classes)
-
-
-    # class ConfusionMatrixCallback(Callback):
-    #
-    #     def __init__(self, log_dir, val_imgs, val_labels, classes, freq=1, seed=None):
-    #         self.file_writer = tf.contrib.summary.create_file_writer(log_dir)
-    #         self.log_dir = log_dir
-    #         self.seed = seed
-    #         self._counter = 0
-    #         self.val_imgs = val_imgs
-    #
-    #         if val_labels.ndim==2:
-    #             val_labels = tf.argmax(val_labels,axis=-1)
-    #         self.val_labels = val_labels
-    #         self.num_samples = val_labels.numpy().shape[0]
-    #         self.classes = classes
-    #         self.freq = freq
-    #
-    #     def log_confusion_matrix(self, model, imgs, labels, epoch, norm_cm=False):
-    #
-    #         pred_labels = model.predict_classes(imgs)# = tf.reshape(imgs, (-1,PARAMS['image_size'], PARAMS['num_channels'])))
-    #         # pred_labels = tf.argmax(pred_labels,axis=-1)
-    #         pred_labels = pred_labels[:,None]
-    #
-    #         con_mat = tf.math.confusion_matrix(labels=labels, predictions=pred_labels, num_classes=len(self.classes)).numpy()
-    #         if norm_cm:
-    #             con_mat = np.around(con_mat.astype('float') / con_mat.sum(axis=1)[:, np.newaxis], decimals=2)
-    #         con_mat_df = pd.DataFrame(con_mat,
-    #                          index = self.classes,
-    #                          columns = self.classes)
-    #
-    #         figure = plt.figure(figsize=(16, 16))
-    #         sns.heatmap(con_mat_df, annot=True,cmap=plt.cm.Blues)
-    #         plt.tight_layout()
-    #         plt.ylabel('True label')
-    #         plt.xlabel('Predicted label')
-    #
-    #         buf = io.BytesIO()
-    #         plt.savefig(buf, format='png')
-    #         buf.seek(0)
-    #
-    #         image = tf.image.decode_png(buf.getvalue(), channels=4)
-    #         image = tf.expand_dims(image, 0)
-    #
-    #         with self.file_writer.as_default(), tf.contrib.summary.always_record_summaries():
-    #             tf.contrib.summary.image(name='val_confusion_matrix',
-    #                                      tensor=image,
-    #                                      step=self._counter)
-    #
-    #         neptune.log_image(log_name='val_confusion_matrix',
-    #                           x=self._counter,
-    #                           y=figure)
-    #         plt.close(figure)
-    #
-    #         self._counter += 1
-    #
-    #         return image
-    #
-    #     def on_epoch_end(self, epoch, logs={}):
-    #
-    #         if (not self.freq) or (epoch%self.freq != 0):
-    #             return
-    #
-    #         cm_summary_image = self.log_confusion_matrix(self.model, self.val_imgs, self.val_labels, epoch=epoch)
 
     def log_data(logs):
         for k, v in logs.items():
@@ -332,7 +194,6 @@ def main(**kwargs):
     def per_class_accuracy(y_true, y_pred):
         return tf.metrics.mean_per_class_accuracy(y_true, y_pred, num_classes=PARAMS['num_classes'])
 
-
     def build_model(model_params,
                     optimizer,
                     loss,
@@ -374,41 +235,6 @@ def main(**kwargs):
 
         return model
 
-
-
-    # class ImageDataLogger:
-    #     def __init__(self, log_dir: str, max_images: int, name: str, augment=True):
-    #         self.file_writer = tf.contrib.summary.create_file_writer(log_dir)
-    #         self.log_dir = log_dir
-    #         self.max_images = max_images
-    #         self.name = name
-    #         self.augment = augment
-    #         self._counter = 0
-    #
-    #     def __call__(self, images, labels):
-    #         if self.augment:
-    #             images = tf.image.random_flip_left_right(images)
-    #             images = tf.image.random_flip_up_down(images)
-    #
-    #         with self.file_writer.as_default(), tf.contrib.summary.always_record_summaries():
-    #             scaled_images = (images - tf.math.reduce_min(images))/(tf.math.reduce_max(images) - tf.math.reduce_min(images))
-    #             tf.contrib.summary.image(name=self.name,tensor=scaled_images,step=self._counter,max_images=self.max_images)
-    #
-    #
-    #
-    #
-    #         tf.io.write_file(filename=os.path.join(self.log_dir,'sample_images',f'{self.name}-{self._counter}.jpg'),
-    #                          contents=scaled_images)
-    #         self._counter += 1
-    #
-    #
-    #         os.path.join(self.log_dir,'sample_images',f'{self.name}-{self._counter}.jpg')
-    #
-            # neptune.log_image(log_name=self.name,
-            #                   x=self._counter,
-            #                   y=scaled_images.numpy())
-    #
-    #         return images, labels
 
     class ImageLogger:
         '''Tensorflow 2.0 version'''
@@ -465,39 +291,6 @@ def main(**kwargs):
             self._counter.assign_add(1)
             return images, labels
 
-
-    # def zoom(x, resize_size = (256,256), crop_size = (224,224)):
-    #     """Zoom augmentation
-    #
-    #     Args:
-    #         x: Image
-    #
-    #     Returns:
-    #         Augmented image
-    #     """
-    #
-    #     # Generate 20 crop settings, ranging from a 1% to 20% crop.
-    #     scales = list(np.arange(0.8, 1.0, 0.01))
-    #     boxes = np.zeros((len(scales), 4))
-    #
-    #     for i, scale in enumerate(scales):
-    #         x1 = y1 = 0.5 - (0.5 * scale)
-    #         x2 = y2 = 0.5 + (0.5 * scale)
-    #         boxes[i] = [x1, y1, x2, y2]
-    #
-    #     def random_crop(img):
-    #         # Create different crops for an image
-    #         crops = tf.image.crop_and_resize([img], boxes=boxes, box_indices=np.zeros(len(scales)), crop_size=crop_size)
-    #         # Return a random crop
-    #         return crops[tf.random.uniform(shape=[], minval=0, maxval=len(scales), dtype=tf.int32)]
-    #
-    #     choice = tf.random.uniform(shape=[], minval=0., maxval=1., dtype=tf.float32)
-    #
-    #     # Only apply cropping 50% of the time
-    #     return tf.cond(choice < 0.5, lambda: x, lambda: random_crop(x))
-
-
-
     def _cond_apply(x, y, func, prob):
         """Conditionally apply func to x and y with probability prob.
 
@@ -517,8 +310,6 @@ def main(**kwargs):
         x, y
         """
         return tf.cond((tf.random.uniform([], 0, 1) >= (1.0 - prob)), lambda: func(x,y), lambda: (x,y))
-
-
 
 
     class ImageAugmentor:
@@ -545,7 +336,7 @@ def main(**kwargs):
             resize_w_pad=(224,224)
             random_crop=(224,224,3)
             random_jitter={'resize':(338,338),
-                           'crop_size':(224,224)}
+                           'crop_size':(224,224, 3)}
 
 
 
@@ -608,9 +399,6 @@ def main(**kwargs):
                           'rgb2gray_1channel':self.rgb2gray_1channel}
 
             self.log_dir = log_dir
-
-            # if self.log_dir:
-                # self.logger = ImageLogger(log_dir=self.log_dir, max_images=4, name=self.name)
 
         def rotate(self, x: tf.Tensor, label: tf.Tensor) -> tf.Tensor:
             """Rotation augmentation
@@ -717,59 +505,6 @@ def main(**kwargs):
             return dataset
 
 
-
-
-
-    # class ImageDataAugmentor:
-    #     '''Tensorflow 2.0 version'''
-    #     def __init__(self, log_dir: str, max_images: int, name: str, augment=True, resize_size=None, crop_size=None):
-    #         self.name = name
-    #         self.augment = augment
-    #         self._counter = tf.Variable(0, dtype=tf.int64) #trainable=False,
-    #
-    #         self.resize_size = resize_size
-    #         self.crop_size = crop_size
-    #         if resize_size and crop_size:
-    #             self.resize_and_crop = partial(zoom, resize_size=self.resize_size, crop_size=self.crop_size)
-    #         else:
-    #             self.image_size = self.crop_size
-    #             # tf.compat.v1.image.resize_image_with_pad(img, *self.image_size)
-    #     def counter(self):
-    #         return self._counter
-    #
-    #     def __call__(self, images, labels):
-    #         if self.augment:
-    #             images = tf.image.random_flip_left_right(images)
-    #             images = tf.image.random_flip_up_down(images)
-    #
-    #         if self.resize_size:
-    #             images = self.resize_and_crop(images)
-    #         elif self.image_size:
-    #             images = tf.compat.v1.image.resize_image_with_pad(images, *self.image_size)
-    #
-    #         self._counter.assign_add(1)
-    #         return images, labels
-
-
-##########################################
-
-    # class ConfusionMatrixCallback(Callback):
-    #     '''Tensorflow 2.0 version'''
-    #     def __init__(self, log_dir, val_imgs, val_labels, classes, freq=1, seed=None):
-    #         self.file_writer = tf.summary.create_file_writer(log_dir)
-    #         self.log_dir = log_dir
-    #         self.seed = seed
-    #         self._counter = 0
-    #         self.val_imgs = val_imgs
-    #
-    #         if val_labels.ndim==2:
-    #             val_labels = tf.argmax(val_labels,axis=-1)
-    #         self.val_labels = val_labels
-    #         self.num_samples = val_labels.numpy().shape[0]
-    #         self.classes = classes
-    #         self.freq = freq
-
-
     class ImageLoggerCallback(Callback):
         '''Tensorflow 2.0 version
 
@@ -787,11 +522,13 @@ def main(**kwargs):
         def init_iterator(self):
             self.data_iter = iter(self.data)
             self._batch = 0
+            self._count = 0
             self.finished = False
 
         def yield_batch(self):
             batch_data = next(self.data_iter)
             self._batch += 1
+            self._count += batch_data[0].shape[0]
             return batch_data
 
         def add_log(self, img, counter=None, name=None):
@@ -828,14 +565,12 @@ def main(**kwargs):
             if self.encoder:
                 y = self.encoder.decode(y)
             for i in range(x.shape[0]):
-                # y_i = y[i]
                 # self.add_log(x[i,...], counter=i, name = f'{self.name}-{y[i]}-batch_{str(self._batch).zfill(3)}')
-                self.add_log(x[i,...], counter=batch+i, name = f'{self.name}-{y[i]}')
+                self.add_log(x[i,...], counter=self._count+i, name = f'{self.name}-{y[i]}')
             print(f'Batch {self._batch}: Logged {np.max([x.shape[0],self.max_images])} {self.name} images to neptune')
 
         def on_epoch_end(self, epoch, logs={}):
             self.finished = True
-
 
 
     class ConfusionMatrixCallback(Callback):
@@ -903,14 +638,16 @@ def main(**kwargs):
                 cm_summary_image = self.log_confusion_matrix(self.model, self.imgs['train'], self.labels['train'], epoch=epoch, name='train')
             cm_summary_image = self.log_confusion_matrix(self.model, self.imgs['val'], self.labels['val'], epoch=epoch, name='val')
 
-
-
-
+####################################################################################
+####################################################################################
+####################################################################################
 
 
 
     neptune.init(project_qualified_name=args.neptune_project_name)
     # neptune_tb.integrate_with_tensorflow()
+
+
     experiment_dir = '/media/data/jacob/sandbox_logs'
     experiment_name = args.experiment_name
 
@@ -918,9 +655,7 @@ def main(**kwargs):
     log_dir =os.path.join(experiment_dir, experiment_name, 'log_dir',PARAMS['loss'], experiment_start_time)
     ensure_dir_exists(log_dir)
     print('Tensorboard log_dir: ', log_dir)
-
     # os.system(f'neptune tensorboard {log_dir} --project {args.neptune_project_name}')
-
 
     weights_best = os.path.join(log_dir, 'model_ckpt.h5')
     restore_best_weights=False
@@ -945,38 +680,43 @@ def main(**kwargs):
                                         }
                        )
 
-
-
     preprocess_input = get_preprocessing_func(PARAMS['model_name'])
-    # preprocess_input(tf.zeros([4, 32, 32, 3]), tf.zeros([4, 32]))
-    load_example = partial(_load_example, num_classes=data_config.num_classes)
-    # load_example = partial(_load_example, img_size=PARAMS['image_size'], num_classes=data_config.num_classes)
+    preprocess_input(tf.zeros([4, 224, 224, 3]))
+    
+    load_example = partial(_load_uint8_example, num_classes=data_config.num_classes)
+    # load_example = partial(_load_example, num_classes=data_config.num_classes)
+
 
     if PARAMS['num_channels']==3:
         color_aug = {'rgb2gray_3channel':1.0}
     elif PARAMS['num_channels']==1:
         color_aug = {'rgb2gray_1channel':1.0}
 
+    resize_w_pad=None
+    random_jitter=None
+    if not PARAMS['random_jitter']['resize']:
+        resize_w_pad = PARAMS['image_size']
+    else:
+        random_jitter=PARAMS['random_jitter']
+
     TRAIN_image_augmentor = ImageAugmentor(name='train',
-                                           augmentations={'rotate':1.0,
-                                                        'flip':1.0,
-                                                        **color_aug},
-                                           resize_w_pad=None,
+                                           augmentations={**PARAMS["augmentations"],
+                                                          **color_aug},#'rotate':1.0,'flip':1.0,**color_aug},
+                                           resize_w_pad=resize_w_pad,
                                            random_crop=None,
-                                           random_jitter={'resize':PARAMS['random_jitter']['resize'],
-                                                          'crop_size':PARAMS['random_jitter']['crop_size']},
+                                           random_jitter=random_jitter,
                                            log_dir=log_dir,
                                            seed=None)
     VAL_image_augmentor = ImageAugmentor(name='val',
                                          augmentations={**color_aug},
-                                         resize_w_pad=PARAMS['random_jitter']['crop_size'][:2],
+                                         resize_w_pad=PARAMS['image_size'],
                                          random_crop=None,
                                          random_jitter=None,
                                          log_dir=log_dir,
                                          seed=None)
     TEST_image_augmentor = ImageAugmentor(name='test',
                                           augmentations={**color_aug},
-                                          resize_w_pad=PARAMS['random_jitter']['crop_size'][:2],
+                                          resize_w_pad=PARAMS['image_size'],
                                           random_crop=None,
                                           random_jitter=None,
                                           log_dir=log_dir,
@@ -1008,10 +748,8 @@ def main(**kwargs):
                     TRAIN_image_augmentor.logger.add_log(v_x_aug[idx],counter=i, name=k+'_aug')
 
 
-    def get_data_loader(data : tuple, data_subset_mode='train', batch_size=32, num_classes=None, infinite=True, augment=True, preloaded=False, seed=2836):
+    def get_data_loader(data : tuple, data_subset_mode='train', batch_size=32, num_classes=None, infinite=True, augment=True, seed=2836):
 
-        # encode_label = partial(_encode_label, num_classes=num_classes)
-        # if type(data)==tuple:
         num_samples = len(data[0])
         x = tf.data.Dataset.from_tensor_slices(data[0])
         labels = tf.data.Dataset.from_tensor_slices(data[1])
@@ -1020,13 +758,19 @@ def main(**kwargs):
         data = data.cache()
         if data_subset_mode == 'train':
             data = data.shuffle(buffer_size=num_samples)
+
+        # data = data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
+        # data = data.map(load_example, num_parallel_calls=AUTOTUNE)
         data = data.map(load_example, num_parallel_calls=AUTOTUNE)
-        # else:
-        #     data = data.map(lambda x,y: (tf.image.convert_image_dtype(x, tf.float32), y))
-        data = data.map(preprocess_input, num_parallel_calls=AUTOTUNE)
+
+
+        data = data.map(lambda x,y: (preprocess_input(x), y), num_parallel_calls=AUTOTUNE)
+
+        if infinite:
+            data = data.repeat()
 
         if data_subset_mode == 'train':
-            data = data.shuffle(buffer_size=100, seed=seed)
+            data = data.shuffle(buffer_size=200, seed=seed)
             augmentor = TRAIN_image_augmentor
         elif data_subset_mode == 'val':
             augmentor = VAL_image_augmentor
@@ -1035,11 +779,8 @@ def main(**kwargs):
 
         if augment:
             data = augmentor.apply_augmentations(data)
+
         data = data.batch(batch_size, drop_remainder=True)
-        # if augmentor.log_dir:
-        #     data = data.map(augmentor.logger, num_parallel_calls=AUTOTUNE)
-        if infinite:
-            data = data.repeat()
 
         return data.prefetch(AUTOTUNE)
 
@@ -1093,11 +834,10 @@ def main(**kwargs):
 
 
 
-    from tensorflow.keras import backend as K
+
 
     # y_true = [[0, 1, 0], [0, 0, 1]]
     # y_pred = [[0.05, 0.95, 0], [0.1, 0.8, 0.1]]
-
 
     def accuracy(y_true, y_pred):
         y_pred = tf.argmax(y_pred, axis=-1)
@@ -1156,19 +896,17 @@ def main(**kwargs):
         # metrics.TrueNegatives(name='tn'),
         # metrics.FalseNegatives(name='fn'),
     METRICS = [
-        recall,
-        precision,
         f1_score,
         metrics.TruePositives(name='tp'),
         metrics.FalsePositives(name='fp'),
         metrics.CategoricalAccuracy(name='accuracy'),
-        metrics.Precision(name='keras_precision'),
-        metrics.Recall(name='keras_recall'),
         metrics.TopKCategoricalAccuracy(name='top_3_categorical_accuracy', k=3),
         metrics.TopKCategoricalAccuracy(name='top_5_categorical_accuracy', k=5)
     ]
+    PARAMS['sys.argv'] = ' '.join(sys.argv)
 
     with neptune.create_experiment(name=experiment_name, params=PARAMS, upload_source_files=[__file__]):
+
 
         print('Logging experiment tags:')
         for tag in args.tags:
@@ -1258,7 +996,7 @@ def main(**kwargs):
             if 'test' in split_data.keys():
                 test_data=get_data_loader(data=split_data['test'], data_subset_mode='test', batch_size=PARAMS['batch_size'], infinite=True, augment=True, seed=2838)
 
-            num_demo_samples=40
+            num_demo_samples=150
             # neptune_log_augmented_images(split_data, num_demo_samples=num_demo_samples, PARAMS=PARAMS)
             cm_data_x['train'], cm_data_y['train'] = next(iter(get_data_loader(data=split_data['train'], data_subset_mode='train', batch_size=num_demo_samples, infinite=True, augment=True, seed=2836)))
             cm_data_x['val'], cm_data_y['val'] = next(iter(get_data_loader(data=split_data['val'], data_subset_mode='val', batch_size=num_demo_samples, infinite=True, augment=True,  seed=2836)))

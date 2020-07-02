@@ -102,6 +102,12 @@ class BaseDataset(object):
         data = pd.read_csv(filepath, drop_index=True)
         return data
 
+    def load_from_tfds(self):
+        self.tfds_builder = tfds.builder(self.name)
+        # Download the dataset
+        self.tfds_builder.download_and_prepare()
+
+
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, name='', threshold=0):
         new_dataset = cls(name=name, src_db=None)
@@ -442,7 +448,7 @@ def preprocess_data(dataset, encoder, config):
     """
 
     dataset.exclude_rare_classes(threshold=config.threshold)
-
+    encoder.encoder = dataset.classes
     dataset, _ = dataset.enforce_class_whitelist(class_names=encoder.classes)
 
     x = list(dataset.data['path'].values)#.reshape((-1,1))
@@ -452,9 +458,10 @@ def preprocess_data(dataset, encoder, config):
     shuffled_data = list(zip(x,y))
     random.shuffle(shuffled_data)
 
-    return partition_data(data=shuffled_data,
-                          partitions=OrderedDict(config.data_splits_meta)
-                          )
+    partitioned_data = partition_data(data=shuffled_data,
+                                      partitions=OrderedDict(config.data_splits_meta)
+                                      )
+    return {k:v for k,v in partitioned_data.items() if len(v)>0}
 
 def calculate_class_counts(y_data : list):
     labels, label_counts = np.unique(y_data, return_counts=True)

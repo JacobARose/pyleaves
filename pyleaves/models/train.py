@@ -1,8 +1,16 @@
-import tensorflow as tf 
+# @Author: Jacob A Rose
+# @Date:   Tue, March 31st 2020, 12:36 am
+# @Email:  jacobrose@brown.edu
+# @Filename: train.py
+
+
+from pyleaves.models.base_model import add_regularization
+
+import tensorflow as tf
 import logging
 import argparse
 import json
-import glob,os 
+import glob,os
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -10,9 +18,9 @@ from pyleaves.models.keras_models import *
 from sklearn.model_selection  import StratifiedKFold
 from imgaug import augmenters as iaa
 import cv2
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report
-from tensorpack.dataflow import * 
+from tensorpack.dataflow import *
 from tensorpack.dataflow.parallel import PrefetchDataZMQ
 from stuf import stuf
 import dataset
@@ -22,7 +30,7 @@ import subprocess
 
 
 to_categorical = tf.keras.utils.to_categorical
-CSVLogger = tf.compat.v1.keras.callbacks.CSVLogger 
+CSVLogger = tf.compat.v1.keras.callbacks.CSVLogger
 
 
 
@@ -44,27 +52,27 @@ def save_json(data,name):
 
 ##______ metrics_______##
 
-def top3_acc(labels, logits): 
+def top3_acc(labels, logits):
     return tf.keras.metrics.top_k_categorical_accuracy(y_true=labels, y_pred=logits, k=3)
 
-def top5_acc(labels, logits): 
+def top5_acc(labels, logits):
     return tf.keras.metrics.top_k_categorical_accuracy(y_true=labels, y_pred=logits, k=5)
 
 
-    
-    
+
+
 def load_data(db, x_col='path', y_col='family', dataset='Fossil'):
 	'''
 	General database data loader function with flexibility for all query types.
-	
+
 	Arguments:
 		db: dataset.database.Database, Must be an open connection to a database
 		x_col: str, Inputs column. Should usually be the column containing filepaths for each sample
 		y_col: str, Labels column. Can be any of {'family','genus','species'}
 		dataset: str, Can be any dataset name that is contained in db
-	
+
 	Return:
-		paths_labels: dataset.util.ResultIter,  
+		paths_labels: dataset.util.ResultIter,
 
 	'''
 	paths_labels = db['dataset'].distinct(x_col, y_col, dataset=dataset)
@@ -73,7 +81,7 @@ def load_data(db, x_col='path', y_col='family', dataset='Fossil'):
 def encode_labels(data, y_col='family'):
 	'''
 	Create 'label' column in data_df that features integer values corresponding to text labels contained in y_col.
-	
+
 	Arguments:
 		data: dataset.util.ResultIter, Should be the returned result from loading data from the leavesdb database (e.g. data = leavesdb.db_query.load_data(db)).
 		y_col: str, name of the columns containing text labels for each sample in data.
@@ -94,7 +102,7 @@ def parse_function(filename, label,channels=3,img_size = (229,229)):
 # def train_preprocess(img, label):
 #     img = tf.image.resize(img, img_size)
 #     return {'image':img, 'label':label}
-    
+
 
 def get_tf_dataset(filenames, labels,batch_size=50):
     data = tf.data.Dataset.from_tensor_slices((filenames, labels))
@@ -112,20 +120,20 @@ class PathDataFlow(RNGDataFlow):
         self.labels = labels
         self.num_samples = len(labels)
         self.tuple_label= [[paths[i],labels[i],np.argmax(labels[i])] for i in range(self.num_samples)]
-        
+
         random.shuffle(self.tuple_label)
     def __iter__(self):
         for i in range(self.num_samples):
             yield self.tuple_label[i]
-            
+
 class ImageDataFlow(PathDataFlow):
-    
+
     def __init__(self, paths, labels, size=(299,299)):
         super().__init__(paths, labels)
         self.size = size
     def __iter__(self):
         sample = next(super().__iter__())
-        
+
         yield [cv2.resize(cv2.imread(sample[0]),self.size), sample[1]]
 
 
@@ -162,28 +170,28 @@ class ImageDataFlow(PathDataFlow):
 
 #             except:
 #                 print('problem with image %s'%p)
-#                 continue 
+#                 continue
 
 
 # class AttentionLogger(tf.keras.callbacks.Callback):
 #         def __init__(self, val_data, logsdir):
 #             super(AttentionLogger, self).__init__()
-#             self.logsdir = logsdir  # where the event files will be written 
+#             self.logsdir = logsdir  # where the event files will be written
 #             self.validation_data = val_data # validation data generator
 #             self.writer = tf.summary.FileWriter(self.logsdir)  # creating the summary writer
 
 #         @tfmpl.figure_tensor
-#         def attention_matplotlib(self, gen_images): 
+#         def attention_matplotlib(self, gen_images):
 #             '''
 #             Creates a matplotlib figure and writes it to tensorboard using tf-matplotlib
 #             gen_images: The image tensor of shape (batchsize,width,height,channels) you want to write to tensorboard
-#             '''  
+#             '''
 #             r, c = 5,5  # want to write 25 images as a 5x5 matplotlib subplot in TBD (tensorboard)
 #             figs = tfmpl.create_figures(1, figsize=(15,15))
 #             cnt = 0
 #             for idx, f in enumerate(figs):
 #                 for i in range(r):
-#                     for j in range(c):    
+#                     for j in range(c):
 #                         ax = f.add_subplot(r,c,cnt+1)
 #                         ax.set_yticklabels([])
 #                         ax.set_xticklabels([])
@@ -195,12 +203,12 @@ class ImageDataFlow(PathDataFlow):
 #         def on_train_begin(self, logs=None):  # when the training begins (run only once)
 #                 image_summary = [] # creating a list of summaries needed (can be scalar, images, histograms etc)
 #                 for index in range(len(self.model.output)):  # self.model is accessible within callback
-#                     img_sum = tf.summary.image('img{}'.format(index), self.attention_matplotlib(self.model.output[index]))                    
+#                     img_sum = tf.summary.image('img{}'.format(index), self.attention_matplotlib(self.model.output[index]))
 #                     image_summary.append(img_sum)
 #                 self.total_summary = tf.summary.merge(image_summary)
 
 #         def on_epoch_end(self, epoch, logs = None):   # at the end of each epoch run this
-#             logs = logs or {} 
+#             logs = logs or {}
 #             x,y = next(self.validation_data)  # get data from the generator
 #             # get the backend session and sun the merged summary with appropriate feed_dict
 #             sess_run_summary = K.get_session().run(self.total_summary, feed_dict = {self.model.input: x['encoder_input']})
@@ -210,29 +218,29 @@ def log_confusion_matrix(epoch, logs):
 
     # Use the model to predict the values from the validation dataset.
     test_pred = model.predict_classes(test_images)
- 
+
     con_mat = tf.math.confusion_matrix(labels=test_labels, predictions=test_pred).numpy()
     con_mat_norm = np.around(con_mat.astype('float') / con_mat.sum(axis=1)[:, np.newaxis], decimals=2)
- 
+
     con_mat_df = pd.DataFrame(con_mat_norm,
-                     index = classes, 
+                     index = classes,
                      columns = classes)
- 
+
     figure = plt.figure(figsize=(8, 8))
     sns.heatmap(con_mat_df, annot=True,cmap=plt.cm.Blues)
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
-  
+
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
- 
+
     plt.close(figure)
     buf.seek(0)
     image = tf.image.decode_png(buf.getvalue(), channels=4)
- 
+
     image = tf.expand_dims(image, 0)
-  
+
      # Log the confusion matrix as an image summary.
     with file_writer.as_default():
         tf.summary.image("Confusion Matrix", image, step=epoch)
@@ -260,20 +268,20 @@ def configure(gpu):
     print(gpu)
     if gpu != 'all':
         print(gpu)
-        os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  
-        os.environ["CUDA_VISIBLE_DEVICES"]="%d"%gpu   
+        os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+        os.environ["CUDA_VISIBLE_DEVICES"]="%d"%gpu
     #config = tf.ConfigProto()
     #config.gpu_options.per_process_gpu_memory_fraction = fraction
     #session = tf.Session(config=config)
 
-    return 
+    return
 
 def gen(ds,batchsize=20):
-    while True: 
+    while True:
         images,labels = [None]*batchsize, [None]*batchsize
         images, labels = next(ds.get_data())
         yield images,labels
-        
+
 def logging_configuration (output_folder):
     os.makedirs(output_folder,exist_ok=True)
     weights_best = os.path.join(output_folder,"weights.best.h5")
@@ -302,7 +310,7 @@ def save_split(X_train,X_test,y_train,y_test,output_folder):
 Dataflow = ImageDataFlow
 
 def train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch_size=20,epochs=50):
-    
+
     skf = StratifiedKFold(n_splits=splits,random_state=42,shuffle=True)
     params = {
           'batch_size': batch_size,
@@ -310,12 +318,12 @@ def train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch
           'size':(229,229),
           'shuffle': True}
     split=1
-      
-  
+
+
     print(y)
-   
+
     for train_idx,test_idx in skf.split(X,y):
-        
+
         print('Starting Split : %02d'%split)
         X_train, X_test = X[train_idx], X[test_idx]
         y_train, y_test = to_categorical(y[train_idx]),to_categorical(y[test_idx])
@@ -333,7 +341,7 @@ def train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch
         if True:
             History=model.fit_generator(train_gen,callbacks=
             callbacks_list,epochs=epochs,steps_per_epoch=len(y_train))
-        
+
         else:
             train_data = get_tf_dataset(filenames = X_train, labels = y_train)
             validation_data = get_tf_dataset(filenames = X_test, labels = y_test)
@@ -356,7 +364,7 @@ def train_cross_validation_model(model,X,y,output_folder,splits,resolution,batch
 if __name__ == '__main__':
     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(level=logging.INFO, format=log_fmt)
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str, default ='/home/irodri15/Lab/leafs/data/processed/full_dataset_processed.csv', help='input file with names')
     parser.add_argument('--output_folder', type=str, default='SAVING', help='how to save this training')
@@ -365,7 +373,7 @@ if __name__ == '__main__':
     parser.add_argument('--pre_trained_weights',type=str,default= None,help='Pre_trained weights ')
     parser.add_argument('--resolution',default=768,help='resolution if "all" will use all the resolutions available')
     parser.add_argument('--splits',type=int,default=10,help='how many splits use for evaluation')
-    
+
 
     args = parser.parse_args()
     fraction = float(args.gpu_fraction)
@@ -373,17 +381,16 @@ if __name__ == '__main__':
     path= args.path
     output = args.output_folder
     output_folder =args.output_folder
-    weights = args.pre_trained_weights 
-    splits = args.splits 
+    weights = args.pre_trained_weights
+    splits = args.splits
 
     configure(gpu,fraction)
-    
+
     Data=LeafData(path)
     if resolution == 'all':
-        Data.multiple_resolution()    
+        Data.multiple_resolution()
     else:
         Data.single_resolution(resolution)
-    X,y = Data.X, Data.Y  
-    
+    X,y = Data.X, Data.Y
+
     classes =len(np.unique(y))
-    

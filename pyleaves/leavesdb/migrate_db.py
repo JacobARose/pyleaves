@@ -78,7 +78,7 @@ def duplicate_raw_dataset(data :pd.DataFrame, omitted_rows: list=[]):
 
 def process_raw_dataset2jpg(data : pd.DataFrame,  target_absolute_root : str, dataset_name : str, log_path : str=None):
     """
-    Uses DaskCoder to iterate through a sequence of files and duplicate/convert each file int JPEG format
+    Uses DaskCoder to iterate through a sequence of files and duplicate/convert each file into JPEG format
 
     Parameters
     ----------
