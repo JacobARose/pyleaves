@@ -372,10 +372,10 @@ def initialize_data_from_paleoai(fold: DataFold,
     train_dataset, _ = fold.train_dataset.enforce_class_whitelist(class_names=classes)
     test_dataset, _ = fold.test_dataset.enforce_class_whitelist(class_names=classes)
 
-    train_x = list(train_dataset.data['path'].values)
+    train_x = [str(p) for p in list(train_dataset.data['path'].values)]
     train_y = np.array(encoder.encode(train_dataset.data['family']))
 
-    test_x = list(test_dataset.data['path'].values)
+    test_x = [str(p) for p in list(test_dataset.data['path'].values)]
     test_y = np.array(encoder.encode(test_dataset.data['family']))
 
     train_data = list(zip(train_x,train_y))
@@ -443,8 +443,8 @@ def load_data_from_tensor_slices(split_data, shuffle_train=True, seed=None):
     train_data = train_data.cache()
     train_data = train_data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
 
-    test_x = tf.data.Dataset.from_tensor_slices(split_data['validation'][0])
-    test_y = tf.data.Dataset.from_tensor_slices(split_data['validation'][1])
+    test_x = tf.data.Dataset.from_tensor_slices(split_data['test'][0])
+    test_y = tf.data.Dataset.from_tensor_slices(split_data['test'][1])
     validation_data = tf.data.Dataset.zip((test_x, test_y))
     validation_data = validation_data.cache()
     validation_data = validation_data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
