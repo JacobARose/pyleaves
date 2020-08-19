@@ -231,8 +231,8 @@ def _aspect_preserving_resize(image, smallest_side):
   image = tf.expand_dims(image, 0)
   resized_image = tf.image.resize(image, [new_height, new_width])
   resized_image = tf.squeeze(resized_image,[0])
-  resized_image.set_shape([new_height, new_width, 3])
   return resized_image
+  # resized_image.set_shape([new_height, new_width, 3])
 
 # def inception_preprocess(images):
 #     ## Images are assumed to be [0,255]
