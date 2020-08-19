@@ -914,8 +914,8 @@ def train_paleoai_dataset(cfg : DictConfig, n_jobs: int=1, verbose: bool=False) 
     cfg_0 = cfg.stage_0
     cfg_1 = cfg.stage_1
 
-    log_config(cfg=cfg_0, verbose=verbose)
-    log_config(cfg=cfg_1, verbose=verbose)
+    log_config(cfg=cfg, verbose=verbose)
+    # log_config(cfg=cfg_1, verbose=verbose)
 
     K.clear_session()
     tf.random.set_seed(cfg_0.misc.seed)
