@@ -8,7 +8,7 @@
 Script built off of configurable_train_pipeline.py
 
 
-python '/home/jacob/projects/pyleaves/pyleaves/mains/baseline_train_pipeline.py'
+python '/home/jacob/projects/pyleaves/pyleaves/mains/paleoai_main.py'
 
 '''
 
@@ -432,24 +432,22 @@ def load_data_from_tensor_slices(split_data, shuffle_train=True, seed=None):
 
 
 def load_data_old(dataset_name='PNAS',
-              splits={'train':0.7,'validation':0.3},
-              threshold=50,
-              exclude_classes=[],
-              include_classes=[],
-              use_tfrecords=False,
-              tfrecord_dir=None,
-              samples_per_shard=800,
-              shuffle_train=True,
-              seed=None):
-              '''
-              This function relies on leavesdb rather than newer paleoai_data-based data sources.
-              Deprecated as of (8/18/2020)
+                  splits={'train':0.7,'validation':0.3},
+                  threshold=50,
+                  exclude_classes=[],
+                  include_classes=[],
+                  use_tfrecords=False,
+                  tfrecord_dir=None,
+                  samples_per_shard=800,
+                  shuffle_train=True,
+                  seed=None):
+    '''
+    This function relies on leavesdb rather than newer paleoai_data-based data sources.
+    Deprecated as of (8/18/2020)
 
-              Use newly named load_data function
+    Use newly named load_data function
 
-              '''
-
-
+    '''
     split_data, data_files, excluded_data_files, encoder = initialize_data_from_leavesdb(dataset_name=dataset_name,
                                                                                 splits=splits,
                                                                                 threshold=threshold,
