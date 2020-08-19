@@ -380,7 +380,7 @@ def initialize_data_from_paleoai(fold: DataFold,
 
     train_data = list(zip(train_x,train_y))
     random.shuffle(train_data)
-    train_data = list(unzip(train_data))
+    train_data = [list(i) for i in unzip(train_data)]
     test_data = (test_x, test_y)
 
     split_data = {'train':train_data, 'test':test_data}
