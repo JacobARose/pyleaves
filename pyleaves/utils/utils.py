@@ -10,6 +10,7 @@
 
 # import pdb;pdb.set_trace();print(__file__)
 from distutils.version import StrictVersion
+import numpy as np
 import os
 import itertools
 from collections import defaultdict, OrderedDict
@@ -31,6 +32,7 @@ def setGPU():
 
 
 def set_tf_config(seed: int=None):
+    import tensorflow as tf
     assert using_tensorflow2()
     gpus = tf.config.experimental.list_physical_devices('GPU')
     try:
