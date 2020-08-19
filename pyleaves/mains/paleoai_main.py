@@ -908,7 +908,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
 from joblib import Parallel, delayed
 
 
-def train_paleoai_dataset(cfg : DictConfig, n_jobs: int=1, verbose: bool=False)) -> None:
+def train_paleoai_dataset(cfg : DictConfig, n_jobs: int=1, verbose: bool=False) -> None:
 
     cfg_0 = cfg.stage_0
     cfg_1 = cfg.stage_1
