@@ -470,11 +470,11 @@ def load_data(data_fold: DataFold,
               seed=None):
 
 
-    split_data, data_files, excluded_data_files = initialize_data_from_leavesdb(dataset_name=dataset_name,
-                                                                                splits=splits,
-                                                                                threshold=threshold,
-                                                                                exclude_classes=exclude_classes,
-                                                                                include_classes=include_classes)
+    # split_data, data_files, excluded_data_files = initialize_data_from_leavesdb(dataset_name=dataset_name,
+    #                                                                             splits=splits,
+    #                                                                             threshold=threshold,
+    #                                                                             exclude_classes=exclude_classes,
+    #                                                                             include_classes=include_classes)
 
     if use_tfrecords:
         split_datasets = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
