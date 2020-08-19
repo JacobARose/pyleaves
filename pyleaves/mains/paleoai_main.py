@@ -485,6 +485,7 @@ def load_data(data_fold: DataFold,
         split_datasets = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
                                                   data=split_data,
                                                   samples_per_shard=samples_per_shard,
+                                                  subset_keys=['train','test'],
                                                   num_classes=len(encoder.classes))
         train_data, test_data = split_datasets['train'], split_datasets['test']
 
@@ -894,10 +895,10 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
                 ImageLoggerCallback(data=train_dataset, freq=1000, max_images=-1, name='train', encoder=encoder),
                 ImageLoggerCallback(data=test_dataset, freq=1000, max_images=-1, name='val', encoder=encoder)]
 
-    history = model.fit(train_dataset,
+    history = model.fit(train_data,
                         epochs=cfg['num_epochs'],
                         callbacks=callbacks,
-                        validation_data=test_dataset,
+                        validation_data=test_data,
                         shuffle=True,
                         steps_per_epoch=cfg['steps_per_epoch'],
                         validation_steps=cfg['validation_steps'])
