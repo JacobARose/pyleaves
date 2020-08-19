@@ -224,7 +224,8 @@ def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=Fals
 
     return image
 
-
+from tensorflow import tf
+from tensorflow.keras.applications.vgg16 import preprocess_input
 preprocess_input(tf.zeros([4, 224, 224, 3]))
 def apply_preprocess(x, y, num_classes=10):
     return preprocess_input(x), tf.one_hot(y, depth=num_classes)
@@ -853,7 +854,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
     from tensorflow.python.keras.layers import Input
     from tensorflow.python.keras.optimizers import Adam
     from tensorflow.python.keras.metrics import categorical_crossentropy
-    from tensorflow.keras.applications.vgg16 import preprocess_input
+    
     from tensorflow.keras.callbacks import Callback, ModelCheckpoint, TensorBoard, LearningRateScheduler, EarlyStopping
     from tensorflow.keras import backend as K
     import tensorflow_datasets as tfds
