@@ -41,7 +41,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 
 from paleoai_data.utils.kfold_cross_validation import DataFold
-from paleoai_data.utils.kfold_cross_validation import generate_KFoldDataset, export_folds_to_csv, prep_dataset, KFoldLoader
+from paleoai_data.utils.kfold_cross_validation import generate_KFoldDataset, export_folds_to_csv, KFoldLoader #, prep_dataset
 
 CONFIG_DIR = str(Path(pyleaves.RESOURCES_DIR,'..','..','configs','hydra'))
 ##########################################################################
@@ -996,7 +996,7 @@ def train_paleoai_dataset(cfg : DictConfig, n_jobs: int=1, verbose: bool=False) 
 @hydra.main(config_path=Path(CONFIG_DIR,'Leaves-PNAS.yaml'))
 def train(cfg : DictConfig) -> None:
 
-    cfg = restore_or_initialize_experiment(cfg, restore_last=False, prefix='log_dir__', verbose=2)
+    cfg = restore_or_initialize_experiment(cfg, restore_last=True, prefix='log_dir__', verbose=2)
 
     neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
     params=OmegaConf.to_container(cfg)
