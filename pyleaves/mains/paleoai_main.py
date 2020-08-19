@@ -232,7 +232,7 @@ def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=Fals
     image : tf.Tensor
         Resized image with shape == 'shape' variable
     """
-    tf.print(type(shape, shape))
+    tf.print(type(shape), shape)
 
     if training:
         smallest_side = tf.minimum(shape[0], shape[1])
