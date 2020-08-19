@@ -362,6 +362,7 @@ def initialize_data_from_paleoai(fold: DataFold,
     train_data = list(zip(train_x,train_y))
     random.shuffle(train_data)
     train_data = list(unzip(train_data))
+    test_data = (test_x, test_y)
 
     split_data = {'train':train_data, 'test':test_data}
 
@@ -478,15 +479,14 @@ def load_data(data_fold: DataFold,
               seed=None):
 
     split_data, train_dataset, test_dataset, encoder = initialize_data_from_paleoai(fold=data_fold,
-                                                                                    subset_keys=['train','test'],
                                                                                     exclude_classes=exclude_classes,
                                                                                     include_classes=include_classes)
-
+                                                                                    # subset_keys=['train','test'],
     if use_tfrecords:
         split_datasets = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
                                                   data=split_data,
                                                   samples_per_shard=samples_per_shard,
-                                                  num_classes=len(classes))
+                                                  num_classes=len(encoder.classes))
         train_data, test_data = split_datasets['train'], split_datasets['test']
 
     else:
@@ -980,7 +980,7 @@ def train_paleoai_dataset(cfg : DictConfig, n_jobs: int=1, verbose: bool=False) 
 
 
 
-@hydra.main(config_path=Path(CONFIG_DIR,'Leaves-PNAS_config.yaml'))
+@hydra.main(config_path=Path(CONFIG_DIR,'Leaves-PNAS.yaml'))
 def train(cfg : DictConfig) -> None:
 
     cfg = restore_or_initialize_experiment(cfg, restore_last=False, prefix='log_dir__', verbose=2)
