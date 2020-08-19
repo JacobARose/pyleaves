@@ -436,7 +436,7 @@ def load_data_from_tfrecords(tfrecord_dir,
 def load_data_from_tensor_slices(split_data, shuffle_train=True, seed=None):
     train_x = tf.data.Dataset.from_tensor_slices(split_data['train'][0])
     train_y = tf.data.Dataset.from_tensor_slices(split_data['train'][1])
-    num_train_samples = len(train_y)
+    num_train_samples = len(split_data['train'][0])
     train_data = tf.data.Dataset.zip((train_x, train_y))
     if shuffle_train:
         train_data = train_data.shuffle(int(num_train_samples),seed=seed, reshuffle_each_iteration=True)
