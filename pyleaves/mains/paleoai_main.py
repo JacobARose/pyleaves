@@ -26,28 +26,14 @@ from pyleaves.utils.callback_utils import BackupAndRestore
 from pprint import pprint
 from pathlib import Path
 
-from pyleaves.utils import setGPU
+from pyleaves.utils import setGPU, set_tf_config
 
 if __name__=='__main__':
 
     setGPU()
+    set_tf_config()
 
-    # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
 import tensorflow as tf
-
-if __name__=='__main__':
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    try:
-        for gpu in gpus:
-            tf.config.experimental.set_memory_growth(gpu, True)
-
-        if gpus:
-            tf.config.experimental.set_visible_devices(gpus[2], 'GPU')
-    except:
-        print('setting memory growth failed, continuing anyway.')
-    random.seed(84)
-    np.random.seed(58)
-    tf.random.set_seed(34)
 
 from tensorflow.python.keras.layers import Input
 from tensorflow.python.keras.optimizers import Adam
@@ -59,6 +45,7 @@ import tensorflow_datasets as tfds
 import tensorflow_addons as tfa
 from pyleaves.models import resnet, vgg16
 from pyleaves.datasets import leaves_dataset, fossil_dataset, pnas_dataset, base_dataset
+from pyleaves.datasets.base_dataset import BaseDataset
 # from pyleaves.utils import ensure_dir_exists
 import neptune
 import arrow
@@ -71,6 +58,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 
 from paleoai_data.utils.kfold_cross_validation import DataFold
+from paleoai_data.utils.kfold_cross_validation import generate_KFoldDataset, export_folds_to_csv, prep_dataset, KFoldLoader
 
 CONFIG_DIR = str(Path(pyleaves.RESOURCES_DIR,'..','..','configs','hydra'))
 ##########################################################################
@@ -364,38 +352,70 @@ def initialize_data_from_leavesdb(dataset_name='PNAS',
     for subset, subset_data in split_data.items():
         split_data[subset] = [list(i) for i in unzip(subset_data)]
 
-    return split_data, data_files, excluded_data_files
+    return split_data, data_files, excluded_data_files, encoder
+
+
+
+def initialize_data_from_paleoai(fold: DataFold,
+                                 exclude_classes=[],
+                                 include_classes=[]):
+
+    train_data, test_data = fold.train_data, fold.test_data
+
+    encoder = base_dataset.LabelEncoder(fold.metadata.class_names)
+    classes = list((set(encoder.classes)-set(exclude_classes)).union(set(include_classes)))
+    # data_files, excluded_data_files = fold.full_dataset.enforce_class_whitelist(class_names=classes)
+    train_dataset, _ = fold.train_dataset.enforce_class_whitelist(class_names=classes)
+    test_dataset, _ = fold.test_dataset.enforce_class_whitelist(class_names=classes)
+
+    train_x = list(train_dataset.data['path'].values)
+    train_y = np.array(encoder.encode(train_dataset.data['family']))
+
+    test_x = list(test_dataset.data['path'].values)
+    test_y = np.array(encoder.encode(test_dataset.data['family']))
+
+    train_data = list(zip(train_x,train_y))
+    random.shuffle(train_data)
+    train_data = list(unzip(train_data))
+
+    split_data = {'train':train_data, 'test':test_data}
+
+    return split_data, train_dataset, test_dataset, encoder
+
+    
+
 
 
 def load_data_from_tfrecords(tfrecord_dir,
                              data=None,
                              target_shape=(768,768,3),
                              samples_per_shard=800,
+                             subset_keys=['train','validation'],
                              num_classes=None):
 
     if data:
         for k,v in data.items():
             data[k] = pd.DataFrame({'source_path':v[0],'label':v[1]})
 
-        train_coder = TFRecordCoder(data = data['train'],
+        train_coder = TFRecordCoder(data = data[subset_keys[0]],
                                     output_dir = tfrecord_dir,
-                                    subset='train',
+                                    subset=subset_keys[0],
                                     target_shape=target_shape,
                                     samples_per_shard=samples_per_shard,
                                     num_classes=num_classes)
 
 
-        val_coder = TFRecordCoder(data = data['validation'],
+        val_coder = TFRecordCoder(data = data[subset_keys[1]],
                                   output_dir = tfrecord_dir,
-                                  subset='validation',
+                                  subset=subset_keys[1],
                                   target_shape=target_shape,
                                   samples_per_shard=samples_per_shard,
                                   num_classes=num_classes)
         train_coder.execute_convert()
         val_coder.execute_convert()
 
-    files = {'train': [os.path.join(tfrecord_dir,f) for f in os.listdir(tfrecord_dir) if 'train' in f],
-             'validation': [os.path.join(tfrecord_dir,f) for f in os.listdir(tfrecord_dir) if 'validation' in f]}
+    files = {subset_keys[0]: [os.path.join(tfrecord_dir,f) for f in os.listdir(tfrecord_dir) if subset_keys[0] in f],
+             subset_keys[1]: [os.path.join(tfrecord_dir,f) for f in os.listdir(tfrecord_dir) if subset_keys[1] in f]}
 
     # import pdb;pdb.set_trace()
     split_datasets = {}
@@ -409,18 +429,18 @@ def load_data_from_tfrecords(tfrecord_dir,
 
 
 def load_data_from_tensor_slices(split_data, shuffle_train=True, seed=None):
-    paths = tf.data.Dataset.from_tensor_slices(split_data['train'][0])
-    labels = tf.data.Dataset.from_tensor_slices(split_data['train'][1])
-    num_train_samples = len(labels)
-    train_data = tf.data.Dataset.zip((paths, labels))
+    train_x = tf.data.Dataset.from_tensor_slices(split_data['train'][0])
+    train_y = tf.data.Dataset.from_tensor_slices(split_data['train'][1])
+    num_train_samples = len(train_y)
+    train_data = tf.data.Dataset.zip((train_x, train_y))
     if shuffle_train:
         train_data = train_data.shuffle(int(num_train_samples),seed=seed, reshuffle_each_iteration=True)
     train_data = train_data.cache()
     train_data = train_data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
 
-    paths = tf.data.Dataset.from_tensor_slices(split_data['validation'][0])
-    labels = tf.data.Dataset.from_tensor_slices(split_data['validation'][1])
-    validation_data = tf.data.Dataset.zip((paths, labels))
+    test_x = tf.data.Dataset.from_tensor_slices(split_data['validation'][0])
+    test_y = tf.data.Dataset.from_tensor_slices(split_data['validation'][1])
+    validation_data = tf.data.Dataset.zip((test_x, test_y))
     validation_data = validation_data.cache()
     validation_data = validation_data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
 
@@ -446,7 +466,7 @@ def load_data_old(dataset_name='PNAS',
               '''
 
 
-    split_data, data_files, excluded_data_files = initialize_data_from_leavesdb(dataset_name=dataset_name,
+    split_data, data_files, excluded_data_files, encoder = initialize_data_from_leavesdb(dataset_name=dataset_name,
                                                                                 splits=splits,
                                                                                 threshold=threshold,
                                                                                 exclude_classes=exclude_classes,
@@ -456,7 +476,7 @@ def load_data_old(dataset_name='PNAS',
         split_datasets = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
                                                   data=split_data,
                                                   samples_per_shard=samples_per_shard,
-                                                  num_classes=len(classes))
+                                                  num_classes=len(encoder.classes))
         train_data, validation_data = split_datasets['train'], split_datasets['validation']
 
     else:
@@ -466,9 +486,6 @@ def load_data_old(dataset_name='PNAS',
             'validation':validation_data}, data_files, excluded_data_files
 
 def load_data(data_fold: DataFold,
-              dataset_name='PNAS',
-              splits={'train':0.7,'validation':0.3},
-              threshold=50,
               exclude_classes=[],
               include_classes=[],
               use_tfrecords=False,
@@ -477,32 +494,27 @@ def load_data(data_fold: DataFold,
               shuffle_train=True,
               seed=None):
 
-
-    # split_data, data_files, excluded_data_files = initialize_data_from_leavesdb(dataset_name=dataset_name,
-    #                                                                             splits=splits,
-    #                                                                             threshold=threshold,
-    #                                                                             exclude_classes=exclude_classes,
-    #                                                                             include_classes=include_classes)
+    split_data, train_dataset, test_dataset, encoder = initialize_data_from_paleoai(fold=data_fold,
+                                                                                    subset_keys=['train','test'],
+                                                                                    exclude_classes=exclude_classes,
+                                                                                    include_classes=include_classes)
 
     if use_tfrecords:
         split_datasets = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
                                                   data=split_data,
                                                   samples_per_shard=samples_per_shard,
                                                   num_classes=len(classes))
-        train_data, validation_data = split_datasets['train'], split_datasets['validation']
+        train_data, test_data = split_datasets['train'], split_datasets['test']
 
     else:
-        train_data, validation_data = load_data_from_tensor_slices(split_data, shuffle_train=shuffle_train, seed=seed)
+        train_data, test_data = load_data_from_tensor_slices(split_data, shuffle_train=shuffle_train, seed=seed)
 
     return {'train':train_data,
-            'validation':validation_data}, data_files, excluded_data_files
+            'test':test_data}, train_dataset, test_dataset,  encoder
 
 
 
-
-
-def create_dataset(dataset_name='PNAS',
-                   threshold=50,
+def create_dataset(data_fold: DataFold,
                    batch_size=32,
                    buffer_size=200,
                    exclude_classes=[],
@@ -510,42 +522,89 @@ def create_dataset(dataset_name='PNAS',
                    target_size=(512,512),
                    num_channels=1,
                    color_mode='grayscale',
-                   splits={'train':0.7,'validation':0.3},
                    augmentations=[{}],
                    seed=None,
                    use_tfrecords=False,
                    tfrecord_dir=None,
                    samples_per_shard=800):
 
-    dataset, data_files, excluded_data_files = load_data(dataset_name=dataset_name,
-                                                         splits=splits,
-                                                         threshold=threshold,
-                                                         seed=seed,
-                                                         exclude_classes=exclude_classes,
-                                                         include_classes=include_classes,
-                                                         use_tfrecords=use_tfrecords,
-                                                         tfrecord_dir=tfrecord_dir,
-                                                         samples_per_shard=samples_per_shard)
+    dataset, train_dataset, test_dataset, encoder = load_data(data_fold=data_fold
+                                                              exclude_classes=exclude_classes,
+                                                              include_classes=include_classes,
+                                                              use_tfrecords=use_tfrecords,
+                                                              tfrecord_dir=tfrecord_dir,
+                                                              samples_per_shard=samples_per_shard,
+                                                              seed=seed)
+
     train_data = prep_dataset(dataset['train'],
                               batch_size=batch_size,
-                              buffer_size=buffer_size,#int(data_files.num_samples*splits['train']),
+                              buffer_size=buffer_size,
                               shuffle=True,
                               target_size=target_size,
                               num_channels=num_channels,
                               color_mode=color_mode,
-                              num_classes=data_files.num_classes,
+                              num_classes=train_dataset.num_classes,
                               augmentations=augmentations,
                               training=True,
                               seed=seed)
-    val_data = prep_dataset(dataset['validation'],
+
+    test_data = prep_dataset(dataset['test'],
                             batch_size=batch_size,
                             target_size=target_size,
                             num_channels=num_channels,
                             color_mode=color_mode,
-                            num_classes=data_files.num_classes,
+                            num_classes=test_dataset.num_classes,
                             training=False,
                             seed=seed)
-    return train_data, val_data, data_files, excluded_data_files
+
+    return train_data, test_data, train_dataset, test_dataset, encoder
+
+
+# def create_dataset(dataset_name='PNAS',
+#                    threshold=50,
+#                    batch_size=32,
+#                    buffer_size=200,
+#                    exclude_classes=[],
+#                    include_classes=[],
+#                    target_size=(512,512),
+#                    num_channels=1,
+#                    color_mode='grayscale',
+#                    splits={'train':0.7,'validation':0.3},
+#                    augmentations=[{}],
+#                    seed=None,
+#                    use_tfrecords=False,
+#                    tfrecord_dir=None,
+#                    samples_per_shard=800):
+
+#     dataset, data_files, excluded_data_files = load_data(dataset_name=dataset_name,
+#                                                          splits=splits,
+#                                                          threshold=threshold,
+#                                                          seed=seed,
+#                                                          exclude_classes=exclude_classes,
+#                                                          include_classes=include_classes,
+#                                                          use_tfrecords=use_tfrecords,
+#                                                          tfrecord_dir=tfrecord_dir,
+#                                                          samples_per_shard=samples_per_shard)
+#     train_data = prep_dataset(dataset['train'],
+#                               batch_size=batch_size,
+#                               buffer_size=buffer_size,#int(data_files.num_samples*splits['train']),
+#                               shuffle=True,
+#                               target_size=target_size,
+#                               num_channels=num_channels,
+#                               color_mode=color_mode,
+#                               num_classes=data_files.num_classes,
+#                               augmentations=augmentations,
+#                               training=True,
+#                               seed=seed)
+#     val_data = prep_dataset(dataset['validation'],
+#                             batch_size=batch_size,
+#                             target_size=target_size,
+#                             num_channels=num_channels,
+#                             color_mode=color_mode,
+#                             num_classes=data_files.num_classes,
+#                             training=False,
+#                             seed=seed)
+#     return train_data, val_data, data_files, excluded_data_files
 
 
 ##########################################################################
@@ -657,9 +716,127 @@ neptune_logger = tf.keras.callbacks.LambdaCallback(on_batch_end=lambda batch, lo
 from pyleaves.utils.neptune_utils import ImageLoggerCallback
 
 # @hydra.main(config_path=Path(CONFIG_DIR,'PNAS_config.yaml'),config_name="PNAS")
-def train_pyleaves_dataset(cfg : DictConfig) -> None:
-    print(cfg.pretty())
-    import pdb; pdb.set_trace()
+# def train_pyleaves_dataset(cfg : DictConfig) -> None:
+#     print(cfg.pretty())
+#     import pdb; pdb.set_trace()
+#     cfg_0 = cfg.stage_0
+#     ensure_dir_exists(cfg['log_dir'])
+#     ensure_dir_exists(cfg['model_dir'])
+#     neptune.append_tag(cfg_0.dataset.dataset_name)
+#     neptune.append_tag(cfg_0.model.model_name)
+#     neptune.append_tag(str(cfg_0.dataset.target_size))
+#     neptune.append_tag(cfg_0.dataset.num_channels)
+#     neptune.append_tag(cfg_0.dataset.color_mode)
+#     K.clear_session()
+#     tf.random.set_seed(cfg_0.misc.seed)
+
+#     train_dataset, validation_dataset, STAGE1_data_files, excluded = create_dataset(dataset_name=cfg_0.dataset.dataset_name,
+#                                                                                     threshold=cfg_0.dataset.threshold,
+#                                                                                     batch_size=cfg_0.training.batch_size,
+#                                                                                     buffer_size=cfg_0.training.buffer_size,
+#                                                                                     exclude_classes=cfg_0.dataset.exclude_classes,
+#                                                                                     target_size=cfg_0.dataset.target_size,
+#                                                                                     num_channels=cfg_0.dataset.num_channels,
+#                                                                                     color_mode=cfg_0.dataset.color_mode,
+#                                                                                     splits=cfg_0.dataset.splits,
+#                                                                                     augmentations=cfg_0.training.augmentations,
+#                                                                                     seed=cfg_0.misc.seed,
+#                                                                                     use_tfrecords=cfg_0.misc.use_tfrecords,
+#                                                                                     tfrecord_dir=cfg_0.dataset.tfrecord_dir,
+#                                                                                     samples_per_shard=cfg_0.misc.samples_per_shard)
+
+#     cfg_0.num_classes = STAGE1_data_files.num_classes
+#     cfg['splits_size'] = {'train':{},
+#                              'validation':{}}
+#     cfg['splits_size']['train'] = int(STAGE1_data_files.num_samples*cfg['splits']['train'])
+#     cfg['splits_size']['validation'] = int(STAGE1_data_files.num_samples*cfg['splits']['validation'])
+
+#     cfg['steps_per_epoch'] = cfg['splits_size']['train']//cfg['BATCH_SIZE']
+#     cfg['validation_steps'] = cfg['splits_size']['validation']//cfg['BATCH_SIZE']
+
+#     neptune.set_property('num_classes',cfg['num_classes'])
+#     neptune.set_property('steps_per_epoch',cfg['steps_per_epoch'])
+#     neptune.set_property('validation_steps',cfg['validation_steps'])
+
+#     # TODO: log encoder contents as dict
+#     encoder = base_dataset.LabelEncoder(STAGE1_data_files.classes)
+
+#     cfg['base_learning_rate'] = cfg['lr']
+#     cfg['input_shape'] = (*cfg['target_size'],cfg['num_channels'])
+
+#     # strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
+#     # with strategy.scope():
+#     model = build_model(cfg)
+
+#     # model = build_or_restore_model(cfg)
+#     model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+#     pprint(cfg)
+
+#     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
+#     backup_callback.set_model(model)
+#     callbacks = [neptune_logger,
+#                  backup_callback,
+#                  EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
+#     #              ImageLoggerCallback(data=train_dataset, freq=1000, max_images=-1, name='train', encoder=encoder),
+#     #              ImageLoggerCallback(data=validation_dataset, freq=1000, max_images=-1, name='val', encoder=encoder),
+
+#     history = model.fit(train_dataset,
+#                         epochs=cfg['num_epochs'],
+#                         callbacks=callbacks,
+#                         validation_data=validation_dataset,
+#                         shuffle=True,
+#                         steps_per_epoch=cfg['steps_per_epoch'],
+#                         validation_steps=cfg['validation_steps'])
+#     #                     initial_epoch=0,
+
+#     # TODO: Change build_model to build_or_load_model
+#     model.save(cfg['saved_model_path'] + '-stage 1')
+#     for k,v in cfg.items():
+#         neptune.set_property(str(k),str(v))
+
+#     if cfg['transfer_to_PNAS'] or cfg['transfer_to_Fossil']:
+#         cfg['include_classes'] = STAGE1_data_files.classes
+#         train_dataset, validation_dataset, STAGE2_data_files, STAGE2_excluded = create_dataset(dataset_name=cfg['stage_2']['dataset_name'], #cfg['dataset_name'],
+#                                                                                                threshold=cfg['threshold'],
+#                                                                                                batch_size=cfg['BATCH_SIZE'],
+#                                                                                                buffer_size=cfg['buffer_size'],
+#                                                                                                exclude_classes=cfg['exclude_classes'],
+#                                                                                                include_classes=cfg['include_classes'],
+#                                                                                                target_size=cfg['target_size'],
+#                                                                                                num_channels=cfg['num_channels'],
+#                                                                                                color_mode=cfg['color_mode'],
+#                                                                                                splits=cfg['splits'],
+#                                                                                                augmentations=cfg['augmentations'],
+#                                                                                                seed=cfg['seed'])
+
+#         cfg['num_classes'] = STAGE2_data_files.num_classes
+#         cfg['splits_size'] = {'train':{},
+#                                  'validation':{}}
+#         cfg['splits_size']['train'] = int(STAGE2_data_files.num_samples*cfg['splits']['train'])
+#         cfg['splits_size']['validation'] = int(STAGE2_data_files.num_samples*cfg['splits']['validation'])
+
+#         cfg['steps_per_epoch'] = cfg['splits_size']['train']//cfg['BATCH_SIZE']
+#         cfg['validation_steps'] = cfg['splits_size']['validation']//cfg['BATCH_SIZE']
+
+#         backup_callback = BackupAndRestore(cfg['checkpoints_path'])
+#         backup_callback.set_model(model)
+#         callbacks = [neptune_logger,
+#                      backup_callback,
+#                      EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
+
+#         history = model.fit(train_dataset,
+#                             epochs=cfg['num_epochs'],
+#                             callbacks=callbacks,
+#                             validation_data=validation_dataset,
+#                             shuffle=True,
+#                             steps_per_epoch=cfg['steps_per_epoch'],
+#                             validation_steps=cfg['validation_steps'])
+#     return history
+
+
+def log_config(cfg: DictConfig, verbose: bool=False):
+    if verbose: print(cfg.pretty())
+
     cfg_0 = cfg.stage_0
     ensure_dir_exists(cfg['log_dir'])
     ensure_dir_exists(cfg['model_dir'])
@@ -668,111 +845,143 @@ def train_pyleaves_dataset(cfg : DictConfig) -> None:
     neptune.append_tag(str(cfg_0.dataset.target_size))
     neptune.append_tag(cfg_0.dataset.num_channels)
     neptune.append_tag(cfg_0.dataset.color_mode)
-    K.clear_session()
-    tf.random.set_seed(cfg_0.misc.seed)
 
-    train_dataset, validation_dataset, STAGE1_data_files, excluded = create_dataset(dataset_name=cfg_0.dataset.dataset_name,
-                                                                                    threshold=cfg_0.dataset.threshold,
-                                                                                    batch_size=cfg_0.training.batch_size,
-                                                                                    buffer_size=cfg_0.training.buffer_size,
-                                                                                    exclude_classes=cfg_0.dataset.exclude_classes,
-                                                                                    target_size=cfg_0.dataset.target_size,
-                                                                                    num_channels=cfg_0.dataset.num_channels,
-                                                                                    color_mode=cfg_0.dataset.color_mode,
-                                                                                    splits=cfg_0.dataset.splits,
-                                                                                    augmentations=cfg_0.training.augmentations,
-                                                                                    seed=cfg_0.misc.seed,
-                                                                                    use_tfrecords=cfg_0.misc.use_tfrecords,
-                                                                                    tfrecord_dir=cfg_0.dataset.tfrecord_dir,
-                                                                                    samples_per_shard=cfg_0.misc.samples_per_shard)
 
-    cfg_0.num_classes = STAGE1_data_files.num_classes
+def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseDataset):
+    cfg.num_classes = dataset.num_classes
     cfg['splits_size'] = {'train':{},
-                             'validation':{}}
-    cfg['splits_size']['train'] = int(STAGE1_data_files.num_samples*cfg['splits']['train'])
-    cfg['splits_size']['validation'] = int(STAGE1_data_files.num_samples*cfg['splits']['validation'])
+                          'test':{}}
+    cfg['splits_size']['train'] = int(train_dataset.num_samples)
+    cfg['splits_size']['test'] = int(test_dataset.num_samples)
 
     cfg['steps_per_epoch'] = cfg['splits_size']['train']//cfg['BATCH_SIZE']
-    cfg['validation_steps'] = cfg['splits_size']['validation']//cfg['BATCH_SIZE']
+    cfg['validation_steps'] = cfg['splits_size']['test']//cfg['BATCH_SIZE']
 
     neptune.set_property('num_classes',cfg['num_classes'])
     neptune.set_property('steps_per_epoch',cfg['steps_per_epoch'])
     neptune.set_property('validation_steps',cfg['validation_steps'])
 
-    # TODO: log encoder contents as dict
-    encoder = base_dataset.LabelEncoder(STAGE1_data_files.classes)
+
+
+def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True)) -> None:
+
+    
+    train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
+                                                                                batch_size=cfg.training.batch_size,
+                                                                                buffer_size=cfg.training.buffer_size,
+                                                                                exclude_classes=cfg.dataset.exclude_classes,
+                                                                                include_classes=cfg.dataset.include_classes,
+                                                                                target_size=cfg.dataset.target_size,
+                                                                                num_channels=cfg.dataset.num_channels,
+                                                                                color_mode=cfg.dataset.color_mode,
+                                                                                augmentations=cfg.training.augmentations,
+                                                                                seed=cfg.misc.seed,
+                                                                                use_tfrecords=cfg.misc.use_tfrecords,
+                                                                                tfrecord_dir=cfg.dataset.tfrecord_dir,
+                                                                                samples_per_shard=cfg.misc.samples_per_shard)
+
+    if verbose: print(f'Starting fold {fold.fold_id}')
+    log_dataset(cfg=cfg, train_dataset, test_dataset)
 
     cfg['base_learning_rate'] = cfg['lr']
     cfg['input_shape'] = (*cfg['target_size'],cfg['num_channels'])
 
-    # strategy = tf.distribute.OneDeviceStrategy(device="/gpu:0")
-    # with strategy.scope():
     model = build_model(cfg)
 
-    # model = build_or_restore_model(cfg)
     model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     pprint(cfg)
 
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
     callbacks = [neptune_logger,
-                 backup_callback,
-                 EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
-    #              ImageLoggerCallback(data=train_dataset, freq=1000, max_images=-1, name='train', encoder=encoder),
-    #              ImageLoggerCallback(data=validation_dataset, freq=1000, max_images=-1, name='val', encoder=encoder),
+                backup_callback,
+                EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
+                ImageLoggerCallback(data=train_dataset, freq=1000, max_images=-1, name='train', encoder=encoder),
+                ImageLoggerCallback(data=test_dataset, freq=1000, max_images=-1, name='val', encoder=encoder)]
 
     history = model.fit(train_dataset,
                         epochs=cfg['num_epochs'],
                         callbacks=callbacks,
-                        validation_data=validation_dataset,
+                        validation_data=test_dataset,
                         shuffle=True,
                         steps_per_epoch=cfg['steps_per_epoch'],
                         validation_steps=cfg['validation_steps'])
-    #                     initial_epoch=0,
-
-    # TODO: Change build_model to build_or_load_model
-    model.save(cfg['saved_model_path'] + '-stage 1')
-    for k,v in cfg.items():
-        neptune.set_property(str(k),str(v))
-
-    if cfg['transfer_to_PNAS'] or cfg['transfer_to_Fossil']:
-        cfg['include_classes'] = STAGE1_data_files.classes
-        train_dataset, validation_dataset, STAGE2_data_files, STAGE2_excluded = create_dataset(dataset_name=cfg['stage_2']['dataset_name'], #cfg['dataset_name'],
-                                                                                               threshold=cfg['threshold'],
-                                                                                               batch_size=cfg['BATCH_SIZE'],
-                                                                                               buffer_size=cfg['buffer_size'],
-                                                                                               exclude_classes=cfg['exclude_classes'],
-                                                                                               include_classes=cfg['include_classes'],
-                                                                                               target_size=cfg['target_size'],
-                                                                                               num_channels=cfg['num_channels'],
-                                                                                               color_mode=cfg['color_mode'],
-                                                                                               splits=cfg['splits'],
-                                                                                               augmentations=cfg['augmentations'],
-                                                                                               seed=cfg['seed'])
-
-        cfg['num_classes'] = STAGE2_data_files.num_classes
-        cfg['splits_size'] = {'train':{},
-                                 'validation':{}}
-        cfg['splits_size']['train'] = int(STAGE2_data_files.num_samples*cfg['splits']['train'])
-        cfg['splits_size']['validation'] = int(STAGE2_data_files.num_samples*cfg['splits']['validation'])
-
-        cfg['steps_per_epoch'] = cfg['splits_size']['train']//cfg['BATCH_SIZE']
-        cfg['validation_steps'] = cfg['splits_size']['validation']//cfg['BATCH_SIZE']
-
-        backup_callback = BackupAndRestore(cfg['checkpoints_path'])
-        backup_callback.set_model(model)
-        callbacks = [neptune_logger,
-                     backup_callback,
-                     EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
-
-        history = model.fit(train_dataset,
-                            epochs=cfg['num_epochs'],
-                            callbacks=callbacks,
-                            validation_data=validation_dataset,
-                            shuffle=True,
-                            steps_per_epoch=cfg['steps_per_epoch'],
-                            validation_steps=cfg['validation_steps'])
     return history
+
+
+# from keras.wrappers.scikit_learn import KerasClassifier
+# from tune_sklearn import TuneGridSearchCV
+from joblib import Parallel, delayed
+
+
+def train_paleoai_dataset(cfg : DictConfig, n_jobs: int=1, verbose: bool=False)) -> None:
+
+    cfg_0 = cfg.stage_0
+    cfg_1 = cfg.stage_1
+
+    log_config(cfg=cfg_0, verbose=verbose)
+    log_config(cfg=cfg_1, verbose=verbose)
+
+    K.clear_session()
+    tf.random.set_seed(cfg_0.misc.seed)
+
+    kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
+
+    kfold_iter = kfold_loader.iter_folds(repeats=1)
+    histories = Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=cfg_0) for i, fold in enumerate(kfold_iter))
+
+    import pdb; pdb.set_trace()
+
+    return histories
+
+    # for i, fold in enumerate(kfold_iter):
+
+    # model.save(cfg['saved_model_path'] + '-stage 0')
+    # for k,v in cfg.items():
+    #     neptune.set_property(str(k),str(v))
+
+    #     cfg['include_classes'] = STAGE1_data_files.classes
+    #     train_dataset, validation_dataset, STAGE2_data_files, STAGE2_excluded = create_dataset(dataset_name=cfg['stage_2']['dataset_name'], #cfg['dataset_name'],
+    #                                                                                            threshold=cfg['threshold'],
+    #                                                                                            batch_size=cfg['BATCH_SIZE'],
+    #                                                                                            buffer_size=cfg['buffer_size'],
+    #                                                                                            exclude_classes=cfg['exclude_classes'],
+    #                                                                                            include_classes=cfg['include_classes'],
+    #                                                                                            target_size=cfg['target_size'],
+    #                                                                                            num_channels=cfg['num_channels'],
+    #                                                                                            color_mode=cfg['color_mode'],
+    #                                                                                            splits=cfg['splits'],
+    #                                                                                            augmentations=cfg['augmentations'],
+    #                                                                                            seed=cfg['seed'])
+
+    #     cfg['num_classes'] = STAGE2_data_files.num_classes
+    #     cfg['splits_size'] = {'train':{},
+    #                              'validation':{}}
+    #     cfg['splits_size']['train'] = int(STAGE2_data_files.num_samples*cfg['splits']['train'])
+    #     cfg['splits_size']['validation'] = int(STAGE2_data_files.num_samples*cfg['splits']['validation'])
+
+    #     cfg['steps_per_epoch'] = cfg['splits_size']['train']//cfg['BATCH_SIZE']
+    #     cfg['validation_steps'] = cfg['splits_size']['validation']//cfg['BATCH_SIZE']
+
+    #     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
+    #     backup_callback.set_model(model)
+    #     callbacks = [neptune_logger,
+    #                  backup_callback,
+    #                  EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
+
+    #     history = model.fit(train_dataset,
+    #                         epochs=cfg['num_epochs'],
+    #                         callbacks=callbacks,
+    #                         validation_data=validation_dataset,
+    #                         shuffle=True,
+    #                         steps_per_epoch=cfg['steps_per_epoch'],
+    #                         validation_steps=cfg['validation_steps'])
+    # return history
+
+
+
+
+
 
 
 
@@ -783,8 +992,9 @@ def train(cfg : DictConfig) -> None:
 
     neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
     params=OmegaConf.to_container(cfg)
-    with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.splits), params=params):
-        train_pyleaves_dataset(cfg)
+    with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name), params=params):
+        # train_pyleaves_dataset(cfg)
+        train_paleoai_dataset(cfg=cfg, n_jobs=3, verbose=True)
 
 
 

@@ -9,12 +9,13 @@
 '''
 
 # import pdb;pdb.set_trace();print(__file__)
+from distutils.version import StrictVersion
 import os
 import itertools
 from collections import defaultdict, OrderedDict
 import gpustat
 import random
-
+from typing import List
 
 def setGPU():
     stats = gpustat.GPUStatCollection.new_query()
@@ -27,6 +28,27 @@ def setGPU():
     print("setGPU: Setting GPU to: {}".format(bestGPU))
     os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
     os.environ['CUDA_VISIBLE_DEVICES'] = str(bestGPU)
+
+
+def set_tf_config(seed: int=None):
+    assert using_tensorflow2()
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+
+        if gpus:
+            tf.config.experimental.set_visible_devices(gpus[0], 'GPU')
+    except:
+        print('setting memory growth failed, continuing anyway.')
+
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+
+
+def using_tensorflow2() -> bool:
+    return StrictVersion(tf.__version__).version >= StrictVersion('2.0.0').version
 
 
 
