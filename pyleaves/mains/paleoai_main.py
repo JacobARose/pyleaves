@@ -265,7 +265,7 @@ def prep_dataset(dataset,
                  seed=None):
 
     print(type(target_size),target_size)
-    import pdb;pdb.set_trace()
+    
     resize = partial(resize_image, shape=(*target_size, num_channels), training=training, seed=seed)
     dataset = dataset.map(lambda x,y: (resize(x), y),
                           num_parallel_calls=-1)
@@ -541,7 +541,7 @@ def create_dataset(data_fold: DataFold,
                                                               tfrecord_dir=tfrecord_dir,
                                                               samples_per_shard=samples_per_shard,
                                                               seed=seed)
-
+    import pdb;pdb.set_trace()
     train_data = prep_dataset(dataset['train'],
                               batch_size=batch_size,
                               buffer_size=buffer_size,
@@ -1010,7 +1010,7 @@ def train(cfg : DictConfig) -> None:
     params=OmegaConf.to_container(cfg)
     with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name), params=params):
         # train_pyleaves_dataset(cfg)
-        train_paleoai_dataset(cfg=cfg, n_jobs=3, verbose=True)
+        train_paleoai_dataset(cfg=cfg, n_jobs=1, verbose=True)
 
 
 
