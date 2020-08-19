@@ -861,8 +861,8 @@ def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseD
     cfg['dataset']['splits_size']['train'] = int(train_dataset.num_samples)
     cfg['dataset']['splits_size']['test'] = int(test_dataset.num_samples)
 
-    cfg['steps_per_epoch'] = cfg['dataset']['splits_size']['train']//cfg['BATCH_SIZE']
-    cfg['validation_steps'] = cfg['dataset']['splits_size']['test']//cfg['BATCH_SIZE']
+    cfg['steps_per_epoch'] = cfg['dataset']['splits_size']['train']//cfg['training']['batch_size']
+    cfg['validation_steps'] = cfg['dataset']['splits_size']['test']//cfg['training']['batch_size']
 
     neptune.set_property('num_classes',cfg['num_classes'])
     neptune.set_property('steps_per_epoch',cfg['steps_per_epoch'])
