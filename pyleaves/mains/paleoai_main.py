@@ -49,6 +49,26 @@ CONFIG_DIR = str(Path(pyleaves.RESOURCES_DIR,'..','..','configs','hydra'))
 
 date_format = '%Y-%m-%d_%H-%M-%S'
 
+
+
+    import tensorflow as tf
+    from tensorflow.python.keras.layers import Input
+    from tensorflow.python.keras.optimizers import Adam
+    from tensorflow.python.keras.metrics import categorical_crossentropy
+    
+    from tensorflow.keras.callbacks import Callback, ModelCheckpoint, TensorBoard, LearningRateScheduler, EarlyStopping
+    from tensorflow.keras import backend as K
+    import tensorflow_datasets as tfds
+    import tensorflow_addons as tfa
+    from pyleaves.models import resnet, vgg16
+
+
+
+
+
+
+
+
 def initialize_experiment(cfg, experiment_start_time=None):
 
     # if 'stage_1' in cfg.pipeline:
@@ -849,16 +869,6 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
     setGPU()
     set_tf_config()
 
-    import tensorflow as tf
-    from tensorflow.python.keras.layers import Input
-    from tensorflow.python.keras.optimizers import Adam
-    from tensorflow.python.keras.metrics import categorical_crossentropy
-    
-    from tensorflow.keras.callbacks import Callback, ModelCheckpoint, TensorBoard, LearningRateScheduler, EarlyStopping
-    from tensorflow.keras import backend as K
-    import tensorflow_datasets as tfds
-    import tensorflow_addons as tfa
-    from pyleaves.models import resnet, vgg16
     
     cfg.tfrecord_dir = os.path.join(cfg.tfrecord_dir,fold.fold_name)
     ensure_dir_exists(cfg.tfrecord_dir)
