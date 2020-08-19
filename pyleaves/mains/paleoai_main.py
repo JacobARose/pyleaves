@@ -28,22 +28,6 @@ from pathlib import Path
 
 from pyleaves.utils import setGPU, set_tf_config
 
-if __name__=='__main__':
-
-    setGPU()
-    set_tf_config()
-
-import tensorflow as tf
-
-from tensorflow.python.keras.layers import Input
-from tensorflow.python.keras.optimizers import Adam
-from tensorflow.python.keras.metrics import categorical_crossentropy
-from tensorflow.keras.applications.vgg16 import preprocess_input
-from tensorflow.keras.callbacks import Callback, ModelCheckpoint, TensorBoard, LearningRateScheduler, EarlyStopping
-from tensorflow.keras import backend as K
-import tensorflow_datasets as tfds
-import tensorflow_addons as tfa
-from pyleaves.models import resnet, vgg16
 from pyleaves.datasets import leaves_dataset, fossil_dataset, pnas_dataset, base_dataset
 from pyleaves.datasets.base_dataset import BaseDataset
 # from pyleaves.utils import ensure_dir_exists
@@ -864,7 +848,19 @@ def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseD
 
 
 def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True)) -> None:
+    setGPU()
+    set_tf_config()
 
+    import tensorflow as tf
+    from tensorflow.python.keras.layers import Input
+    from tensorflow.python.keras.optimizers import Adam
+    from tensorflow.python.keras.metrics import categorical_crossentropy
+    from tensorflow.keras.applications.vgg16 import preprocess_input
+    from tensorflow.keras.callbacks import Callback, ModelCheckpoint, TensorBoard, LearningRateScheduler, EarlyStopping
+    from tensorflow.keras import backend as K
+    import tensorflow_datasets as tfds
+    import tensorflow_addons as tfa
+    from pyleaves.models import resnet, vgg16
     
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
                                                                                 batch_size=cfg.training.batch_size,
@@ -985,7 +981,7 @@ def train_paleoai_dataset(cfg : DictConfig, n_jobs: int=1, verbose: bool=False))
 
 
 
-@hydra.main(config_path=Path(CONFIG_DIR,'PNAS_config.yaml'))
+@hydra.main(config_path=Path(CONFIG_DIR,'Leaves-PNAS_config.yaml'))
 def train(cfg : DictConfig) -> None:
 
     cfg = restore_or_initialize_experiment(cfg, restore_last=False, prefix='log_dir__', verbose=2)
