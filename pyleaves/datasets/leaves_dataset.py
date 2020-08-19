@@ -17,12 +17,12 @@ from pyleaves.tests.test_utils import MetaData
 
 class LeavesDataset(BaseDataset):
 
-    __version__ = '1.1'
+    __version__ = '0.1'
 
-    def __init__(self, src_db=pyleaves.DATABASE_PATH):
+    def __init__(self, src_db=pyleaves.DATABASE_PATH, all_cols=False):
         super().__init__(name='Leaves', src_db=src_db)
         # super().__init__(name='Leaves2020', src_db=src_db)
-        self._data = self.load_from_db()
+        self._data = self.load_from_db(all_cols=all_cols)
 
         self.__class__.metadata = METADATA
 

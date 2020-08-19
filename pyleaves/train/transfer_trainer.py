@@ -7,8 +7,6 @@ Script for defining a class to manage a multi-stage training process for transfe
 
 
 
-##TBD Currently this script is justt a copy of BaseTrainer
-
 
 @author: JacobARose
 '''
@@ -39,12 +37,124 @@ from pyleaves.analysis.img_utils import TFRecordCoder, plot_image_grid, imagenet
 from pyleaves.leavesdb.tf_utils.tf_utils import train_val_test_split, get_data_splits_metadata
 from pyleaves.leavesdb.tf_utils.create_tfrecords import main as create_tfrecords
 
+
+from pyleaves.analysis.mlflow_utils import mlflow_log_history, mlflow_log_best_history
 from pyleaves.config import DatasetConfig, TrainConfig, ModelConfig, ExperimentConfig
 from pyleaves.train.base_trainer import BaseTrainer
 from pyleaves.models.resnet import ResNet, ResNetGrayScale
 from pyleaves.models.vgg16 import VGG16, VGG16GrayScale
 from stuf import stuf
 
+import mlflow
+
+
+
+class MLFlowTrainer:
+    
+    def fit(self,
+            x=None, 
+            y=None, 
+            batch_size=None,
+            epochs=1, 
+            verbose=1,
+            callbacks=None,
+            validation_data=None,
+            shuffle=True,
+            class_weight=None, 
+            sample_weight=None,
+            initial_epoch=0,
+            steps_per_epoch=None,
+            validation_steps=None,
+            validation_freq=1,
+            max_queue_size=10,
+            workers=1,
+            use_multiprocessing=False,
+            history_name=''):
+    
+    #TODO CHECK IS USE_MULTIPROCESSING STILL WORKS/HELPS IF USING TF.DATA WITH AUTOTUNE
+    
+        history = self.model.fit(x=x,
+                                 y=y, 
+                                 batch_size=batch_size,
+                                 epochs=epochs,
+                                 verbose=verbose,
+                                 callbacks=callbacks,
+                                 validation_data=validation_data,
+                                 shuffle=shuffle,
+                                 class_weight=class_weight,
+                                 sample_weight=sample_weight,
+                                 initial_epoch=initial_epoch,
+                                 steps_per_epoch=steps_per_epoch,
+                                 validation_steps=validation_steps,
+                                 validation_freq=validation_freq,
+                                 max_queue_size=max_queue_size,
+                                 workers=workers,
+                                 use_multiprocessing=use_multiprocessing)
+    
+        
+        mlflow_log_history(history, history_name=history_name)
+        
+        return history
+    
+    
+    
+    
+    def evaluate(self,
+                 x=None,
+                 y=None,
+                 batch_size=None,
+                 verbose=1,
+                 sample_weight=None,
+                 steps=None, 
+                 callbacks=None,
+                 max_queue_size=10,
+                 workers=1, 
+                 use_multiprocessing=False,
+                 log_name=''):
+        
+        results = self.model.evaluate(x=x,
+                                      y=y,
+                                      batch_size=batch_size,
+                                      verbose=verbose,
+                                      sample_weight=sample_weight,
+                                      steps=steps,
+                                      callbacks=callbacks,
+                                      max_queue_size=max_queue_size,
+                                      workers=workers,
+                                      use_multiprocessing=use_multiprocessing)
+        
+        history = {k:v for k, v in zip(self.metrics_names,results)}
+        
+        for k, v in history.items():
+            mlflow.log_metric(log_name+k, v)
+        
+        return history        
+        
+        
+    
+    def predict(self,
+                x,
+                batch_size=None,
+                verbose=0, 
+                steps=None, 
+                callbacks=None, 
+                max_queue_size=10,
+                workers=1,
+                use_multiprocessing=False):
+    
+        predictions = self.model.predict(x=x,
+                batch_size=batch_size,
+                verbose=verbose, 
+                steps=steps,
+                callbacks=callbacks,
+                max_queue_size=max_queue_size,
+                workers=workers,
+                use_multiprocessing=use_multiprocessing)
+        
+        
+        
+        return predictions
+
 
 
 
@@ -53,15 +163,29 @@ from stuf import stuf
         
         
     
-class TransferTrainer:
+class TransferTrainer(MLFlowTrainer):
     
-    def __init__(self, experiment_configs=[], model_builder=None, src_db=pyleaves.DATABASE_PATH):
+    def __init__(self, 
+                 experiment_configs=[], 
+                 model_builder=None, 
+                 trainer_constructor=None,
+                 label_encoders={'source':None,'target':None},
+                 **kwargs): # src_db=pyleaves.DATABASE_PATH):
         self.model_builder = model_builder
         self.num_domains = len(experiment_configs) # Number of pipeline stages
+        if trainer_constructor is None:
+            trainer_constructor = BaseTrainer
+        self.domains = {'source':trainer_constructor(experiment_configs[0], 
+                                                     label_encoder=label_encoders['source'])}
+        if label_encoders['target'] is not None:
+            encoder=label_encoders['target']
+        else:
+            encoder = self.domains['source'].encoder
+        self.domains.update({'target':trainer_constructor(experiment_configs[1], label_encoder=encoder)})
 
-        self.domains = {'source':BaseTrainer(experiment_configs[0], src_db=src_db)}
-        encoder = self.domains['source'].encoder
-        self.domains.update({'target':BaseTrainer(experiment_configs[1], label_encoder=encoder, src_db=src_db)})
+#         self.domains = {'source':BaseTrainer(experiment_configs[0])}
+#         encoder = self.domains['source'].encoder
+#         self.domains.update({'target':BaseTrainer(experiment_configs[1], label_encoder=encoder)})
         self.configs = {'source':experiment_configs[0],
                         'target':experiment_configs[1]}
         self.histories = {}
@@ -76,6 +200,8 @@ class TransferTrainer:
         elif self.model_name.startswith('resnet'):
             self.add_model_manager(ResNet(model_config))
         self.model = self.model_manager.build_model()
+        
+        self.metrics_names = self.model.metrics_names
         
     def get_data_loader(self, domain='source', subset='train'):
         '''
@@ -113,6 +239,7 @@ class TransferTrainer:
         
         
         
+    
     
 
 # from pyleaves.train.callbacks import get_callbacks

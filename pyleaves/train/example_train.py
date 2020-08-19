@@ -119,7 +119,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dataset_name', default='PNAS', type=str, help='Name of dataset of images to use for creating TFRecords')
     parser.add_argument('-m', '--model_name', default='vgg16', type=str, help='Name of model to train')
-    parser.add_argument('-gpu', '--gpu_id', default='1', type=str, help='integer number of gpu to train on')
+    parser.add_argument('-gpu', '--gpu_id', default='0', type=str, help='integer number of gpu to train on')
 #     parser.add_argument('-ch', '--num_channels', default=3, type=int, help='Number of input channels, either 1 for grayscale, or 3 for rgb')
     parser.add_argument('-c', '--color_type', default='grayscale', type=str, help='grayscale or rgb')
     parser.add_argument('-bsz', '--batch_size', default='64', type=str, help='Batch size. What else do you need to know?')
@@ -260,7 +260,7 @@ if __name__=='__main__':
     #########################################
     for num_finished, hparam in enumerate(hparam_sampler):
         hparam = {k:v for k,v in hparam}
-        
+#         break
         args.model_name = hparam['model_names']
         args.dataset_name = hparam['dataset_names']
         args.base_learning_rate = hparam['learning_rates']
@@ -270,17 +270,17 @@ if __name__=='__main__':
         
         with mlflow.start_run(run_name=run_name, nested=True):
 
-            num_channels=3
-            if args.model_name=='vgg16':
-                target_size=(224,224)
-                if args.color_type=='grayscale':
-                    num_channels=1
-            elif 'resnet' in args.model_name:
-                target_size=(224,224)
-            elif args.model_name=='xception':
-                target_size=(299,299)
-            else:
-                target_size=(224,224)
+#             num_channels=3
+#             if args.model_name=='vgg16':
+#                 target_size=(224,224)
+#                 if args.color_type=='grayscale':
+#                     num_channels=1
+#             elif 'resnet' in args.model_name:
+#                 target_size=(224,224)
+#             elif args.model_name=='xception':
+#                 target_size=(299,299)
+#             else:
+#                 target_size=(224,224)
 
             histories = []
             current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -296,8 +296,8 @@ if __name__=='__main__':
 
             dataset_config = DatasetConfig(dataset_name=args.dataset_name,
                                             label_col='family',
-                                            target_size=target_size,
-                                            num_channels=num_channels,
+#                                             target_size=target_size,
+#                                             num_channels=num_channels,
                                             grayscale=(args.color_type=='grayscale'),
                                             low_class_count_thresh=args.low_class_count_thresh,
                                             data_splits={'val_size':0.2,'test_size':0.2},
@@ -320,13 +320,13 @@ if __name__=='__main__':
                                        verbose=True)
 
             experiment_config = ExperimentConfig(dataset_config=dataset_config,
-                                                 train_config=train_config)            
+                                                 train_config=train_config)
 
             mlflow.tensorflow.autolog()
 
     #         mlflow.log_params(experiment_config)
 
-            print(f'BEGINNING: DATASET:{args.dataset_name}|MODEL:{args.model_name}|bsz:{args.batch_size}|lr:{args.base_learning_rate}|num_channels:{num_channels}|Color_type={args.color_type}|regularizer={regularizer}')
+            print(f'BEGINNING: DATASET:{args.dataset_name}|MODEL:{args.model_name}|bsz:{args.batch_size}|lr:{args.base_learning_rate}|Color_type={args.color_type}|regularizer={regularizer}')
             print('-'*30)
 
             trainer = main(experiment_config, experiment_dir)

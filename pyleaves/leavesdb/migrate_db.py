@@ -76,7 +76,7 @@ def duplicate_raw_dataset(data :pd.DataFrame, omitted_rows: list=[]):
     return data, omitted_rows
 
 
-def process_raw_dataset2jpg(data : pd.DataFrame,  target_absolute_root : str, dataset_name : str, log_path : str=None):
+def process_raw_dataset2jpg(data : pd.DataFrame, dataset_name : str, log_path : str=None, columns=None):
     """
     Uses DaskCoder to iterate through a sequence of files and duplicate/convert each file into JPEG format
 
@@ -106,19 +106,25 @@ def process_raw_dataset2jpg(data : pd.DataFrame,  target_absolute_root : str, da
 
 
     """
+    if columns is None:
+        columns={'source_path':'source_path',
+                 'target_path':'converted_target_path',
+                 'label':'family'}
 
-    data = data.assign(label=data.family, dataset = dataset_name)
-    # data.dataset = dataset_name
+    CorruptJPEGError.reset()
+
+    if 'label' not in data.columns:
+        data = data.assign(label=data[columns['label']])
+    if dataset_name is not None:
+        data = data.assign(dataset = dataset_name)
+    else:
+        dataset_name = data.dataset_name.unique()[0]
     num_files = len(data)
 
     print(f'[BEGINNING] copying {num_files} from {dataset_name}')
     start_time = time.perf_counter()
-
     coder = DaskCoder(data,
-                      target_absolute_root,
-                      columns={'source_path':'source_path',
-                               'target_path':'converted_target_path',
-                               'label':'family'})
+                      columns=columns)
     data = coder.execute_conversion(coder.input_dataset)
 
     num_files_kept = len(data)

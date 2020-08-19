@@ -3,6 +3,19 @@
 # @Email:  jacobrose@brown.edu
 # @Filename: callbacks.py
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+'''
+DEPRECATED (7/22/2020) - Jacob Rose
+Action: Moved to pyleaves.utils.callback_utils.py
+Reason: Cleaning up repo organization
+'''
+
+
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
 import io
 import os
 
@@ -30,11 +43,25 @@ import cv2
 from mlxtend import evaluate, plotting
 from pyleaves.models.vgg16 import visualize_activations#, get_layers_by_index
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+
+
+
+=======
+
+
+
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
+class BaseCallback(Callback):
+
+=======
 
 
 
 class BaseCallback(Callback):
 
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
     def __init__(self, log_dir, seed = None):
         super().__init__()
         self.log_dir = log_dir
@@ -120,6 +147,7 @@ class NeptuneVisualizationCallback(Callback):
         for log_name, log_value in logs.items():
             neptune.log_metric(f'batch_{log_name}', log_value)
 
+<<<<<<< HEAD
     def on_epoch_end(self, epoch, logs={}):
         for log_name, log_value in logs.items():
             neptune.log_metric(f'epoch_{log_name}', log_value)
@@ -234,6 +262,122 @@ class VisualizeActivationsCallback(BaseCallback):
             self.write_image_summary(grid_summary, title=f'Layer : {layer_name}', epoch=epoch)
 
     def on_epoch_end(self, epoch, logs={}):
+=======
+    def on_epoch_end(self, epoch, logs={}):
+        for log_name, log_value in logs.items():
+            neptune.log_metric(f'epoch_{log_name}', log_value)
+
+        y_pred = np.asarray(self.model.predict(self.validation_data[0]))
+        y_true = self.validation_data[1]
+
+        y_pred_class = np.argmax(y_pred, axis=1)
+
+        fig, ax = plt.subplots(figsize=(16, 12))
+        plot_confusion_matrix(y_true, y_pred_class, ax=ax)
+        neptune.log_image('confusion_matrix', fig)
+
+        fig, ax = plt.subplots(figsize=(16, 12))
+        plot_roc(y_true, y_pred, ax=ax)
+        neptune.log_image('roc_curve', fig)
+
+
+
+
+
+
+
+
+
+
+class ConfusionMatrixCallback(Callback):
+
+    def __init__(self, log_dir, val_imgs, val_labels, classes, freq=1, seed=None):
+        super().__init__()
+        self.file_writer = tf.contrib.summary.create_file_writer(log_dir)
+        self.log_dir = log_dir
+        self.seed = seed
+        self._counter = 0
+        self.val_imgs = val_imgs
+
+        if val_labels.ndim==2:
+            val_labels = tf.argmax(val_labels,axis=1)
+        self.val_labels = val_labels
+        self.num_samples = val_labels.numpy().shape[0]
+        self.classes = classes
+        self.freq = freq
+
+    def log_confusion_matrix(self, model, imgs, labels, epoch, norm_cm=False):
+
+        pred_labels = model.predict_classes(imgs)# = tf.reshape(imgs, (-1,PARAMS['image_size'], PARAMS['num_channels'])))
+        pred_labels = pred_labels[:,None]
+
+        con_mat = tf.math.confusion_matrix(labels=labels, predictions=pred_labels, num_classes=len(self.classes)).numpy()
+        if norm_cm:
+            con_mat = np.around(con_mat.astype('float') / con_mat.sum(axis=1)[:, np.newaxis], decimals=2)
+        con_mat_df = pd.DataFrame(con_mat,
+                         index = self.classes,
+                         columns = self.classes)
+
+        figure = plt.figure(figsize=(16, 16))
+        sns.heatmap(con_mat_df, annot=True,cmap=plt.cm.Blues)
+        plt.tight_layout()
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+
+        image = tf.image.decode_png(buf.getvalue(), channels=4)
+        image = tf.expand_dims(image, 0)
+
+        with self.file_writer.as_default(), tf.contrib.summary.always_record_summaries():
+            tf.contrib.summary.image(name='val_confusion_matrix',
+                                     tensor=image,
+                                     step=self._counter)
+
+        neptune.log_image(log_name='val_confusion_matrix',
+                          x=self._counter,
+                          y=figure)
+        plt.close(figure)
+
+        self._counter += 1
+
+        return image
+
+    def on_epoch_end(self, epoch, logs={}):
+
+        if (not self.freq) or (epoch%self.freq != 0):
+            return
+        self.log_confusion_matrix(self.model, self.val_imgs, self.val_labels, epoch=epoch)
+
+
+################################################
+
+class VisualizeActivationsCallback(BaseCallback):
+
+    def __init__(self, val_data, log_dir, freq=10, seed=None, sess=None):
+        super().__init__(log_dir=log_dir, seed=seed)
+        self.graph = tf.get_default_graph() #self.sess.graph #
+        self.sess = sess or tf.Session()
+        self.validation_iterator = val_data.make_one_shot_iterator()
+        self.validation_data = self.validation_iterator.get_next()
+        self.freq = freq
+
+    def write_activation_summaries(self, model, input_images, input_labels, epoch=0):
+        if type(model.layers[0])==tf.python.keras.engine.training.Model:
+            #In case model was constructed from a base model
+            model = model.layers[0]
+
+        activation_grids_list = visualize_activations(input_images, model, self.sess, self.graph, group='vgg16_conv_block_outputs')[:1]
+        i=0
+        for activation_grid in activation_grids_list:
+            # layer_name =  get_layers_by_index(model,[i])[0].name
+            layer_name, grid_summary = self.sess.run(*activation_grid)
+            self.write_image_summary(grid_summary, title=f'Layer : {layer_name}', epoch=epoch)
+
+    def on_epoch_end(self, epoch, logs={}):
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
 
         if self.freq==0:
             return

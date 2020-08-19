@@ -12,3 +12,4 @@ from . import tf_utils
 from . import db_utils
 from . import db_manager
 from . import experiments_db
+from . import migrate_db

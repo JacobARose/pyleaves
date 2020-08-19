@@ -165,7 +165,8 @@ def build_db_from_json(frozen_json_filepaths=[],
                        json_records=None,
                        column_schema=None,
                        exist_ok=False,
-                       temp_backup=False):
+                       temp_backup=False,
+                       primary_id='id'):
     '''
     Reconstruct database .db file from collection of individual json records, each of which may contain one or more data samples.
 
@@ -204,7 +205,7 @@ def build_db_from_json(frozen_json_filepaths=[],
     db_URI = f'sqlite:///{db_path}'
 
     with dataset.connect(db_URI) as db:
-        table = db.create_table('dataset', primary_id='id')#, types=types)
+        table = db.create_table('dataset', primary_id=primary_id)#, types=types)
         count = 0
         for filepath in frozen_json_filepaths:
             try:

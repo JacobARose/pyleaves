@@ -20,16 +20,15 @@ from stuf import stuf
 from toolz.itertoolz import frequencies
 from pyleaves import leavesdb
 import pyleaves
-
-
-
+from pyleaves.tests.test_utils import MetaData
+from typing import List
 
 
 class BaseDataset(object):
 
-    __version__ = '1.1'
+    __version__ = '0.1'
 
-    def __init__(self, name='', src_db=pyleaves.DATABASE_PATH):
+    def __init__(self, name='', src_db=pyleaves.DATABASE_PATH, columns = ['path','family','catalog_number'], id_col=None):
         """
         Base class meant to be subclassed for unique named datasets. Implements some property setters/getters for maintaining consistency
         of data and filters (like min class count threshold).
@@ -52,7 +51,10 @@ class BaseDataset(object):
 
         """
         self.name = name
-        self.columns = ['path','family']
+        self.columns = columns
+        self.x_col = 'path'
+        self.y_col = 'family'
+        self.id_col = id_col
         if src_db:
             self.local_db = leavesdb.init_local_db(src_db = src_db, verbose=False)
         self._threshold = 0
@@ -80,6 +82,8 @@ class BaseDataset(object):
         db = dataset.connect(f"sqlite:///{self.local_db}", row_type=stuf)
         if all_cols:
             data = pd.DataFrame(db['dataset'].all())
+            if self.name in data.dataset.values:
+                data = data[data.dataset == self.name]
         else:
             data = pd.DataFrame(leavesdb.db_query.load_data(db=db, x_col=x_col, y_col=y_col, dataset=self.name))
         return data
@@ -107,10 +111,15 @@ class BaseDataset(object):
         # Download the dataset
         self.tfds_builder.download_and_prepare()
 
+    def load_from_lists(self, x: List, y: List, columns: List[str]=None):
+        columns = columns or self.columns
+        data = pd.DataFrame({columns[0]:np.array(x),
+                             columns[1]:np.array(y)})
+        return data
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, name='', threshold=0):
-        new_dataset = cls(name=name, src_db=None)
+        new_dataset = cls(name=name, src_db=None, columns=df.columns.tolist())
         new_dataset._threshold = threshold
         new_dataset.data = df
         return new_dataset
@@ -133,7 +142,10 @@ class BaseDataset(object):
         >>>
 
         """
-        self._data = pyleaves.data_pipeline.preprocessing.filter_low_count_labels(self.data,threshold,'family',verbose=False)
+        self._data = pyleaves.data_pipeline.preprocessing.filter_low_count_labels(self.data,
+                                                                                  threshold,
+                                                                                  self.y_col,
+                                                                                  verbose=False)
         self._threshold = threshold
 
     def merge_with(self, other):
@@ -174,6 +186,7 @@ class BaseDataset(object):
         # import pdb; pdb.set_trace()
         self._data = new_data.drop_duplicates(subset='path')
         self.exclude_rare_classes(self.threshold)
+        self.columns = self._data.columns.tolist()
         if len(self._data) != len(new_data):
             print(f'dropped {len(new_data)-len(self._data)} duplicate rows')
 
@@ -185,8 +198,8 @@ class BaseDataset(object):
         dict
             mapping {class_name:class_count} values
         '''
-        y_col = self.columns[1]
-        return frequencies(self.data[y_col])
+        # y_col = self.columns[1]
+        return frequencies(self.data[self.y_col])
 
     @property
     def classes(self):
@@ -217,6 +230,14 @@ class BaseDataset(object):
     num_classes: {self.num_classes}
     class_count_threshold: {self.threshold}
         '''
+
+    def get_instance_metadata(self):
+        return MetaData.from_Dataset(self)
+                    # (name=self.name,
+                    # num_samples=self.num_samples,
+                    # num_classes=self.num_classes,
+                    # threshold=threshold,
+                    # class_distribution=self.
 
 
     def select_data_by_source_dataset(self, source_name):
@@ -320,8 +341,8 @@ class BaseDataset(object):
         include = self.data[idx]
         exclude = self.data[~idx]
 
-        return (BaseDataset.from_dataframe(include, threshold=self.threshold),
-                BaseDataset.from_dataframe(exclude, threshold=self.threshold))
+        return (BaseDataset.from_dataframe(include, name=self.name, threshold=self.threshold),
+                BaseDataset.from_dataframe(exclude, name=self.name, threshold=self.threshold))
 
         # assert include.shape[0]+exclude.shape[0]==self.data.shape[0]
         # return (include, exclude)

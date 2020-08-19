@@ -44,21 +44,27 @@ def generate_encoding_map(data, text_label_col='family', int_label_col='label'):
 
 
 def load_label_encodings_from_file(filepath):
-
+#     import pdb; pdb.set_trace()
     assert os.path.isfile(filepath)
-    assert filepath.endswith('json')
-    with open(filepath, 'r') as file:
-        data = json.load(file)
+    if filepath.endswith('json'):
+        with open(filepath, 'r') as file:
+            data = json.load(file)
 
-    return dict(**data)
+    elif filepath.endswith('csv'):
+        data = pd.read_csv(filepath, index_col=0).squeeze().to_dict()
+#         data = data.rename(columns={'Unnamed: 0':'text_label','0':'int_label'})
+    return dict(data)
 
 def save_label_encodings_to_file(encoding_dict, filepath):
-    assert filepath.endswith('json')
     base_dir = os.path.dirname(filepath)
     ensure_dir_exists(base_dir)
-    with open(filepath, 'w') as file:
-        json.dump(encoding_dict, file)
+    if filepath.endswith('json'):
+        with open(filepath, 'w') as file:
+            json.dump(encoding_dict, file)
 
+    elif filepath.endswith('csv'):
+        data = pd.DataFrame(list(encoding_dict.values()),index=list(encoding_dict.keys()))
+        data.to_csv(filepath)
 
 
 class LabelEncoder:
@@ -71,7 +77,7 @@ class LabelEncoder:
             reserved_mappings={}, dict({str:int}):
                 a dictionary mapping of text to integer numbers
             filepath
-        
+
         '''
         self.num_classes=0
         self._encodings = OneToOne()
@@ -81,19 +87,26 @@ class LabelEncoder:
         if len(labels)>0:
             self.merge_labels(labels)
         if filepath is not None:
+#             if len(self)>0:
             self.merge_labels(self.load_labels(filepath))
-            
-    def filter(self, data_df, label_col='family'):
+
+
+
+    def filter(self, data_df, text_label_col='family', int_label_col=None):
         '''
         Filter a dataframe to include only rows corresponding to labels in the encoder. Useful for preprocessing a target domain dataset for a model trained on source domain labels.
         '''
-        whitelist=list(self.get_encodings())
-        return data_df[data_df[label_col].isin(whitelist)]
-        
+        int_whitelist= list(self.get_encodings().inv)
+        text_whitelist=list(self.get_encodings())
+        if int_label_col:
+            data = data_df[data_df[int_label_col].isin(int_whitelist)]
+        else:
+            data = data_df[data_df[text_label_col].isin(text_whitelist)]
+        return data
 
     def transform(self, labels):
         return [self._encodings[l] for l in list(labels)]
-    
+
     def inv_transform(self, encoded_labels):
         return [self._encodings.inv[l] for l in list(encoded_labels)]
 
@@ -107,18 +120,21 @@ class LabelEncoder:
             if l not in self._encodings.keys():
                 self._encodings.update({l:self.num_classes})
                 self.num_classes += 1
-    
+
     def load_labels(self, filepath):
         return load_label_encodings_from_file(filepath)
 
     def save_labels(self, filepath):
         save_label_encodings_to_file(self.get_encodings(), filepath)
-    
+
     def get_encodings(self):
         return copy.deepcopy(self._encodings)
-    
+
     def __len__(self):
         return len(self.get_encodings())
+
+    def __repr__(self):
+        return json.dumps(self.get_encodings(), indent=2)
 
 
 
@@ -174,8 +190,8 @@ def one_hot_decode_labels(one_hot_labels):
     return np.argmax(one_hot_labels, axis=1).reshape(-1,1)
 
 
-def get_class_counts(data_df, verbose=True):
-    labels, label_counts = np.unique(data_df['label'], return_counts=True)
+def get_class_counts(data_df, y_col='label', verbose=True):
+    labels, label_counts = np.unique(data_df[y_col], return_counts=True)
     if verbose:
         print('label : count')
         for label, count in zip(labels, label_counts):
@@ -192,7 +208,7 @@ def filter_low_count_labels(data_df, threshold=2, y_col='family', verbose = True
     filtered_data = data_df[data_df[y_col].isin(filtered_text_labels)]
     if verbose:
         print(f'Selecting only samples that belong to a class with population >= {threshold} samples')
-        print(f'Previous num_classes = {len(label_counts)}, new num_classes = {len(filtered_labels)}')
+        print(f'Previous num_classes = {len(label_counts)}, new num_classes = {len(filtered_text_labels)}')
         print(f'Previous data_df.shape = {data_df.shape}, new data_df.shape = {filtered_data.shape}')
     return filtered_data
 

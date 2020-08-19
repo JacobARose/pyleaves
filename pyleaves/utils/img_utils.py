@@ -738,6 +738,17 @@ class CorruptJPEGError(Exception):
     #     return failed
 
     @classmethod
+<<<<<<< HEAD
+<<<<<<< HEAD
+    def reset(cls):
+        cls.corrupted_files = []
+        cls.false_alarms = []
+
+    @classmethod
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
     def get_failed_events(cls):
         '''Return list of tuples, containing (path,error) for each failed path'''
         failed = [c for c in cls.corrupted_files if not os.path.isfile(c[1]['source_path'])]
@@ -788,6 +799,16 @@ class CorruptJPEGError(Exception):
 import pdb;
 isfile = os.path.isfile
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+import warnings
+from PIL import Image
+warnings.simplefilter('error', Image.DecompressionBombWarning)
+
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
 def uint16_to_uint8(img):
     if img.dtype == np.uint8:
         return img
@@ -827,6 +848,16 @@ def process_file(sample : dict, columns={'source_path':'source_path','target_pat
         CorruptJPEGError((str(OSError), sample))
         print(str(OSError))
         return None
+<<<<<<< HEAD
+<<<<<<< HEAD
+    except Image.DecompressionBombWarning:
+        CorruptJPEGError((str(Image.DecompressionBombWarning), sample))
+        print(str(Image.DecompressionBombWarning))
+        return None
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
     except:
         print('Unknown conversion error for source image:', sample[columns['source_path']])
         CorruptJPEGError(('Unknown file processing failure', sample))

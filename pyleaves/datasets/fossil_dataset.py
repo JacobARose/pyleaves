@@ -17,9 +17,9 @@ from pyleaves.tests.test_utils import MetaData
 
 class FossilDataset(BaseDataset):
 
-    def __init__(self, src_db=pyleaves.DATABASE_PATH):
+    def __init__(self, src_db=pyleaves.DATABASE_PATH, all_cols=False):
         super().__init__(name='Fossil', src_db=src_db)
-        self._data = self.load_from_db()
+        self._data = self.load_from_db(all_cols=all_cols)
         self.__class__.metadata = METADATA
 
 

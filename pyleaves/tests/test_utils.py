@@ -20,6 +20,13 @@ import seaborn as sns
 from stuf import stuf
 import time
 from typing import Dict
+<<<<<<< HEAD
+<<<<<<< HEAD
+from textwrap import wrap
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
 import tensorflow as tf
 if __name__ == '__main__':
     tf.compat.v1.enable_eager_execution()
@@ -28,7 +35,14 @@ if __name__ == '__main__':
 
 import pyleaves
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
 
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
+=======
+
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
@@ -71,7 +85,15 @@ class MetaData:
 
 
     @classmethod
+<<<<<<< HEAD
+<<<<<<< HEAD
+    def from_Dataset(cls, data): #: pyleaves.datasets.BaseDataset):
+=======
     def from_Dataset(cls, data ): #: pyleaves.datasets.BaseDataset):
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
+=======
+    def from_Dataset(cls, data ): #: pyleaves.datasets.BaseDataset):
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
         return cls(name = data.name,
                    num_samples = data.num_samples,
                    num_classes = data.num_classes,
@@ -83,7 +105,16 @@ class MetaData:
                                 sort_by='count',
                                 ascending=False,
                                 figsize=(10,10),
+<<<<<<< HEAD
+<<<<<<< HEAD
+                                ax=None,
+                                plot_minmax=False):
+=======
                                 ax=None):
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
+=======
+                                ax=None):
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
         if class_names is None:
             class_names = self.class_names
             class_counts = self.class_counts
@@ -104,15 +135,154 @@ class MetaData:
         x = 'label'
         y = 'count'
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+        if ax:
+            fig = plt.gcf()
+        else:
+            fig, ax = plt.subplots(1,1,figsize=figsize)
+        plt.sca(ax)
+        ax = sns.barplot(x=x,y=y,data=data, ax=ax)
+
+        plt.sca(ax)
+        plt.axhline(y=data[y].min(), ls='--', label=f'min={data[y].min()}')
+        plt.axhline(y=data[y].max(), ls='--', label=f'max={data[y].max()}')
+        plt.legend()
+=======
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
         if not ax:
             fig, ax = plt.subplots(1,1,figsize=figsize)
         ax = sns.barplot(x=x,y=y,data=data, ax=ax)
 
+<<<<<<< HEAD
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
         N = sum(class_counts)
         M = len(class_names)
         ax.set_title(f'{self.name} (N={N},M={M})')
         for xlabel in ax.get_xticklabels():
             xlabel.set_rotation(90)
+<<<<<<< HEAD
+<<<<<<< HEAD
+        return fig, ax
+
+    def plot_class_percentiles(self,
+                               class_names=None,
+                               sort_by='count',
+                               ascending=False,
+                               figsize=(10,10),
+                               ax=None,
+                               plot_minmax=False):
+        name = self.name
+        if class_names is None:
+            class_names = self.class_names
+            class_counts = self.class_counts
+        else:
+            # Only plot user provided subset of classes
+            keep_class = {'class_names':[], 'class_counts':[]}
+            for i, class_i in enumerate(self.class_names):
+                if class_i in class_names:
+                    keep_class['class_names'].append(class_i)
+                    keep_class['class_counts'].append(self.class_counts[i])
+            class_names = keep_class['class_names']
+            class_counts = keep_class['class_counts']
+
+        data = pd.DataFrame({'label':class_names,
+                             'count':class_counts})
+        data = data.sort_values(by=sort_by, ascending=ascending).reset_index(drop=True)
+        x = 'label'
+        y = 'count'
+
+        mincount = 0
+        maxcount = data[y].max()
+        thresholds = np.linspace(mincount, maxcount, dtype=np.int32)
+
+        data_counts = data['count']
+        CDF = []
+        for threshold in thresholds:
+            percent_included = (data_counts[data_counts>threshold].sum() / data_counts.sum())*100
+            CDF.append((threshold, percent_included))
+        CDF = pd.DataFrame(CDF, columns = ['threshold','cumulative frequency (%)'])
+
+        if ax:
+            fig = plt.gcf()
+        else:
+            fig, ax = plt.subplots(1,1,figsize=figsize)
+        plt.sca(ax)
+        ax = sns.lineplot(x='threshold', y='cumulative frequency (%)', data=CDF, markers=True,ax=ax)
+
+        plt.axhline(y=100, ls='--', color='k', lw=1.75)
+        plt.axhline(y=0, ls='--', color='k', lw=1.75)
+        ax.set_title('\n'.join(wrap(f'{name} - % of samples belonging to classes where (images/class) >= threshold',60)))
+        ax.set_xlim(left=0, right=maxcount)
+        plt.tight_layout()
+
+        return fig, ax
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#         data = pd.DataFrame({'label':class_names,
+#                              'count':class_counts})
+#         data = data.sort_values(by=sort_by, ascending=ascending)
+#         x = 'label'
+#         y = 'count'
+#
+#         if not ax:
+#             fig, ax = plt.subplots(1,1,figsize=figsize)
+#         ax = sns.barplot(x=x,y=y,data=data, ax=ax)
+#
+#         plt.axhline(y=data[y].min(), ls='--', label=f'min={data[y].min()}')
+#         plt.axhline(y=data[y].max(), ls='--', label=f'max={data[y].max()}')
+#         plt.legend()
+#         N = sum(class_counts)
+#         M = len(class_names)
+#         ax.set_title(f'{self.name} (N={N},M={M})')
+#         for xlabel in ax.get_xticklabels():
+#             xlabel.set_rotation(90)
+#         return fig, ax
+#
+#
+#
+#     def __repr__(self):
+#         distr = {k:v for k,v in self.class_distribution.items()}
+#         return \
+# f'''name: {self.name}
+# num_samples: {self.num_samples}
+# num_classes: {self.num_classes}
+# class_count_threshold: {self.threshold}
+# class_distribution: {distr}
+#         '''
+=======
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
         return ax
 
     def __repr__(self):
@@ -124,6 +294,10 @@ num_classes: {self.num_classes}
 class_count_threshold: {self.threshold}
 class_distribution: {distr}
         '''
+<<<<<<< HEAD
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
+=======
+>>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
 
 
 

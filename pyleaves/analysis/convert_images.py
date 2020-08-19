@@ -5,7 +5,7 @@ Command line script for Batch converting image file formats and copying to new l
 Primarily used for standardizing all images into JPG format for future loading into tf.data.Dataset
 
 
->> python ./pyleaves/pyleaves/analysis/convert_images.py -t /media/data/jacob/Fossil_Project/src_data -ext jpg -json_fname database_cleaned_records.json -db /home/jacob/pyleaves/pyleaves/leavesdb/resources/updated_leavesdb.db -db_out home/jacob/pyleaves/pyleaves/leavesdb/resources/converted_updated_leavesdb.db
+>> python ./pyleaves/pyleaves/analysis/convert_images.py -t /media/data_cifs/jacob/Fossil_Project/src_data/Leaves_updated -ext jpg -json_fname database_cleaned_records.json -db /home/jacob/pyleaves/pyleaves/leavesdb/resources/updated_leavesdb.db -db_out home/jacob/pyleaves/pyleaves/leavesdb/resources/converted_updated_leavesdb.db
 
 '''
 import argparse
@@ -19,7 +19,7 @@ from stuf import stuf
 import time
 
 from pyleaves.leavesdb.db_manager import dict2json, build_db_from_json, clear_duplicates_from_db
-from pyleaves.utils import ensure_dir_exists
+from pyleaves.utils import ensure_dir_exists, process_hparam_args
 from pyleaves.analysis.img_utils import convert_to_png, convert_to_jpg, JPGCoder, DaskCoder, CorruptJPEGError
 from pyleaves import leavesdb
 
@@ -31,6 +31,7 @@ basename = os.path.basename
 def main():
     
     parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--dataset_names', type=str, default='all', nargs-'*', help="if 'all', convert all images in database. Otherwise, provide 1 or more dataset_names as a list to only convert those. e.g. ''-d PNAS Leaves'.")
     parser.add_argument('-t', '--target_dir', type=str, default=r'/media/data_cifs/jacob/Fossil_Project/opt_data', help='Location for saving converted image files')
     parser.add_argument('-ext', '--target_ext', type=str, default='jpg', help="Image format to save all image copies as. Must be either 'png' or 'jpg'.")
     parser.add_argument('-prefix', '--json_prefix', type=str, default=r'/home/jacob/pyleaves/pyleaves/leavesdb/resources', help='Location for saving newly created json files containing paths of converted files + all previous data')
@@ -40,38 +41,35 @@ def main():
 
     args = parser.parse_args()
 
-#     class Args:
-#         target_dir=r'/media/data_cifs/jacob/Fossil_Project/opt_data'
-#         target_ext = 'jpg'
-#         json_prefix=r'/home/jacob/pyleaves/pyleaves/leavesdb/resources'
-#         json_filename=r'database_json_records_PNG_format.json'
-#         db_path=r'/home/jacob/pyleaves/pyleaves/leavesdb/resources/leavesdb.db'
-#     args = Args()
-
     def get_converted_image_name(row, output_dir, output_format='jpg'):
         assert output_format in ['jpg','png']
         
-        filepath = row.loc['path']
-        label = row.loc['label']
+        filepath, label = row.loc['path'], row.loc['label']
 
         filename, file_ext = splitext(basename(filepath))
         row['source_path'] = filepath
         
         output_filepath = join(output_dir, label, filename + '.' + output_format)
-        if filepath != output_filepath:
-            row['path'] = output_filepath
+        row['path'] = output_filepath
         return row
     
     #LOAD DataFrame from default db and return only non-duplicated file paths.
     data = clear_duplicates_from_db(db=None, local_db=args.db_path, prefix = args.json_prefix, json_filename='database_records.json')
 
     data_by_dataset = data.groupby(by='dataset')
-    data_by_dataset_dict = {k:v for k,v in data_by_dataset} # if k not in ['Fossil']}
+    
+    search_params = ['dataset_names']
+    if args.dataset_names = 'all':
+        conv_all=True
+    args = process_hparam_args(args,search_params)
+    
+    data_by_dataset_dict={}
+    for k,v in data_by_dataset:
+        if k in args.dataset_names or conv_all:
+            data_by_dataset_dict.update({k:v})
     
     data_records = []
     new_data_location_info = {}
-#     dataset_name='PNAS'; rows = data_by_dataset_dict['PNAS']
-#     if True:
     for dataset_name, rows in data_by_dataset_dict.items():
         
         output_dir=join(args.target_dir,dataset_name)
@@ -99,26 +97,25 @@ def main():
             new_data_location_info.update({dataset_name:{'data':new_dataset_paths, 'total_time':total_time, 'conversion_rate':num_files/total_time}})
             print(f'[FINISHED] copying {num_files} from {dataset_name}')
         except CorruptJPEGError:
-            print(CorruptJPEGError.corrupted_files)
+            print(f'Corrupt JPEG #{len(CorruptJPEGError.corrupted_files)} : {CorruptJPEGError.corrupted_files[-1]}')
             continue
         except Exception as e:
             print(type(e))
             print('[EXCEPTION] ', e)
             sys.exit(0)
 
-    print('[FINISHED] All Corrupted files->')
-    print(CorruptJPEGError.corrupted_files)
-    db_path = args.db_out_path #join(args.json_prefix,'leavesdb.db')
+    print(f'[FINISHED] Found a total of {len(CorruptJPEGError.corrupted_files)} Corrupted files->')
+    print('\n'.join(CorruptJPEGError.corrupted_files))
     db_json_path = join(args.json_prefix,args.json_filename)
 
     #Create JSON records file containing previous file info combined with new file paths
     dict2json(data_records, prefix=args.json_prefix, filename=args.json_filename)
     
     #Create new SQLite .db file from newly created JSON
-    build_db_from_json(frozen_json_filepaths=[db_json_path], db_path=db_path)
+    build_db_from_json(frozen_json_filepaths=[db_json_path], db_path=args.db_out_path)
         
     with open('file_conversion_log.txt', 'a') as log_file:
-        log_file.write('Database: '+db_path+'\n')
+        log_file.write('Database: '+args.db_out_path+'\n')
         log_file.write('db_json_path: '+db_json_path+'\n')
         for dataset_name, log_info in new_data_location_info.items():
             log_file.write(dataset_name+'\n')

@@ -6,27 +6,34 @@ from stuf import stuf
 import json
 import cv2
 import shutil
-'''HELPER FUNCTIONS'''
+# '''HELPER FUNCTIONS'''
 from pyleaves.utils import ensure_dir_exists
 import pyleaves
 
 
 # print(dir(pyleaves))
 
-def init_local_db(local_db = os.path.expanduser(r'~/scripts/leavesdb.db'), src_db = pyleaves.DATABASE_PATH, force_update=True, verbose=True):
+def init_local_db(local_db = None,
+				  src_db = pyleaves.DATABASE_PATH,
+				  force_update=True,
+				  verbose=True):
 	'''
 	Whenever working on a new machine, run this function in order to make sure the main leavesdb.db file is stored locally to avoid CIFS permissions issues.
 
 	usage: init_local_db()
 
-    force_update, bool:
-        default True, if false, then only copy from src_db if local_db doesn't exist.
+	force_update, bool:
+	default True, if false, then only copy from src_db if local_db doesn't exist.
 	'''
+	if not local_db:
+		local_db = os.path.expanduser('~/scripts/leavesdb.db')
+
 	ensure_dir_exists(os.path.dirname(local_db))
 
 	if (not os.path.isfile(local_db)) or force_update:
 		if verbose: print(f'Copying sql db file from {src_db} to {local_db}')
 		shutil.copyfile(src_db, local_db)
+
 	if verbose: print(f'Proceeding with sql db at location {local_db}')
 
 	return local_db
