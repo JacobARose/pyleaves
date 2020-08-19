@@ -263,6 +263,8 @@ def prep_dataset(dataset,
                  training=False,
                  seed=None):
 
+    print(type(target_size),target_size)
+
     resize = partial(resize_image, shape=(*target_size, num_channels), training=training, seed=seed)
     dataset = dataset.map(lambda x,y: (resize(x), y),
                           num_parallel_calls=-1)
