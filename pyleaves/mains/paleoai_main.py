@@ -669,7 +669,7 @@ def build_model(cfg):
 
 
     initial_learning_rate = cfg['lr']
-    lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+    lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
                             initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True
     )
 
@@ -900,10 +900,12 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
     if verbose: print(f'Starting fold {fold.fold_id}')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset)
 
-    cfg['base_learning_rate'] = cfg['lr']
-    cfg['input_shape'] = (*cfg.dataset['target_size'],cfg['num_channels'])
+    cfg['model']['base_learning_rate'] = cfg['lr']
+    cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg['num_channels'])
 
-    model = build_model(cfg)
+    model_config = OmegaConf.merge(cfg.model, cfg.training)
+
+    model = build_model(model_config)
 
     model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     pprint(cfg)
