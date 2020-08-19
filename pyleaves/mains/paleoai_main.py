@@ -233,6 +233,7 @@ def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=Fals
         Resized image with shape == 'shape' variable
     """
     tf.print(type(shape), shape)
+    import pdb;pdb.set_trace()
     shape = (tf.cast(shape[0], dtype=tf.int32), tf.cast(shape[1], dtype=tf.int32))
     if training:
         smallest_side = tf.minimum(shape[0], shape[1])
