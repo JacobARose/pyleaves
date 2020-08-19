@@ -845,7 +845,7 @@ def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseD
 
 
 
-def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True)) -> None:
+def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> None:
     setGPU()
     set_tf_config()
 
