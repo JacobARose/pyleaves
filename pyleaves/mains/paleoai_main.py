@@ -872,6 +872,10 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
     
     cfg.tfrecord_dir = os.path.join(cfg.tfrecord_dir,fold.fold_name)
     ensure_dir_exists(cfg.tfrecord_dir)
+    if verbose:
+        print('='*20)
+        print(cfg.tfrecord_dir)
+        print('='*20)
 
     K.clear_session()    
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
@@ -936,7 +940,7 @@ def train_paleoai_dataset(cfg : DictConfig, n_jobs: int=1, verbose: bool=False) 
     kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
 
     kfold_iter = kfold_loader.iter_folds(repeats=1)
-    histories = Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=cfg_0) for i, fold in enumerate(kfold_iter))
+    histories = Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0)) for i, fold in enumerate(kfold_iter))
 
     import pdb; pdb.set_trace()
 
