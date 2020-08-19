@@ -872,7 +872,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
                                                                                 augmentations=cfg.training.augmentations,
                                                                                 seed=cfg.misc.seed,
                                                                                 use_tfrecords=cfg.misc.use_tfrecords,
-                                                                                tfrecord_dir=cfg.dataset.tfrecord_dir,
+                                                                                tfrecord_dir=cfg.tfrecord_dir,
                                                                                 samples_per_shard=cfg.misc.samples_per_shard)
 
     if verbose: print(f'Starting fold {fold.fold_id}')
