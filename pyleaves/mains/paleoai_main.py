@@ -51,16 +51,16 @@ date_format = '%Y-%m-%d_%H-%M-%S'
 
 
 
-    import tensorflow as tf
-    from tensorflow.python.keras.layers import Input
-    from tensorflow.python.keras.optimizers import Adam
-    from tensorflow.python.keras.metrics import categorical_crossentropy
-    
-    from tensorflow.keras.callbacks import Callback, ModelCheckpoint, TensorBoard, LearningRateScheduler, EarlyStopping
-    from tensorflow.keras import backend as K
-    import tensorflow_datasets as tfds
-    import tensorflow_addons as tfa
-    from pyleaves.models import resnet, vgg16
+import tensorflow as tf
+from tensorflow.python.keras.layers import Input
+from tensorflow.python.keras.optimizers import Adam
+from tensorflow.python.keras.metrics import categorical_crossentropy
+
+from tensorflow.keras.callbacks import Callback, ModelCheckpoint, TensorBoard, LearningRateScheduler, EarlyStopping
+from tensorflow.keras import backend as K
+import tensorflow_datasets as tfds
+import tensorflow_addons as tfa
+from pyleaves.models import resnet, vgg16
 
 
 
