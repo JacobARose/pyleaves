@@ -541,7 +541,8 @@ def create_dataset(data_fold: DataFold,
                                                               tfrecord_dir=tfrecord_dir,
                                                               samples_per_shard=samples_per_shard,
                                                               seed=seed)
-    import pdb;pdb.set_trace()
+    if type(target_size)=='str':
+        target_size = tuple(map(int, target_size.strip('()').split(',')))
     train_data = prep_dataset(dataset['train'],
                               batch_size=batch_size,
                               buffer_size=buffer_size,
@@ -881,7 +882,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
         print(cfg.tfrecord_dir)
         print('='*20)
 
-    K.clear_session()    
+    K.clear_session()
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
                                                                                 batch_size=cfg.training.batch_size,
                                                                                 buffer_size=cfg.training.buffer_size,

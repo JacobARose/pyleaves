@@ -14,7 +14,7 @@ stage_0:
         threshold: 10
         color_mode: 'grayscale'
         num_channels: 3
-        target_size: (512,512)
+        target_size: [512,512]
         splits:
             train: 0.5
             validation: 0.5
