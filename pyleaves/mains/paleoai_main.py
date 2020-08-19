@@ -510,7 +510,7 @@ def create_dataset(data_fold: DataFold,
                    tfrecord_dir=None,
                    samples_per_shard=800):
 
-    dataset, train_dataset, test_dataset, encoder = load_data(data_fold=data_fold
+    dataset, train_dataset, test_dataset, encoder = load_data(data_fold=data_fold,
                                                               exclude_classes=exclude_classes,
                                                               include_classes=include_classes,
                                                               use_tfrecords=use_tfrecords,
