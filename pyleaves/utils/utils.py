@@ -48,6 +48,7 @@ def set_tf_config(seed: int=None):
 
 
 def using_tensorflow2() -> bool:
+    import tensorflow as tf
     return StrictVersion(tf.__version__).version >= StrictVersion('2.0.0').version
 
 
