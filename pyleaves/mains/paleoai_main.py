@@ -982,11 +982,11 @@ def train_paleoai_dataset(cfg : DictConfig, n_jobs: int=1, verbose: bool=False) 
 
 @hydra.main(config_path=Path(CONFIG_DIR,'Leaves-PNAS.yaml'))
 def train(cfg : DictConfig) -> None:
-    cfg=OmegaConf.to_container(cfg)
+
     cfg = restore_or_initialize_experiment(cfg, restore_last=False, prefix='log_dir__', verbose=2)
 
     neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
-    params=cfg#OmegaConf.to_container(cfg)
+    params=OmegaConf.to_container(cfg)
     with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name), params=params):
         # train_pyleaves_dataset(cfg)
         train_paleoai_dataset(cfg=cfg, n_jobs=3, verbose=True)
