@@ -45,7 +45,7 @@ from pyleaves.utils import ensure_dir_exists
 import pyleaves
 # print(type(pyleaves.config))
 # import pdb; pdb.set_trace()
-DatasetConfig = pyleaves.config.DatasetConfig
+# DatasetConfig = pyleaves.config.DatasetConfig
 # from pyleaves import leavesdb
 from pyleaves.leavesdb.tf_utils.tf_utils import bytes_feature, int64_feature, float_feature
 
