@@ -30,7 +30,6 @@ from pyleaves.utils import setGPU, set_tf_config
 
 from pyleaves.datasets import leaves_dataset, fossil_dataset, pnas_dataset, base_dataset
 from pyleaves.datasets.base_dataset import BaseDataset
-# from pyleaves.utils import ensure_dir_exists
 import neptune
 import arrow
 from pyleaves.utils import ensure_dir_exists, img_aug_utils as iau
@@ -861,6 +860,9 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
     import tensorflow_addons as tfa
     from pyleaves.models import resnet, vgg16
     
+    cfg.tfrecord_dir = os.path.join(cfg.tfrecord_dir,fold.fold_name)
+    ensure_dir_exists(cfg.tfrecord_dir)
+
     K.clear_session()    
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
                                                                                 batch_size=cfg.training.batch_size,
