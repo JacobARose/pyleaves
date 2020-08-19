@@ -62,7 +62,6 @@ def initialize_experiment(cfg, experiment_start_time=None):
     cfg.experiment.experiment_dir = os.path.join(cfg.experiment.neptune_experiment_dir, cfg.experiment.experiment_name)
 
     cfg.experiment.experiment_start_time = experiment_start_time or datetime.now().strftime(date_format)
-    import pdb;pdb.set_trace()
     cfg.update(log_dir = os.path.join(cfg.experiment.experiment_dir, 'log_dir__'+cfg.experiment.experiment_start_time))
     cfg.update(model_dir = os.path.join(cfg.log_dir,'model_dir'))
     cfg.stage_0.update(tfrecord_dir = os.path.join(cfg.log_dir,'tfrecord_dir'))
@@ -861,6 +860,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
     import tensorflow_addons as tfa
     from pyleaves.models import resnet, vgg16
     
+    K.clear_session()    
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
                                                                                 batch_size=cfg.training.batch_size,
                                                                                 buffer_size=cfg.training.buffer_size,
@@ -916,9 +916,9 @@ def train_paleoai_dataset(cfg : DictConfig, n_jobs: int=1, verbose: bool=False) 
 
     log_config(cfg=cfg, verbose=verbose)
     # log_config(cfg=cfg_1, verbose=verbose)
+    # import tensorflow as tf
 
-    K.clear_session()
-    tf.random.set_seed(cfg_0.misc.seed)
+    # tf.random.set_seed(cfg_0.misc.seed)
 
     kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
 
