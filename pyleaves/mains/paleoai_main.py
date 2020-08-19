@@ -224,7 +224,7 @@ def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=Fals
 
     return image
 
-from tensorflow import tf
+import tensorflow as tf
 from tensorflow.keras.applications.vgg16 import preprocess_input
 preprocess_input(tf.zeros([4, 224, 224, 3]))
 def apply_preprocess(x, y, num_classes=10):
