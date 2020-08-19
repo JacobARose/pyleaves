@@ -856,7 +856,7 @@ def log_config(cfg: DictConfig, verbose: bool=False):
 
 def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseDataset):
     cfg['dataset']['num_classes'] = train_dataset.num_classes
-    cfg['splits_size'] = {'train':{},
+    cfg['dataset']['splits_size'] = {'train':{},
                           'test':{}}
     cfg['dataset']['splits_size']['train'] = int(train_dataset.num_samples)
     cfg['dataset']['splits_size']['test'] = int(test_dataset.num_samples)
