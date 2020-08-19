@@ -898,7 +898,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
                                                                                 samples_per_shard=cfg.misc.samples_per_shard)
 
     if verbose: print(f'Starting fold {fold.fold_id}')
-    log_dataset(cfg=cfg_0, train_dataset=train_dataset, test_dataset=test_dataset)
+    log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset)
 
     cfg['base_learning_rate'] = cfg['lr']
     cfg['input_shape'] = (*cfg['target_size'],cfg['num_channels'])
