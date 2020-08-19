@@ -858,8 +858,8 @@ def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseD
     cfg['dataset']['num_classes'] = train_dataset.num_classes
     cfg['splits_size'] = {'train':{},
                           'test':{}}
-    cfg['splits_size']['train'] = int(train_dataset.num_samples)
-    cfg['splits_size']['test'] = int(test_dataset.num_samples)
+    cfg['dataset']['splits_size']['train'] = int(train_dataset.num_samples)
+    cfg['dataset']['splits_size']['test'] = int(test_dataset.num_samples)
 
     cfg['steps_per_epoch'] = cfg['splits_size']['train']//cfg['BATCH_SIZE']
     cfg['validation_steps'] = cfg['splits_size']['test']//cfg['BATCH_SIZE']
@@ -1011,6 +1011,7 @@ def train(cfg : DictConfig) -> None:
     params=OmegaConf.to_container(cfg)
     with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name), params=params):
         # train_pyleaves_dataset(cfg)
+        OmegaConf.set_struct(cfg, False)
         train_paleoai_dataset(cfg=cfg, n_jobs=1, verbose=True)
 
 
