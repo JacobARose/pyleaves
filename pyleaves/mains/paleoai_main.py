@@ -1,12 +1,13 @@
 # @Author: Jacob A Rose
-# @Date:   Fri, July 17th 2020, 11:53 pm
+# @Date:   Tue August 18th 2020, 11:53 pm
 # @Email:  jacobrose@brown.edu
-# @Filename: baseline_train_pipeline.py
+# @Filename: paleoai_main.py
 
-#!/usr/bin/env python
-# coding: utf-8
 
 '''
+Script built off of configurable_train_pipeline.py
+
+
 python '/home/jacob/projects/pyleaves/pyleaves/mains/baseline_train_pipeline.py'
 
 '''
@@ -24,8 +25,14 @@ import os
 from pyleaves.utils.callback_utils import BackupAndRestore
 from pprint import pprint
 from pathlib import Path
+
+from pyleaves.utils import setGPU
+
 if __name__=='__main__':
-    os.environ["CUDA_VISIBLE_DEVICES"] = '2'
+
+    setGPU()
+
+    # os.environ["CUDA_VISIBLE_DEVICES"] = '2'
 import tensorflow as tf
 
 if __name__=='__main__':

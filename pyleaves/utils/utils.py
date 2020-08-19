@@ -12,31 +12,45 @@
 import os
 import itertools
 from collections import defaultdict, OrderedDict
+import gpustat
+import random
+
+
+def setGPU():
+    stats = gpustat.GPUStatCollection.new_query()
+    ids = map(lambda gpu: int(gpu.entry['index']), stats)
+    ratios = map(lambda gpu: float(gpu.entry['memory.used'])/float(gpu.entry['memory.total']), stats)
+    pairs = list(zip(ids, ratios))
+    random.shuffle(pairs)
+    bestGPU = min(pairs, key=lambda x: x[1])[0]
+
+    print("setGPU: Setting GPU to: {}".format(bestGPU))
+    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(bestGPU)
 
 
 
+# def create_session(target='', gpus='0,1,2,3', timeout_sec=10):
+#     '''Create an intractive TensorFlow session.
+#     Helper function that creates TF session that uses growing GPU memory
+#     allocation and opration timeout. 'allow_growth' flag prevents TF
+#     from allocating the whole GPU memory an once, which is useful
+#     when having multiple python sessions sharing the same GPU.
+#     '''
+#     try:
+#         import tensorflow as tf
+#     except:
+#         pass
+#     tf.reset_default_graph()
+#     # graph = tf.Graph()
+#     config = tf.ConfigProto()
 
-def create_session(target='', gpus='0,1,2,3', timeout_sec=10):
-    '''Create an intractive TensorFlow session.
-    Helper function that creates TF session that uses growing GPU memory
-    allocation and opration timeout. 'allow_growth' flag prevents TF
-    from allocating the whole GPU memory an once, which is useful
-    when having multiple python sessions sharing the same GPU.
-    '''
-    try:
-        import tensorflow as tf
-    except:
-        pass
-    tf.reset_default_graph()
-    # graph = tf.Graph()
-    config = tf.ConfigProto()
-
-    # config.gpu_options.visible_device_list= gpus
-    config.gpu_options.allow_growth = True
-    config.gpu_options.per_process_gpu_memory_fraction = 0.9
-    config.operation_timeout_in_ms = int(timeout_sec*1000)
-    return tf.Session(target=target, graph=tf.get_default_graph(), config=config)
-    # return tf.InteractiveSession(target=target, graph=graph, config=config)
+#     # config.gpu_options.visible_device_list= gpus
+#     config.gpu_options.allow_growth = True
+#     config.gpu_options.per_process_gpu_memory_fraction = 0.9
+#     config.operation_timeout_in_ms = int(timeout_sec*1000)
+#     return tf.Session(target=target, graph=tf.get_default_graph(), config=config)
+#     # return tf.InteractiveSession(target=target, graph=graph, config=config)
 
 
 
