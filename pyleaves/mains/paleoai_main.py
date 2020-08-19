@@ -238,7 +238,7 @@ def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=Fals
     if training:
         smallest_side = tf.minimum(shape[0], shape[1])
         image = iau._aspect_preserving_resize(image, smallest_side = smallest_side + resize_buffer_size)
-        image = tf.image.random_crop(image, (shape[0],shape[0]), seed=seed)
+        image = tf.image.random_crop(image, shape, seed=seed)
     else:
         image = tf.image.resize_with_pad(image, target_height=shape[0], target_width=shape[1])
 
