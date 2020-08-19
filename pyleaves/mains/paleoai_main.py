@@ -232,8 +232,8 @@ def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=Fals
     image : tf.Tensor
         Resized image with shape == 'shape' variable
     """
-    tf.print(type(shape), shape)
-    import pdb;pdb.set_trace()
+    tf.print(type(shape), shape, type(tf.cast(shape[0], dtype=tf.int32)), tf.cast(shape[0], dtype=tf.int32))
+
     shape = (tf.cast(shape[0], dtype=tf.int32), tf.cast(shape[1], dtype=tf.int32))
     if training:
         smallest_side = tf.minimum(shape[0], shape[1])
@@ -265,7 +265,7 @@ def prep_dataset(dataset,
                  seed=None):
 
     print(type(target_size),target_size)
-
+    import pdb;pdb.set_trace()
     resize = partial(resize_image, shape=(*target_size, num_channels), training=training, seed=seed)
     dataset = dataset.map(lambda x,y: (resize(x), y),
                           num_parallel_calls=-1)
