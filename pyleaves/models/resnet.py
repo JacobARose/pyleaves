@@ -55,28 +55,12 @@ class ResNet(BaseModel):
 
 
     def __init__(self, model_config, name=None):
-<<<<<<< HEAD
-<<<<<<< HEAD
+
         assert model_config.model_name in self._MODELS
 
         if name is None:
             name = model_config.model_name
         self.base_model = self._MODELS[name] # TODO Should this be a class attribute?
-=======
-        assert model_config.name in self._MODELS
-
-        if name is None:
-            name = model_config.name
-        self.base_model = self._MODELS[model_config.name] # TODO Should this be a class attribute?
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
-=======
-        assert model_config.name in self._MODELS
-
-        if name is None:
-            name = model_config.name
-        self.base_model = self._MODELS[model_config.name] # TODO Should this be a class attribute?
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
-
         super().__init__(model_config, name=name)
 
     def get_weights(self, model):

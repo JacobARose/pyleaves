@@ -20,13 +20,7 @@ import seaborn as sns
 from stuf import stuf
 import time
 from typing import Dict
-<<<<<<< HEAD
-<<<<<<< HEAD
 from textwrap import wrap
-=======
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
-=======
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
 import tensorflow as tf
 if __name__ == '__main__':
     tf.compat.v1.enable_eager_execution()
@@ -35,14 +29,7 @@ if __name__ == '__main__':
 
 import pyleaves
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
 
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
-=======
-
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 
@@ -85,15 +72,7 @@ class MetaData:
 
 
     @classmethod
-<<<<<<< HEAD
-<<<<<<< HEAD
-    def from_Dataset(cls, data): #: pyleaves.datasets.BaseDataset):
-=======
-    def from_Dataset(cls, data ): #: pyleaves.datasets.BaseDataset):
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
-=======
-    def from_Dataset(cls, data ): #: pyleaves.datasets.BaseDataset):
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
+    def from_Dataset(cls, data):
         return cls(name = data.name,
                    num_samples = data.num_samples,
                    num_classes = data.num_classes,
@@ -105,16 +84,8 @@ class MetaData:
                                 sort_by='count',
                                 ascending=False,
                                 figsize=(10,10),
-<<<<<<< HEAD
-<<<<<<< HEAD
                                 ax=None,
                                 plot_minmax=False):
-=======
-                                ax=None):
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
-=======
-                                ax=None):
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
         if class_names is None:
             class_names = self.class_names
             class_counts = self.class_counts
@@ -135,8 +106,6 @@ class MetaData:
         x = 'label'
         y = 'count'
 
-<<<<<<< HEAD
-<<<<<<< HEAD
         if ax:
             fig = plt.gcf()
         else:
@@ -148,24 +117,11 @@ class MetaData:
         plt.axhline(y=data[y].min(), ls='--', label=f'min={data[y].min()}')
         plt.axhline(y=data[y].max(), ls='--', label=f'max={data[y].max()}')
         plt.legend()
-=======
-=======
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
-        if not ax:
-            fig, ax = plt.subplots(1,1,figsize=figsize)
-        ax = sns.barplot(x=x,y=y,data=data, ax=ax)
-
-<<<<<<< HEAD
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
-=======
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
         N = sum(class_counts)
         M = len(class_names)
         ax.set_title(f'{self.name} (N={N},M={M})')
         for xlabel in ax.get_xticklabels():
             xlabel.set_rotation(90)
-<<<<<<< HEAD
-<<<<<<< HEAD
         return fig, ax
 
     def plot_class_percentiles(self,
@@ -222,33 +178,6 @@ class MetaData:
         return fig, ax
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #         data = pd.DataFrame({'label':class_names,
 #                              'count':class_counts})
 #         data = data.sort_values(by=sort_by, ascending=ascending)
@@ -280,10 +209,6 @@ class MetaData:
 # class_count_threshold: {self.threshold}
 # class_distribution: {distr}
 #         '''
-=======
-=======
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
-        return ax
 
     def __repr__(self):
         distr = {k:v for k,v in self.class_distribution.items()}
@@ -294,10 +219,6 @@ num_classes: {self.num_classes}
 class_count_threshold: {self.threshold}
 class_distribution: {distr}
         '''
-<<<<<<< HEAD
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
-=======
->>>>>>> 1179b95c98968c8d47c7e3ebfdac6146574ae95e
 
 
 
