@@ -901,7 +901,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset)
 
     cfg['base_learning_rate'] = cfg['lr']
-    cfg['input_shape'] = (*cfg.dataset.['target_size'],cfg['num_channels'])
+    cfg['input_shape'] = (*cfg.dataset['target_size'],cfg['num_channels'])
 
     model = build_model(cfg)
 
