@@ -75,7 +75,7 @@ stage_1:
         seed: 45
         use_tfrecords: true
         samples_per_shard: 500
-
+num_classes: ???
 
 pipeline:
     - stage_0
