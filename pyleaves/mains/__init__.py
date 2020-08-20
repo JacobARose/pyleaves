@@ -8,3 +8,5 @@ e.g. data preprocessing -> data loading -> model training -> model testing
 
 
 '''
+
+from . import paleoai_main
