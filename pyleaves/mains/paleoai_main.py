@@ -879,7 +879,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: boo
         print(cfg.tfrecord_dir)
         print('='*20)
 
-    print(f'USING DEVICE {gpu_device} FOR FOLD {fold.fold_id}')
+    print(f'USING DEVICE {gpu_device.name} FOR FOLD {fold.fold_id}')
     
     with tf.device(gpu_device.name):
         K.clear_session()
