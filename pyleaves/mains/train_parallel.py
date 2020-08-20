@@ -14,6 +14,7 @@ import os
 
 from pyleaves.mains.paleoai_main import restore_or_initialize_experiment, train_paleoai_dataset
 
+CONFIG_DIR = str(Path(pyleaves.RESOURCES_DIR,'..','..','configs','hydra'))
 
 @hydra.main(config_path=Path(CONFIG_DIR,'Leaves-PNAS.yaml'))
 def train(cfg : DictConfig) -> None:
