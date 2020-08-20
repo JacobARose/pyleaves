@@ -29,3 +29,6 @@ def train(cfg : DictConfig) -> None:
 
         train_paleoai_dataset(cfg=cfg, n_jobs=1, verbose=True)
 
+if __name__=="__main__":
+
+    train()
