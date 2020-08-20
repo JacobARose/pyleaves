@@ -951,7 +951,7 @@ def train_paleoai_dataset(cfg : DictConfig, fold_id: int=0, n_jobs: int=1, verbo
 
     for i, fold in enumerate(kfold_iter):
         if i==fold_id:
-            history = train_single_fold(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i])
+            history = train_single_fold(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[0])
             break
 
     return history
