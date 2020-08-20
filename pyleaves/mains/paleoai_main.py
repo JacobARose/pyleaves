@@ -653,6 +653,7 @@ def build_model(cfg):
                 'METRICS':['accuracy']
                 }
     '''
+    import pdb; pdb.set_trace()
 
     if cfg['model_name']=='vgg16':
         if cfg['num_channels']==1:
