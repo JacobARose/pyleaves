@@ -78,11 +78,12 @@ def initialize_experiment(cfg, experiment_start_time=None):
     cfg.experiment.experiment_start_time = experiment_start_time or datetime.now().strftime(date_format)
     cfg.update(log_dir = os.path.join(cfg.experiment.experiment_dir, 'log_dir__'+cfg.experiment.experiment_start_time))
     cfg.update(model_dir = os.path.join(cfg.log_dir,'model_dir'))
-    cfg['stage_0']['model_dir'] = os.path.join(cfg.log_dir,'model_dir')
+    cfg['stage_0']['model_dir'] = cfg.model_dir #os.path.join(cfg.log_dir,'model_dir')
     cfg.stage_0.update(tfrecord_dir = os.path.join(cfg.log_dir,'tfrecord_dir'))
     cfg.update(tfrecord_dir = cfg.stage_0.tfrecord_dir)
     cfg.saved_model_path = str(Path(cfg.model_dir) / Path('saved_model'))
     cfg.checkpoints_path = str(Path(cfg.model_dir) / Path('checkpoints'))
+    cfg['stage_0']['checkpoints_path'] = cfg.checkpoints_paths
     for k,v in cfg.items():
         if '_dir' in k:
             ensure_dir_exists(v)
