@@ -881,7 +881,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: boo
 
     print(f'USING DEVICE {gpu_device} FOR FOLD {fold.fold_id}')
     
-    with tf.device(gpu_device):
+    with tf.device(gpu_device.name):
         K.clear_session()
         train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
                                                                                     batch_size=cfg.training.batch_size,
