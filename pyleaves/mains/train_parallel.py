@@ -11,7 +11,7 @@ import neptune
 from omegaconf import DictConfig, OmegaConf
 import os
 
-from paleoai_data.mains.paleoai_main import restore_or_initialize_experiment, train_paleoai_dataset
+from pyleaves.mains.paleoai_main import restore_or_initialize_experiment, train_paleoai_dataset
 
 
 @hydra.main(config_path=Path(CONFIG_DIR,'Leaves-PNAS.yaml'))
