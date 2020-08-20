@@ -11,44 +11,39 @@ Script built off of configurable_train_pipeline.py
 python '/home/jacob/projects/pyleaves/pyleaves/mains/paleoai_main.py'
 
 '''
-
+import arrow
 from collections import OrderedDict
+from functools import partial
 from stuf import stuf
 import copy
 from datetime import datetime, timedelta
+import hydra
+from more_itertools import unzip
+import neptune
 import numpy as np
+from omegaconf import DictConfig, OmegaConf
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import random
 import os
-from pyleaves.utils.callback_utils import BackupAndRestore
 from pprint import pprint
 from pathlib import Path
-
-from pyleaves.utils import setGPU, set_tf_config
-
-from pyleaves.datasets import leaves_dataset, fossil_dataset, pnas_dataset, base_dataset
+import pyleaves
 from pyleaves.datasets.base_dataset import BaseDataset
-import neptune
-import arrow
+from pyleaves.models import resnet, vgg16
+from pyleaves.utils.callback_utils import BackupAndRestore
+from pyleaves.utils import setGPU, set_tf_config
+from pyleaves.datasets import leaves_dataset, fossil_dataset, pnas_dataset, base_dataset
 from pyleaves.utils import ensure_dir_exists, img_aug_utils as iau
 from tfrecord_utils.encoders import TFRecordCoder
-from more_itertools import unzip
-from functools import partial
-import pyleaves
-import hydra
-from omegaconf import DictConfig, OmegaConf
-
 from paleoai_data.utils.kfold_cross_validation import DataFold
 from paleoai_data.utils.kfold_cross_validation import generate_KFoldDataset, export_folds_to_csv, KFoldLoader #, prep_dataset
 
+##########################################################################
+##########################################################################
 CONFIG_DIR = str(Path(pyleaves.RESOURCES_DIR,'..','..','configs','hydra'))
-##########################################################################
-##########################################################################
-
 date_format = '%Y-%m-%d_%H-%M-%S'
-
 
 
 import tensorflow as tf
@@ -60,7 +55,7 @@ from tensorflow.keras.callbacks import Callback, ModelCheckpoint, TensorBoard, L
 from tensorflow.keras import backend as K
 import tensorflow_datasets as tfds
 import tensorflow_addons as tfa
-from pyleaves.models import resnet, vgg16
+
 
 
 
@@ -872,8 +867,8 @@ def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseD
 
 
 
-def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> None:
-    setGPU()
+def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: bool=True) -> None:
+    # setGPU()
     set_tf_config()
 
     
@@ -884,42 +879,45 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
         print(cfg.tfrecord_dir)
         print('='*20)
 
-    K.clear_session()
-    train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
-                                                                                batch_size=cfg.training.batch_size,
-                                                                                buffer_size=cfg.training.buffer_size,
-                                                                                exclude_classes=cfg.dataset.exclude_classes,
-                                                                                include_classes=cfg.dataset.include_classes,
-                                                                                target_size=cfg.dataset.target_size,
-                                                                                num_channels=cfg.dataset.num_channels,
-                                                                                color_mode=cfg.dataset.color_mode,
-                                                                                augmentations=cfg.training.augmentations,
-                                                                                seed=cfg.misc.seed,
-                                                                                use_tfrecords=cfg.misc.use_tfrecords,
-                                                                                tfrecord_dir=cfg.tfrecord_dir,
-                                                                                samples_per_shard=cfg.misc.samples_per_shard)
+    print(f'USING DEVICE {gpu_device} FOR FOLD {fold.fold_id}')
+    
+    with tf.device(gpu_device):
+        K.clear_session()
+        train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
+                                                                                    batch_size=cfg.training.batch_size,
+                                                                                    buffer_size=cfg.training.buffer_size,
+                                                                                    exclude_classes=cfg.dataset.exclude_classes,
+                                                                                    include_classes=cfg.dataset.include_classes,
+                                                                                    target_size=cfg.dataset.target_size,
+                                                                                    num_channels=cfg.dataset.num_channels,
+                                                                                    color_mode=cfg.dataset.color_mode,
+                                                                                    augmentations=cfg.training.augmentations,
+                                                                                    seed=cfg.misc.seed,
+                                                                                    use_tfrecords=cfg.misc.use_tfrecords,
+                                                                                    tfrecord_dir=cfg.tfrecord_dir,
+                                                                                    samples_per_shard=cfg.misc.samples_per_shard)
 
-    if verbose: print(f'Starting fold {fold.fold_id}')
-    log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset)
+        if verbose: print(f'Starting fold {fold.fold_id}')
+        log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset)
 
-    cfg['model']['base_learning_rate'] = cfg['lr']
-    cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
-    cfg['model']['model_dir'] = cfg['model_dir']
-    cfg['model']['num_classes'] = cfg['dataset']['num_classes']
-    model_config = OmegaConf.merge(cfg.model, cfg.training)
+        cfg['model']['base_learning_rate'] = cfg['lr']
+        cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
+        cfg['model']['model_dir'] = cfg['model_dir']
+        cfg['model']['num_classes'] = cfg['dataset']['num_classes']
+        model_config = OmegaConf.merge(cfg.model, cfg.training)
 
-    model = build_model(model_config)
+        model = build_model(model_config)
 
-    model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-    pprint(cfg)
+        model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+        pprint(cfg)
 
-    backup_callback = BackupAndRestore(cfg['checkpoints_path'])
-    backup_callback.set_model(model)
-    callbacks = [neptune_logger,
-                backup_callback,
-                EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
-                ImageLoggerCallback(data=train_dataset, freq=1000, max_images=-1, name='train', encoder=encoder),
-                ImageLoggerCallback(data=test_dataset, freq=1000, max_images=-1, name='val', encoder=encoder)]
+        backup_callback = BackupAndRestore(cfg['checkpoints_path'])
+        backup_callback.set_model(model)
+        callbacks = [neptune_logger,
+                    backup_callback,
+                    EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
+                    ImageLoggerCallback(data=train_dataset, freq=1000, max_images=-1, name='train', encoder=encoder),
+                    ImageLoggerCallback(data=test_dataset, freq=1000, max_images=-1, name='val', encoder=encoder)]
 
     history = model.fit(train_data,
                         epochs=cfg['num_epochs'],
@@ -943,16 +941,12 @@ def train_paleoai_dataset(cfg : DictConfig, n_jobs: int=1, verbose: bool=False) 
 
     log_config(cfg=cfg, verbose=verbose)
     # log_config(cfg=cfg_1, verbose=verbose)
-    # import tensorflow as tf
 
-    # tf.random.set_seed(cfg_0.misc.seed)
+    gpus = tf.config.experimental.list_physical_devices('GPU')
 
     kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
-
     kfold_iter = kfold_loader.iter_folds(repeats=1)
-    histories = Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0)) for i, fold in enumerate(kfold_iter))
-
-    import pdb; pdb.set_trace()
+    histories = Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i]) for i, fold in enumerate(kfold_iter))
 
     return histories
 
