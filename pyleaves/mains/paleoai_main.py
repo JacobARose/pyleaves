@@ -648,7 +648,6 @@ def build_model(cfg):
                 'METRICS':['accuracy']
                 }
     '''
-    import pdb; pdb.set_trace()
 
     if cfg['model_name']=='vgg16':
         if cfg['num_channels']==1:
@@ -916,9 +915,10 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: boo
         callbacks = [neptune_logger,
                     backup_callback,
                     EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
-                    ImageLoggerCallback(data=train_dataset, freq=1000, max_images=-1, name='train', encoder=encoder),
-                    ImageLoggerCallback(data=test_dataset, freq=1000, max_images=-1, name='val', encoder=encoder)]
+                    ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder),
+                    ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder)]
 
+    import pdb; pdb.set_trace()
     history = model.fit(train_data,
                         epochs=cfg['num_epochs'],
                         callbacks=callbacks,
