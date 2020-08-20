@@ -493,7 +493,8 @@ def create_dataset(data_fold: DataFold,
                    use_tfrecords=False,
                    tfrecord_dir=None,
                    samples_per_shard=800):
-
+    import pdb; pdb.set_trace()
+    
     dataset, train_dataset, test_dataset, encoder = load_data(data_fold=data_fold,
                                                               exclude_classes=exclude_classes,
                                                               include_classes=include_classes,
@@ -514,6 +515,8 @@ def create_dataset(data_fold: DataFold,
                               augmentations=augmentations,
                               training=True,
                               seed=seed)
+
+    
 
     test_data = prep_dataset(dataset['test'],
                             batch_size=batch_size,
