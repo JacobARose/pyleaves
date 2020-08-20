@@ -229,8 +229,6 @@ def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=Fals
     image : tf.Tensor
         Resized image with shape == 'shape' variable
     """
-    tf.print(type(shape), shape, type(tf.cast(shape[0], dtype=tf.int32)), tf.cast(shape[0], dtype=tf.int32))
-
     
     if training:
         smallest_side = tf.minimum(shape[0], shape[1])
@@ -240,6 +238,7 @@ def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=Fals
         image = tf.image.resize_with_pad(image, target_height=shape[0], target_width=shape[1])
 
     return image
+# tf.print(type(shape), shape, type(tf.cast(shape[0], dtype=tf.int32)), tf.cast(shape[0], dtype=tf.int32))
 # shape = (tf.cast(shape[0], dtype=tf.int32), tf.cast(shape[1], dtype=tf.int32))
 import tensorflow as tf
 from tensorflow.keras.applications.vgg16 import preprocess_input
