@@ -921,7 +921,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: boo
 
     import pdb; pdb.set_trace()
     history = model.fit(train_data,
-                        epochs=cfg['num_epochs'],
+                        epochs=cfg.training['num_epochs'],
                         callbacks=callbacks,
                         validation_data=test_data,
                         shuffle=True,
