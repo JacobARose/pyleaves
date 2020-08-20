@@ -83,7 +83,7 @@ def initialize_experiment(cfg, experiment_start_time=None):
     cfg.update(tfrecord_dir = cfg.stage_0.tfrecord_dir)
     cfg.saved_model_path = str(Path(cfg.model_dir) / Path('saved_model'))
     cfg.checkpoints_path = str(Path(cfg.model_dir) / Path('checkpoints'))
-    cfg['stage_0']['checkpoints_path'] = cfg.checkpoints_paths
+    cfg['stage_0']['checkpoints_path'] = cfg.checkpoints_path
     for k,v in cfg.items():
         if '_dir' in k:
             ensure_dir_exists(v)
