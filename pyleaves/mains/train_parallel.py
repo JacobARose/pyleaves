@@ -24,10 +24,10 @@ def train(cfg : DictConfig) -> None:
 
     neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
     params=OmegaConf.to_container(cfg)
-    with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name), params=params):
+    with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(cfg.fold_id), params=params):
         # train_pyleaves_dataset(cfg)
 
-        train_paleoai_dataset(cfg=cfg, n_jobs=4, verbose=True)
+        train_paleoai_dataset(cfg=cfg, fold_id=cfg.fold_id, n_jobs=1, verbose=True)
 
 if __name__=="__main__":
 

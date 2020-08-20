@@ -903,22 +903,22 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: boo
     cfg['model']['num_classes'] = cfg['dataset']['num_classes']
     model_config = OmegaConf.merge(cfg.model, cfg.training)
     
-    with tf.device(gpu_device.name.strip('/physical_device:')):
-        K.clear_session()
-        model = build_model(model_config)
+    # with tf.device(gpu_device.name.strip('/physical_device:')):
+    K.clear_session()
+    model = build_model(model_config)
 
-        model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-        pprint(cfg)
+    model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+    pprint(cfg)
 
-        backup_callback = BackupAndRestore(cfg['checkpoints_path'])
-        backup_callback.set_model(model)
-        callbacks = [neptune_logger,
-                    backup_callback,
-                    EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
-                    ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder),
-                    ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder)]
+    backup_callback = BackupAndRestore(cfg['checkpoints_path'])
+    backup_callback.set_model(model)
+    callbacks = [neptune_logger,
+                backup_callback,
+                EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
+                ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder),
+                ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder)]
 
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     history = model.fit(train_data,
                         epochs=cfg.training['num_epochs'],
                         callbacks=callbacks,
@@ -931,27 +931,30 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: boo
 
 # from keras.wrappers.scikit_learn import KerasClassifier
 # from tune_sklearn import TuneGridSearchCV
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 
 
-def train_paleoai_dataset(cfg : DictConfig, n_jobs: int=1, verbose: bool=False) -> None:
+def train_paleoai_dataset(cfg : DictConfig, fold_id: int=0, n_jobs: int=1, verbose: bool=False) -> None:
 
     cfg_0 = cfg.stage_0
     cfg_1 = cfg.stage_1
 
     log_config(cfg=cfg, verbose=verbose)
-    # log_config(cfg=cfg_1, verbose=verbose)
 
     gpus = tf.config.experimental.list_physical_devices('GPU')
 
     print(f'VISIBLE GPUs INCLUDE:', gpus)
 
-    gpus = [*gpus, *gpus, *gpus]
     kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
     kfold_iter = kfold_loader.iter_folds(repeats=1)
-    histories = Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i]) for i, fold in enumerate(kfold_iter))
+    # histories = Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i]) for i, fold in enumerate(kfold_iter) if i < n_jobs)
 
-    return histories
+    for i, fold in enumerate(kfold_iter):
+        if i==fold_id:
+            history = train_single_fold(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i])
+            break
+
+    return history
 
     # for i, fold in enumerate(kfold_iter):
 
