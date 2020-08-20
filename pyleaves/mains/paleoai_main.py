@@ -881,31 +881,31 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: boo
 
     print(f'USING DEVICE {gpu_device.name} FOR FOLD {fold.fold_id}')
     
+    train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
+                                                                                batch_size=cfg.training.batch_size,
+                                                                                buffer_size=cfg.training.buffer_size,
+                                                                                exclude_classes=cfg.dataset.exclude_classes,
+                                                                                include_classes=cfg.dataset.include_classes,
+                                                                                target_size=cfg.dataset.target_size,
+                                                                                num_channels=cfg.dataset.num_channels,
+                                                                                color_mode=cfg.dataset.color_mode,
+                                                                                augmentations=cfg.training.augmentations,
+                                                                                seed=cfg.misc.seed,
+                                                                                use_tfrecords=cfg.misc.use_tfrecords,
+                                                                                tfrecord_dir=cfg.tfrecord_dir,
+                                                                                samples_per_shard=cfg.misc.samples_per_shard)
+
+    if verbose: print(f'Starting fold {fold.fold_id}')
+    log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset)
+
+    cfg['model']['base_learning_rate'] = cfg['lr']
+    cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
+    cfg['model']['model_dir'] = cfg['model_dir']
+    cfg['model']['num_classes'] = cfg['dataset']['num_classes']
+    model_config = OmegaConf.merge(cfg.model, cfg.training)
+    
     with tf.device(gpu_device.name.strip('/physical_device:')):
         K.clear_session()
-        train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
-                                                                                    batch_size=cfg.training.batch_size,
-                                                                                    buffer_size=cfg.training.buffer_size,
-                                                                                    exclude_classes=cfg.dataset.exclude_classes,
-                                                                                    include_classes=cfg.dataset.include_classes,
-                                                                                    target_size=cfg.dataset.target_size,
-                                                                                    num_channels=cfg.dataset.num_channels,
-                                                                                    color_mode=cfg.dataset.color_mode,
-                                                                                    augmentations=cfg.training.augmentations,
-                                                                                    seed=cfg.misc.seed,
-                                                                                    use_tfrecords=cfg.misc.use_tfrecords,
-                                                                                    tfrecord_dir=cfg.tfrecord_dir,
-                                                                                    samples_per_shard=cfg.misc.samples_per_shard)
-
-        if verbose: print(f'Starting fold {fold.fold_id}')
-        log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset)
-
-        cfg['model']['base_learning_rate'] = cfg['lr']
-        cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
-        cfg['model']['model_dir'] = cfg['model_dir']
-        cfg['model']['num_classes'] = cfg['dataset']['num_classes']
-        model_config = OmegaConf.merge(cfg.model, cfg.training)
-
         model = build_model(model_config)
 
         model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
