@@ -903,7 +903,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset)
 
     cfg['model']['base_learning_rate'] = cfg['lr']
-    cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg['num_channels'])
+    cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
     cfg['model']['model_dir'] = cfg['model_dir']
     model_config = OmegaConf.merge(cfg.model, cfg.training)
 
