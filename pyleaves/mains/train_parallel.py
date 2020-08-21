@@ -37,8 +37,8 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
     log_config(cfg=cfg, verbose=verbose)
     kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
     kfold_iter = kfold_loader.iter_folds(repeats=1)
-    # histories = Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i]) for i, fold in enumerate(kfold_iter) if i < n_jobs)
-
+    # histories = CUDA_ERROR_NOT_INITIALIZED: initialization error Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i]) for i, fold in enumerate(kfold_iter) if i < n_jobs)
+    histories = []
     print(f'Beginning training of models with fold_ids: {fold_ids}')
     with Pool(processes=n_jobs) as pool:
         for i, fold in enumerate(kfold_iter):
@@ -47,13 +47,14 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
                                         args=(fold, copy.deepcopy(cfg_0)),
                                         callback = log_history)#, gpu_device=gpus[0])
             print(i)
+            histories.append(history)
             
                 # fold_ids.pop(np.where(fold_ids==i))
             # if len(fold_ids)==0:
                 # break
-
-    import pdb;pdb.set_trace()
-    pool.join()
+        histories = [h.wait() for h in histories]
+    # import pdb;pdb.set_trace()
+    # pool.join()
 
     return history
 
