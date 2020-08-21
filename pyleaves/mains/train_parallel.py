@@ -8,6 +8,7 @@ python '/home/jacob/projects/pyleaves/pyleaves/mains/train_parallel.py' stage_0.
 
 import hydra
 from multiprocessing import Pool
+import numpy as np
 import neptune
 from pathlib import Path
 from omegaconf import DictConfig, OmegaConf
@@ -45,7 +46,7 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
                 history = pool.apply_async(train_single_fold, 
                                            args=(fold, copy.deepcopy(cfg_0)),
                                            callback = log_history)#, gpu_device=gpus[0])
-                fold_ids.pop(i)
+                fold_ids.pop(np.where(fold_ids==i))
             if len(fold_ids)==0:
                 break
 
