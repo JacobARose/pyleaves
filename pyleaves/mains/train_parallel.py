@@ -65,8 +65,8 @@ def train(cfg : DictConfig) -> None:
     params=OmegaConf.to_container(cfg)
     with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(cfg.fold_id), params=params):
         # train_pyleaves_dataset(cfg)
-
-        train_paleoai_dataset(cfg=cfg, fold_ids=[cfg.fold_id], n_jobs=1, verbose=True)
+        # [cfg.fold_id]
+        train_paleoai_dataset(cfg=cfg, fold_ids=list(range(10)), n_jobs=1, verbose=True)
 
 if __name__=="__main__":
 
