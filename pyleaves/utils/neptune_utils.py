@@ -23,7 +23,7 @@ class ImageLoggerCallback(Callback):
 
     Callback that keeps track of a tf.data.Dataset and logs the correct batch to neptune based on the current batch.
     '''
-    def __init__(self, data :tf.data.Dataset, freq=1, max_images=-1, name='', encoder=None):
+    def __init__(self, data :tf.data.Dataset, freq=1, max_images=-1, name='', encoder=None, neptune_logger=None):
 
         self.data = data
         self.freq = freq
@@ -31,6 +31,7 @@ class ImageLoggerCallback(Callback):
         self.name = name
         self.encoder=encoder
         self.init_iterator()
+        self.neptune_logger = neptune_logger or neptune
 
     def init_iterator(self):
         self.data_iter = iter(self.data)
@@ -53,7 +54,7 @@ class ImageLoggerCallback(Callback):
         scaled_img = (img - np.min(img))/(np.max(img) - np.min(img)) * 255.0
         scaled_img = scaled_img.astype(np.uint32)
 
-        neptune.log_image(log_name= name or self.name,
+        self.neptune_logger.log_image(log_name= name or self.name,
                           x=counter,
                           y=scaled_img)
         return scaled_img

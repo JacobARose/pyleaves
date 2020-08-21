@@ -128,7 +128,7 @@ def restore_or_initialize_experiment(cfg, restore_last=False, prefix='log_dir__'
 
 
 
-def log_data(logs):
+def log_data(logs, neptune):
     for k, v in logs.items():
         neptune.log_metric(k, v)
 
@@ -586,11 +586,11 @@ def plot_sample(sample, num_res=1):
 neptune_logger = tf.keras.callbacks.LambdaCallback(on_batch_end=lambda batch, logs: log_data(logs),
                                                    on_epoch_end=lambda epoch, logs: log_data(logs))
 
-from pyleaves.utils.neptune_utils import ImageLoggerCallback
 
 
 
-def log_config(cfg: DictConfig, verbose: bool=False):
+
+def log_config(cfg: DictConfig, neptune, verbose: bool=False):
     if verbose: print(cfg.pretty())
 
     cfg_0 = cfg.stage_0
@@ -603,7 +603,7 @@ def log_config(cfg: DictConfig, verbose: bool=False):
     neptune.append_tag(cfg_0.dataset.color_mode)
 
 
-def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseDataset):
+def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseDataset, neptune):
     cfg['dataset']['num_classes'] = train_dataset.num_classes
     cfg['dataset']['splits_size'] = {'train':{},
                           'test':{}}
@@ -627,7 +627,7 @@ def get_model_config(cfg: DictConfig):
     return model_config
 
 
-def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> None:
+def train_single_fold(fold: DataFold, cfg : DictConfig, neptune,  verbose: bool=True) -> None:
     import tensorflow as tf
     set_tf_config()
     preprocess_input(tf.zeros([4, 224, 224, 3]))
@@ -658,7 +658,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
                                                                                 samples_per_shard=cfg.misc.samples_per_shard)
 
     if verbose: print(f'Starting fold {fold.fold_id}')
-    log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset)
+    log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
 
     # cfg['model']['base_learning_rate'] = cfg['lr']
     # cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
@@ -675,14 +675,16 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
     model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     pprint(cfg)
 
+    from pyleaves.utils.neptune_utils import ImageLoggerCallback
+
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
     callbacks = [neptune_logger,
                 backup_callback,
                 tf.keras.callbacks.CSVLogger(cfg.log_dir, separator=',', append=False),
                 EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
-                ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder),
-                ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder)]
+                ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
+                ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
 
     # import pdb; pdb.set_trace()
     history = model.fit(train_data,
