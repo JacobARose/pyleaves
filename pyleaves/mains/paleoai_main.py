@@ -240,6 +240,7 @@ def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=Fals
     return image
 # tf.print(type(shape), shape, type(tf.cast(shape[0], dtype=tf.int32)), tf.cast(shape[0], dtype=tf.int32))
 # shape = (tf.cast(shape[0], dtype=tf.int32), tf.cast(shape[1], dtype=tf.int32))
+
 import tensorflow as tf
 from tensorflow.keras.applications.vgg16 import preprocess_input
 preprocess_input(tf.zeros([4, 224, 224, 3]))
@@ -260,7 +261,6 @@ def prep_dataset(dataset,
                  training=False,
                  seed=None):
 
-    print(type(target_size),target_size)
     
     resize = partial(resize_image, shape=(*target_size, num_channels), training=training, seed=seed)
     dataset = dataset.map(lambda x,y: (resize(x), y),
@@ -291,25 +291,6 @@ def prep_dataset(dataset,
     dataset = dataset.prefetch(1)
     return dataset
 
-
-def partition_data(data, partitions=OrderedDict({'train':0.5,'test':0.5})):
-    '''
-    Split data into named partitions by fraction
-
-    Example:
-    --------
-    >> split_data = partition_data(data, partitions=OrderedDict({'train':0.4,'val':0.1,'test':0.5}))
-    '''
-    num_rows = len(data)
-    output={}
-    taken = 0.0
-    for k,v in partitions.items():
-        idx = (int(taken*num_rows),int((taken+v)*num_rows))
-        output.update({k:data[idx[0]:idx[1]]})
-        taken+=v
-    assert taken <= 1.0
-    return output
-
 def decode_example(serialized_example):
     feature_description = {
     'image': tf.io.FixedLenFeature([], tf.string),
@@ -326,39 +307,6 @@ def decode_example(serialized_example):
 
 
 
-def initialize_data_from_leavesdb(dataset_name='PNAS',
-                                  splits={'train':0.7,'validation':0.3},
-                                  threshold=50,
-                                  exclude_classes=[],
-                                  include_classes=[]):
-    datasets = {
-            'PNAS': pnas_dataset.PNASDataset(),
-            'Leaves': leaves_dataset.LeavesDataset(),
-            'Fossil': fossil_dataset.FossilDataset()
-            }
-    data_files = datasets[dataset_name]
-
-    data_files.exclude_rare_classes(threshold=threshold)
-    encoder = base_dataset.LabelEncoder(data_files.classes)
-    classes = list((set(encoder.classes)-set(exclude_classes)).union(set(include_classes)))
-    data_files, excluded_data_files = data_files.enforce_class_whitelist(class_names=classes)
-
-    x = list(data_files.data['path'].values)
-    y = np.array(encoder.encode(data_files.data['family']))
-
-    shuffled_data = list(zip(x,y))
-    random.shuffle(shuffled_data)
-    partitioned_data = partition_data(data=shuffled_data,
-                                      partitions=OrderedDict(splits))
-    split_data = {k:v for k,v in partitioned_data.items() if len(v)>0}
-
-    for subset, subset_data in split_data.items():
-        split_data[subset] = [list(i) for i in unzip(subset_data)]
-
-    return split_data, data_files, excluded_data_files, encoder
-
-
-
 def initialize_data_from_paleoai(fold: DataFold,
                                  exclude_classes=[],
                                  include_classes=[]):
@@ -367,7 +315,6 @@ def initialize_data_from_paleoai(fold: DataFold,
 
     encoder = base_dataset.LabelEncoder(fold.metadata.class_names)
     classes = list((set(encoder.classes)-set(exclude_classes)).union(set(include_classes)))
-    # data_files, excluded_data_files = fold.full_dataset.enforce_class_whitelist(class_names=classes)
     train_dataset, _ = fold.train_dataset.enforce_class_whitelist(class_names=classes)
     test_dataset, _ = fold.test_dataset.enforce_class_whitelist(class_names=classes)
 
@@ -494,7 +441,7 @@ def create_dataset(data_fold: DataFold,
                    tfrecord_dir=None,
                    samples_per_shard=800):
     import pdb; pdb.set_trace()
-    
+
     dataset, train_dataset, test_dataset, encoder = load_data(data_fold=data_fold,
                                                               exclude_classes=exclude_classes,
                                                               include_classes=include_classes,
@@ -502,8 +449,10 @@ def create_dataset(data_fold: DataFold,
                                                               tfrecord_dir=tfrecord_dir,
                                                               samples_per_shard=samples_per_shard,
                                                               seed=seed)
-    if type(target_size)=='str':
-        target_size = tuple(map(int, target_size.strip('()').split(',')))
+    # if type(target_size)=='str':
+    #     target_size = tuple(map(int, target_size.strip('()').split(',')))
+    num_classes = train_dataset.num_classes
+
     train_data = prep_dataset(dataset['train'],
                               batch_size=batch_size,
                               buffer_size=buffer_size,
@@ -511,7 +460,7 @@ def create_dataset(data_fold: DataFold,
                               target_size=target_size,
                               num_channels=num_channels,
                               color_mode=color_mode,
-                              num_classes=train_dataset.num_classes,
+                              num_classes=num_classes,
                               augmentations=augmentations,
                               training=True,
                               seed=seed)
@@ -523,7 +472,7 @@ def create_dataset(data_fold: DataFold,
                             target_size=target_size,
                             num_channels=num_channels,
                             color_mode=color_mode,
-                            num_classes=test_dataset.num_classes,
+                            num_classes=num_classes,
                             training=False,
                             seed=seed)
 
