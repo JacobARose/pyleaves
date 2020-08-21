@@ -47,9 +47,12 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
                                         args=(fold, copy.deepcopy(cfg_0)),
                                         callback = log_history)#, gpu_device=gpus[0])
             print(i)
+            
                 # fold_ids.pop(np.where(fold_ids==i))
             # if len(fold_ids)==0:
                 # break
+
+    import pdb;pdb.set_trace()
     pool.join()
 
     return history
