@@ -639,6 +639,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
     ensure_dir_exists(cfg.tfrecord_dir)
     if verbose:
         print('='*20)
+        print(f'RUNNING: fold {fold.fold_id}')
         print(cfg.tfrecord_dir)
         print('='*20)
     
