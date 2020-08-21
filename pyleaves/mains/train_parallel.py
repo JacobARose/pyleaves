@@ -50,6 +50,7 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
                 # fold_ids.pop(np.where(fold_ids==i))
             # if len(fold_ids)==0:
                 # break
+        pool.join()
 
     return history
 
