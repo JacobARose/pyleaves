@@ -29,6 +29,7 @@ import random
 import os
 from pprint import pprint
 from pathlib import Path
+from typing import List
 import pyleaves
 from pyleaves.datasets.base_dataset import BaseDataset
 from pyleaves.models import resnet, vgg16
@@ -57,7 +58,9 @@ from tensorflow.keras import backend as K
 import tensorflow_datasets as tfds
 import tensorflow_addons as tfa
 
+tf.debugging.set_log_device_placement(True)
 
+gpus = tf.config.experimental.list_logical_devices('GPU')
 
 
 
@@ -615,13 +618,20 @@ def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseD
     neptune.set_property('validation_steps',cfg['validation_steps'])
 
 
+def get_model_config(cfg: DictConfig):
+    cfg['model']['base_learning_rate'] = cfg['lr']
+    cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
+    cfg['model']['model_dir'] = cfg['model_dir']
+    cfg['model']['num_classes'] = cfg['dataset']['num_classes']
+    model_config = OmegaConf.merge(cfg.model, cfg.training)
+    return model_config
 
-def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: bool=True) -> None:
-    # setGPU()
+
+def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> None:
     set_tf_config()
     import tensorflow as tf
-    from tensorflow.keras.applications.vgg16 import preprocess_input
     preprocess_input(tf.zeros([4, 224, 224, 3]))
+    K.clear_session()
 
     
     cfg.tfrecord_dir = os.path.join(cfg.tfrecord_dir,fold.fold_name)
@@ -631,7 +641,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: boo
         print(cfg.tfrecord_dir)
         print('='*20)
 
-    print(f'USING DEVICE {gpu_device.name} FOR FOLD {fold.fold_id}')
+
     
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
                                                                                 batch_size=cfg.training.batch_size,
@@ -650,15 +660,16 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: boo
     if verbose: print(f'Starting fold {fold.fold_id}')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset)
 
-    cfg['model']['base_learning_rate'] = cfg['lr']
-    cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
-    cfg['model']['model_dir'] = cfg['model_dir']
-    cfg['model']['num_classes'] = cfg['dataset']['num_classes']
-    model_config = OmegaConf.merge(cfg.model, cfg.training)
-    
-    # with tf.device(gpu_device.name.strip('/physical_device:')):
-    K.clear_session()
-    model = build_model(model_config)
+    # cfg['model']['base_learning_rate'] = cfg['lr']
+    # cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
+    # cfg['model']['model_dir'] = cfg['model_dir']
+    # cfg['model']['num_classes'] = cfg['dataset']['num_classes']
+    # model_config = OmegaConf.merge(cfg.model, cfg.training)
+    model_config = get_model_config(cfg=cfg)
+
+    gpu_device = setGPU(only_return=True)
+    with tf.device(gpu_device.name): #.strip('/physical_device:')):
+        model = build_model(model_config)
 
     model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     pprint(cfg)
@@ -667,6 +678,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: boo
     backup_callback.set_model(model)
     callbacks = [neptune_logger,
                 backup_callback,
+                tf.keras.callbacks.CSVLogger(cfg.log_dir, separator=',', append=False),
                 EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
                 ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder),
                 ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder)]
@@ -687,45 +699,45 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: boo
 # from joblib import Parallel, delayed
 
 
-def train_paleoai_dataset(cfg : DictConfig, fold_id: int=0, n_jobs: int=1, verbose: bool=False) -> None:
+def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int=1, verbose: bool=False) -> None:
 
     cfg_0 = cfg.stage_0
-    cfg_1 = cfg.stage_1
+    # cfg_1 = cfg.stage_1
 
     log_config(cfg=cfg, verbose=verbose)
 
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-
-    print(f'VISIBLE GPUs INCLUDE:', gpus)
+    # gpus = tf.config.experimental.list_physical_devices('GPU')
+    # print(f'VISIBLE GPUs INCLUDE:', gpus)
 
     kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
     kfold_iter = kfold_loader.iter_folds(repeats=1)
     # histories = Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i]) for i, fold in enumerate(kfold_iter) if i < n_jobs)
 
+    print(f'Beginning training of models with fold_ids: {fold_ids}')
     for i, fold in enumerate(kfold_iter):
-        if i==fold_id:
-            history = train_single_fold(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[0])
-            break
+        if i in fold_ids:
+            history = train_single_fold(fold=fold, cfg=copy.deepcopy(cfg_0))#, gpu_device=gpus[0])
+            
 
     return history
 
 
 
-@hydra.main(config_path=Path(CONFIG_DIR,'Leaves-PNAS.yaml'))
-def train(cfg : DictConfig) -> None:
+# @hydra.main(config_path=Path(CONFIG_DIR,'Leaves-PNAS.yaml'))
+# def train(cfg : DictConfig) -> None:
 
-    OmegaConf.set_struct(cfg, False)
-    cfg = restore_or_initialize_experiment(cfg, restore_last=True, prefix='log_dir__', verbose=2)
+#     OmegaConf.set_struct(cfg, False)
+#     cfg = restore_or_initialize_experiment(cfg, restore_last=True, prefix='log_dir__', verbose=2)
 
-    neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
-    params=OmegaConf.to_container(cfg)
-    with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name), params=params):
-        # train_pyleaves_dataset(cfg)
+#     neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
+#     params=OmegaConf.to_container(cfg)
+#     with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name), params=params):
+#         # train_pyleaves_dataset(cfg)
 
-        train_paleoai_dataset(cfg=cfg, n_jobs=1, verbose=True)
+#         train_paleoai_dataset(cfg=cfg, n_jobs=1, verbose=True)
 
 
 
-if __name__=='__main__':
+# if __name__=='__main__':
 
-    train()
+#     train()

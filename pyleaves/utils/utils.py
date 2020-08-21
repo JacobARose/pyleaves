@@ -15,10 +15,11 @@ import os
 import itertools
 from collections import defaultdict, OrderedDict
 import gpustat
+from pprint import pprint
 import random
 from typing import List
 
-def setGPU():
+def setGPU(only_return=False):
     stats = gpustat.GPUStatCollection.new_query()
     ids = map(lambda gpu: int(gpu.entry['index']), stats)
     ratios = map(lambda gpu: float(gpu.entry['memory.used'])/float(gpu.entry['memory.total']), stats)
@@ -26,9 +27,14 @@ def setGPU():
     random.shuffle(pairs)
     bestGPU = min(pairs, key=lambda x: x[1])[0]
 
-    print("setGPU: Setting GPU to: {}".format(bestGPU))
-    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+    print(f'setGPU: GPU:memory ratios initially visible to setGPU:')
+    pprint(pairs)
+    if only_return:
+        return bestGPU
+    print(f"setGPU: Setting GPU to: {bestGPU}")
+    # os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
     os.environ['CUDA_VISIBLE_DEVICES'] = str(bestGPU)
+    return bestGPU
 
 
 def set_tf_config(seed: int=None):
