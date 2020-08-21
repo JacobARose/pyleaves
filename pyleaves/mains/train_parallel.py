@@ -16,6 +16,42 @@ from pyleaves.mains.paleoai_main import restore_or_initialize_experiment, train_
 from pyleaves import RESOURCES_DIR
 CONFIG_DIR = str(Path(RESOURCES_DIR,'..','..','configs','hydra'))
 
+
+
+def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int=1, verbose: bool=False) -> None:
+
+    histories = []
+    def log_history(history: dict):
+        try:
+            histories.append(history)
+        except:
+            histories.append(None)
+
+
+    cfg_0 = cfg.stage_0
+    # cfg_1 = cfg.stage_1
+    log_config(cfg=cfg, verbose=verbose)
+    kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
+    kfold_iter = kfold_loader.iter_folds(repeats=1)
+    # histories = Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i]) for i, fold in enumerate(kfold_iter) if i < n_jobs)
+
+    print(f'Beginning training of models with fold_ids: {fold_ids}')
+    with Pool(processes=n_jobs) as pool:
+        for i, fold in enumerate(kfold_iter):
+            if i in fold_ids:
+                history = pool.apply_async(train_single_fold, 
+                                           args=(fold, copy.deepcopy(cfg_0)),
+                                           callback = log_history)#, gpu_device=gpus[0])
+                fold_ids.pop(i)
+            if len(fold_ids)==0:
+                break
+
+    return history
+
+
+
+
+
 @hydra.main(config_path=Path(CONFIG_DIR,'Leaves-PNAS.yaml'))
 def train(cfg : DictConfig) -> None:
 

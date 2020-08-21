@@ -10,16 +10,10 @@ Model definition for building VGG16 with or without Imagenet weights, as well as
 
 
 '''
-from pyleaves.models.base_model import add_regularization
-
 from collections import OrderedDict
 import numpy as np
 import os
 import tensorflow as tf
-# tf.compat.v1.enable_eager_execution()
-# from pyleaves.utils import set_visible_gpus
-# set_visible_gpus([4])
-
 from tensorflow.keras.applications import resnet, resnet_v2
 from tensorflow.python.keras.models import Sequential, Model, load_model
 from tensorflow.python.keras.layers import Dropout, Input, Conv2D, MaxPooling2D
@@ -29,8 +23,8 @@ from tensorflow.python.keras.metrics import categorical_crossentropy
 from tensorflow.keras import datasets, layers, models
 import itertools
 import matplotlib.pyplot as plt
-
 import pyleaves
+from pyleaves.models.base_model import add_regularization
 # from pyleaves.config import DatasetConfig, TrainConfig, ExperimentConfig, ModelConfig
 # from pyleaves.models.base_model import BaseModel
 

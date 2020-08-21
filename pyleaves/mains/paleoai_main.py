@@ -12,6 +12,7 @@ python '/home/jacob/projects/pyleaves/pyleaves/mains/paleoai_main.py'
 
 '''
 import arrow
+from box import Box
 from collections import OrderedDict
 from functools import partial
 from stuf import stuf
@@ -54,7 +55,6 @@ from tensorflow.python.keras.metrics import categorical_crossentropy
 
 from tensorflow.keras.callbacks import Callback, ModelCheckpoint, TensorBoard, LearningRateScheduler, EarlyStopping
 from tensorflow.keras.applications.vgg16 import preprocess_input
-from tensorflow.keras import backend as K
 import tensorflow_datasets as tfds
 import tensorflow_addons as tfa
 
@@ -628,9 +628,10 @@ def get_model_config(cfg: DictConfig):
 
 
 def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> None:
-    set_tf_config()
     import tensorflow as tf
+    set_tf_config()
     preprocess_input(tf.zeros([4, 224, 224, 3]))
+    from tensorflow.keras import backend as K
     K.clear_session()
 
     
@@ -640,8 +641,6 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
         print('='*20)
         print(cfg.tfrecord_dir)
         print('='*20)
-
-
     
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
                                                                                 batch_size=cfg.training.batch_size,
@@ -691,7 +690,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
                         shuffle=True,
                         steps_per_epoch=cfg['steps_per_epoch'],
                         validation_steps=cfg['validation_steps'])
-    return history
+    return history.history
 
 
 # from keras.wrappers.scikit_learn import KerasClassifier
@@ -699,27 +698,59 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, verbose: bool=True) -> N
 # from joblib import Parallel, delayed
 
 
-def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int=1, verbose: bool=False) -> None:
+    
 
-    cfg_0 = cfg.stage_0
-    # cfg_1 = cfg.stage_1
+# def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int=1, verbose: bool=False) -> None:
 
-    log_config(cfg=cfg, verbose=verbose)
+#     histories = []
+#     def log_history(history: dict):
+#         try:
+#             histories.append(history)
+#         except:
+#             histories.append(None)
 
-    # gpus = tf.config.experimental.list_physical_devices('GPU')
-    # print(f'VISIBLE GPUs INCLUDE:', gpus)
 
-    kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
-    kfold_iter = kfold_loader.iter_folds(repeats=1)
-    # histories = Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i]) for i, fold in enumerate(kfold_iter) if i < n_jobs)
+#     cfg_0 = cfg.stage_0
+#     # cfg_1 = cfg.stage_1
+#     log_config(cfg=cfg, verbose=verbose)
+#     kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
+#     kfold_iter = kfold_loader.iter_folds(repeats=1)
+#     # histories = Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i]) for i, fold in enumerate(kfold_iter) if i < n_jobs)
 
-    print(f'Beginning training of models with fold_ids: {fold_ids}')
-    for i, fold in enumerate(kfold_iter):
-        if i in fold_ids:
-            history = train_single_fold(fold=fold, cfg=copy.deepcopy(cfg_0))#, gpu_device=gpus[0])
-            
+#     print(f'Beginning training of models with fold_ids: {fold_ids}')
+#     with Pool(processes=n_jobs) as pool:
+#         for i, fold in enumerate(kfold_iter):
+#             if i in fold_ids:
+#                 history = pool.apply_async(train_single_fold, 
+#                                            args=(fold, copy.deepcopy(cfg_0)),
+#                                            callback = log_history)#, gpu_device=gpus[0])
+#                 fold_ids.pop(i)
+#             if len(fold_ids)==0:
+#                 break
 
-    return history
+#     return history
+
+
+# def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int=1, verbose: bool=False) -> None:
+
+#     cfg_0 = cfg.stage_0
+#     # cfg_1 = cfg.stage_1
+
+#     log_config(cfg=cfg, verbose=verbose)
+
+#     kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
+#     kfold_iter = kfold_loader.iter_folds(repeats=1)
+#     # histories = Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i]) for i, fold in enumerate(kfold_iter) if i < n_jobs)
+#     history = Box({'history':[]})
+#     print(f'Beginning training of models with fold_ids: {fold_ids}')
+#     for i, fold in enumerate(kfold_iter):
+#         if i in fold_ids:
+#             history = train_single_fold(fold=fold, cfg=copy.deepcopy(cfg_0))#, gpu_device=gpus[0])
+#             fold_ids.pop(i)
+#         if len(fold_ids)==0:
+#             break
+
+#     return history
 
 
 
