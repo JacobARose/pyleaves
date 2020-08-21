@@ -52,6 +52,7 @@ from tensorflow.python.keras.optimizers import Adam
 from tensorflow.python.keras.metrics import categorical_crossentropy
 
 from tensorflow.keras.callbacks import Callback, ModelCheckpoint, TensorBoard, LearningRateScheduler, EarlyStopping
+from tensorflow.keras.applications.vgg16 import preprocess_input
 from tensorflow.keras import backend as K
 import tensorflow_datasets as tfds
 import tensorflow_addons as tfa
