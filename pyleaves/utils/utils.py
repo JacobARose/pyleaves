@@ -41,7 +41,7 @@ def set_tf_config(seed: int=None):
     import tensorflow as tf
     assert using_tensorflow2()
     gpus = tf.config.experimental.list_physical_devices('GPU')
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     try:
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
