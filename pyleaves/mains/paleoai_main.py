@@ -241,9 +241,6 @@ def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=Fals
 # tf.print(type(shape), shape, type(tf.cast(shape[0], dtype=tf.int32)), tf.cast(shape[0], dtype=tf.int32))
 # shape = (tf.cast(shape[0], dtype=tf.int32), tf.cast(shape[1], dtype=tf.int32))
 
-import tensorflow as tf
-from tensorflow.keras.applications.vgg16 import preprocess_input
-preprocess_input(tf.zeros([4, 224, 224, 3]))
 def apply_preprocess(x, y, num_classes=10):
     return preprocess_input(x), tf.one_hot(y, depth=num_classes)
 
@@ -621,6 +618,9 @@ def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseD
 def train_single_fold(fold: DataFold, cfg : DictConfig, gpu_device, verbose: bool=True) -> None:
     # setGPU()
     set_tf_config()
+    import tensorflow as tf
+    from tensorflow.keras.applications.vgg16 import preprocess_input
+    preprocess_input(tf.zeros([4, 224, 224, 3]))
 
     
     cfg.tfrecord_dir = os.path.join(cfg.tfrecord_dir,fold.fold_name)
