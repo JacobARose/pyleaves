@@ -7,12 +7,15 @@ python '/home/jacob/projects/pyleaves/pyleaves/mains/train_parallel.py' stage_0.
 '''
 
 import hydra
+from multiprocessing import Pool
 import neptune
 from pathlib import Path
 from omegaconf import DictConfig, OmegaConf
 import os
-
-from pyleaves.mains.paleoai_main import restore_or_initialize_experiment, train_paleoai_dataset
+from typing import List
+import copy
+from paleoai_data.utils.kfold_cross_validation import KFoldLoader
+from pyleaves.mains.paleoai_main import restore_or_initialize_experiment, train_single_fold, log_config#, train_paleoai_dataset
 from pyleaves import RESOURCES_DIR
 CONFIG_DIR = str(Path(RESOURCES_DIR,'..','..','configs','hydra'))
 
@@ -63,7 +66,7 @@ def train(cfg : DictConfig) -> None:
     with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(cfg.fold_id), params=params):
         # train_pyleaves_dataset(cfg)
 
-        train_paleoai_dataset(cfg=cfg, fold_id=cfg.fold_id, n_jobs=1, verbose=True)
+        train_paleoai_dataset(cfg=cfg, fold_ids=[cfg.fold_id], n_jobs=1, verbose=True)
 
 if __name__=="__main__":
 
