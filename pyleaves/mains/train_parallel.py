@@ -20,7 +20,7 @@ CONFIG_DIR = str(Path(RESOURCES_DIR,'..','..','configs','hydra'))
 def train(cfg : DictConfig) -> None:
 
     OmegaConf.set_struct(cfg, False)
-    cfg = restore_or_initialize_experiment(cfg, restore_last=True, prefix='log_dir__', verbose=2)
+    cfg = restore_or_initialize_experiment(cfg, restore_last=True, prefix='log_dir__', verbose=0)
 
     neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
     params=OmegaConf.to_container(cfg)
