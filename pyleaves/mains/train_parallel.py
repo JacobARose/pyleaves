@@ -42,13 +42,14 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
     print(f'Beginning training of models with fold_ids: {fold_ids}')
     with Pool(processes=n_jobs) as pool:
         for i, fold in enumerate(kfold_iter):
-            if i in fold_ids:
-                history = pool.apply_async(train_single_fold, 
-                                           args=(fold, copy.deepcopy(cfg_0)),
-                                           callback = log_history)#, gpu_device=gpus[0])
-                fold_ids.pop(np.where(fold_ids==i))
-            if len(fold_ids)==0:
-                break
+            # if i in fold_ids:
+            history = pool.apply_async(train_single_fold, 
+                                        args=(fold, copy.deepcopy(cfg_0)),
+                                        callback = log_history)#, gpu_device=gpus[0])
+            print(i)
+                # fold_ids.pop(np.where(fold_ids==i))
+            # if len(fold_ids)==0:
+                # break
 
     return history
 
