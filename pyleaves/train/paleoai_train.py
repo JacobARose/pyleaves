@@ -43,7 +43,7 @@ from paleoai_data.utils.kfold_cross_validation import DataFold
 from paleoai_data.utils.kfold_cross_validation import generate_KFoldDataset, export_folds_to_csv, KFoldLoader #, prep_dataset
 
 
-from paleoai_data.utils.multiprocessing_utils import RunAsCUDASubprocess
+from pyleaves.utils.multiprocessing_utils import RunAsCUDASubprocess
 ##########################################################################
 ##########################################################################
 CONFIG_DIR = str(Path(pyleaves.RESOURCES_DIR,'..','..','configs','hydra'))
