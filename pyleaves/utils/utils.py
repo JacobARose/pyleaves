@@ -37,7 +37,8 @@ def setGPU(only_return=False):
     return bestGPU
 
 
-def set_tf_config(seed: int=None):
+def set_tf_config(gpu_id: int=0, seed: int=None):
+
     import tensorflow as tf
     assert using_tensorflow2()
     gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -47,7 +48,7 @@ def set_tf_config(seed: int=None):
             tf.config.experimental.set_memory_growth(gpu, True)
 
         if gpus:
-            tf.config.experimental.set_visible_devices(gpus[0], 'GPU')
+            tf.config.experimental.set_visible_devices(f'GPU:{gpu_id}', 'GPU') #[gpu for gpu in gpus if gpu_id in gpu.name], 'GPU')
     except:
         print('setting memory growth failed, continuing anyway.')
 

@@ -133,7 +133,8 @@ from pyleaves.utils.multiprocessing_utils import RunAsCUDASubprocess
 def train_single_fold(fold: DataFold, cfg : DictConfig, neptune, worker_id=None, verbose: bool=True) -> None:
 
     from pyleaves.utils import set_tf_config, setGPU
-    set_tf_config()
+    gpu_id = setGPU()
+    set_tf_config(gpu_id)
     
     import tensorflow as tf
     from tensorflow.keras import backend as K
