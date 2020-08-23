@@ -12,6 +12,7 @@ import hydra
 from pathlib import Path
 from omegaconf import DictConfig, OmegaConf
 # import os
+import itertools
 from typing import List
 import copy
 from paleoai_data.utils.kfold_cross_validation import KFoldLoader
@@ -40,11 +41,22 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
     # histories = CUDA_ERROR_NOT_INITIALIZED: initialization error Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i]) for i, fold in enumerate(kfold_iter) if i < n_jobs)
     histories = []
     print(f'Beginning training of models with fold_ids: {fold_ids}')
-    histories = perform_concurrent_tasks(train_single_fold,
-                            tasks_to_do=((fold, copy.deepcopy(cfg_0), neptune, worker_id) for worker_id, fold in enumerate(kfold_iter)),
-                            max_processes=n_jobs)
+    # histories = perform_concurrent_tasks(train_single_fold,
+    #                         tasks_to_do=((fold, copy.deepcopy(cfg_0), neptune, worker_id) for worker_id, fold in enumerate(kfold_iter)),
+    #                         max_processes=n_jobs)
+    # return histories
 
+    histories = []
+    for worker_id, fold in enumerate(itertools.islice(kfold_iter, n_jobs)):
+    # for task in itertools.islice(tasks_to_do, max_processes)
+        print(worker_id)
+        print(fold)
+        histories.append(train_single_fold(fold, copy.deepcopy(cfg_0), neptune, worker_id))
     return histories
+
+
+
+
     # pool = Pool(processes=n_jobs)
     # for i, fold in enumerate(kfold_iter):
     #     history = pool.apply_async(train_single_fold, 
