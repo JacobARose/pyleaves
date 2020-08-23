@@ -11,63 +11,23 @@ Script built off of configurable_train_pipeline.py
 python '/home/jacob/projects/pyleaves/pyleaves/mains/paleoai_main.py'
 
 '''
-import arrow
-from box import Box
-from collections import OrderedDict
-from functools import partial
-from stuf import stuf
 import copy
-from datetime import datetime, timedelta
-import hydra
-from more_itertools import unzip
-import neptune
-import numpy as np
+from datetime import datetime
 from omegaconf import DictConfig, OmegaConf
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import random
 import os
-from pprint import pprint
 from pathlib import Path
-from typing import List
-import pyleaves
-from pyleaves.datasets.base_dataset import BaseDataset
-from pyleaves.models import resnet, vgg16
-from pyleaves.utils.callback_utils import BackupAndRestore
-from pyleaves.utils import setGPU, set_tf_config
-from pyleaves.datasets import leaves_dataset, fossil_dataset, pnas_dataset, base_dataset
-from pyleaves.utils import ensure_dir_exists, img_aug_utils as iau
-from tfrecord_utils.encoders import TFRecordCoder
-from paleoai_data.utils.kfold_cross_validation import DataFold
-from paleoai_data.utils.kfold_cross_validation import generate_KFoldDataset, export_folds_to_csv, KFoldLoader #, prep_dataset
-
-
-from paleoai_data.utils.multiprocessing_utils import RunAsCUDASubprocess
-##########################################################################
-##########################################################################
-CONFIG_DIR = str(Path(pyleaves.RESOURCES_DIR,'..','..','configs','hydra'))
+from pprint import pprint
+from pyleaves.utils import ensure_dir_exists
+# from pyleaves.datasets.base_dataset import BaseDataset
+from paleoai_data.dataset_drivers.base_dataset import BaseDataset
+# import hydra
+# import neptune
+# ##########################################################################
+# ##########################################################################
+# CONFIG_DIR = str(Path(pyleaves.RESOURCES_DIR,'..','..','configs','hydra'))
 date_format = '%Y-%m-%d_%H-%M-%S'
-
-
-import tensorflow as tf
-from tensorflow.python.keras.layers import Input
-from tensorflow.python.keras.optimizers import Adam
-from tensorflow.python.keras.metrics import categorical_crossentropy
-
-from tensorflow.keras.callbacks import Callback, ModelCheckpoint, TensorBoard, LearningRateScheduler, EarlyStopping
-from tensorflow.keras.applications.vgg16 import preprocess_input
-import tensorflow_datasets as tfds
-import tensorflow_addons as tfa
-
-tf.debugging.set_log_device_placement(True)
-
-gpus = tf.config.experimental.list_logical_devices('GPU')
-
-
-
-
-
+# tf.debugging.set_log_device_placement(True)
+# gpus = tf.config.experimental.list_logical_devices('GPU')
 
 
 def initialize_experiment(cfg, experiment_start_time=None):
@@ -166,21 +126,30 @@ def get_model_config(cfg: DictConfig):
     model_config = OmegaConf.merge(cfg.model, cfg.training)
     return model_config
 
+from paleoai_data.utils.kfold_cross_validation import DataFold
+from pyleaves.utils.multiprocessing_utils import RunAsCUDASubprocess
 
 @RunAsCUDASubprocess()
-def train_single_fold(fold: DataFold, cfg : DictConfig, neptune,  verbose: bool=True) -> None:
-    import tensorflow as tf
-    set_tf_config()
-    preprocess_input(tf.zeros([4, 224, 224, 3]))
-    from tensorflow.keras import backend as K
-    K.clear_session()
+def train_single_fold(fold: DataFold, cfg : DictConfig, neptune, worker_id=None, verbose: bool=True) -> None:
 
+    from pyleaves.utils import set_tf_config, setGPU
+    set_tf_config()
+    
+    import tensorflow as tf
+    from tensorflow.keras import backend as K
+
+    from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model, log_data
+    from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, LambdaCallback, LearningRateScheduler
+    from pyleaves.utils.callback_utils import BackupAndRestore
+    from pyleaves.utils.neptune_utils import ImageLoggerCallback
+    preprocess_input(tf.zeros([4, 224, 224, 3]))
+    K.clear_session()
     
     cfg.tfrecord_dir = os.path.join(cfg.tfrecord_dir,fold.fold_name)
     ensure_dir_exists(cfg.tfrecord_dir)
     if verbose:
         print('='*20)
-        print(f'RUNNING: fold {fold.fold_id}')
+        print(f'RUNNING: fold {fold.fold_id} in process {worker_id or "None"}')
         print(cfg.tfrecord_dir)
         print('='*20)
     
@@ -201,11 +170,6 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, neptune,  verbose: bool=
     if verbose: print(f'Starting fold {fold.fold_id}')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
 
-    # cfg['model']['base_learning_rate'] = cfg['lr']
-    # cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
-    # cfg['model']['model_dir'] = cfg['model_dir']
-    # cfg['model']['num_classes'] = cfg['dataset']['num_classes']
-    # model_config = OmegaConf.merge(cfg.model, cfg.training)
     model_config = get_model_config(cfg=cfg)
 
     gpu_device = setGPU(only_return=True)
@@ -216,20 +180,19 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, neptune,  verbose: bool=
     model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     pprint(cfg)
 
-    from pyleaves.utils.neptune_utils import ImageLoggerCallback
+    
 
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
-    neptune_logger = tf.keras.callbacks.LambdaCallback(on_batch_end=lambda batch, logs: log_data(logs, neptune),
-                                                   on_epoch_end=lambda epoch, logs: log_data(logs, neptune))
-    callbacks = [neptune_logger,
+    neptune_logger_callback = LambdaCallback(on_batch_end=lambda batch, logs: log_data(logs, neptune),
+                                            on_epoch_end=lambda epoch, logs: log_data(logs, neptune))
+    callbacks = [neptune_logger_callback,
                 backup_callback,
                 tf.keras.callbacks.CSVLogger(cfg.log_dir, separator=',', append=False),
                 EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
                 ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
                 ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
 
-    # import pdb; pdb.set_trace()
     history = model.fit(train_data,
                         epochs=cfg.training['num_epochs'],
                         callbacks=callbacks,

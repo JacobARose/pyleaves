@@ -55,11 +55,11 @@ from tensorflow.python.keras.layers import Input
 from tensorflow.python.keras.optimizers import Adam
 from tensorflow.python.keras.metrics import categorical_crossentropy
 
-from tensorflow.keras.callbacks import Callback, ModelCheckpoint, TensorBoard, LearningRateScheduler, EarlyStopping
+from tensorflow.keras.callbacks import Callback, ModelCheckpoint, TensorBoard, LearningRateScheduler
 from tensorflow.keras.applications.vgg16 import preprocess_input
 import tensorflow_datasets as tfds
 import tensorflow_addons as tfa
-
+from tensorflow.keras.callbacks import EarlyStopping, CSVLogger, LambdaCallback
 tf.debugging.set_log_device_placement(True)
 
 gpus = tf.config.experimental.list_logical_devices('GPU')
@@ -131,6 +131,10 @@ def restore_or_initialize_experiment(cfg, restore_last=False, prefix='log_dir__'
 
 
 def log_data(logs, neptune):
+    for k, v in logs.items():
+        neptune.log_metric(k, v)
+
+def log_neptune_data(logs, neptune):
     for k, v in logs.items():
         neptune.log_metric(k, v)
 
@@ -443,7 +447,7 @@ def create_dataset(data_fold: DataFold,
                    use_tfrecords=False,
                    tfrecord_dir=None,
                    samples_per_shard=800):
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
 
     dataset, train_dataset, test_dataset, encoder = load_data(data_fold=data_fold,
                                                               exclude_classes=exclude_classes,
@@ -584,13 +588,9 @@ def plot_sample(sample, num_res=1):
             ax.imshow((images[y] + 1.0)/2, cmap='gray')
     plt.show()
 
-# neptune_logger = tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_data(logs))
-neptune_logger = tf.keras.callbacks.LambdaCallback(on_batch_end=lambda batch, logs: log_data(logs),
-                                                   on_epoch_end=lambda epoch, logs: log_data(logs))
-
-
-
-
+# # neptune_logger = tf.keras.callbacks.LambdaCallback(on_epoch_end=lambda epoch, logs: log_data(logs))
+# neptune_logger = tf.keras.callbacks.LambdaCallback(on_batch_end=lambda batch, logs: log_data(logs, neptune),
+#                                                    on_epoch_end=lambda epoch, logs: log_data(logs, neptune))
 
 def log_config(cfg: DictConfig, neptune, verbose: bool=False):
     if verbose: print(cfg.pretty())
@@ -605,99 +605,102 @@ def log_config(cfg: DictConfig, neptune, verbose: bool=False):
     neptune.append_tag(cfg_0.dataset.color_mode)
 
 
-def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseDataset, neptune):
-    cfg['dataset']['num_classes'] = train_dataset.num_classes
-    cfg['dataset']['splits_size'] = {'train':{},
-                          'test':{}}
-    cfg['dataset']['splits_size']['train'] = int(train_dataset.num_samples)
-    cfg['dataset']['splits_size']['test'] = int(test_dataset.num_samples)
+# def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseDataset, neptune):
+#     cfg['dataset']['num_classes'] = train_dataset.num_classes
+#     cfg['dataset']['splits_size'] = {'train':{},
+#                           'test':{}}
+#     cfg['dataset']['splits_size']['train'] = int(train_dataset.num_samples)
+#     cfg['dataset']['splits_size']['test'] = int(test_dataset.num_samples)
 
-    cfg['steps_per_epoch'] = cfg['dataset']['splits_size']['train']//cfg['training']['batch_size']
-    cfg['validation_steps'] = cfg['dataset']['splits_size']['test']//cfg['training']['batch_size']
+#     cfg['steps_per_epoch'] = cfg['dataset']['splits_size']['train']//cfg['training']['batch_size']
+#     cfg['validation_steps'] = cfg['dataset']['splits_size']['test']//cfg['training']['batch_size']
 
-    neptune.set_property('num_classes',cfg['num_classes'])
-    neptune.set_property('steps_per_epoch',cfg['steps_per_epoch'])
-    neptune.set_property('validation_steps',cfg['validation_steps'])
-
-
-def get_model_config(cfg: DictConfig):
-    cfg['model']['base_learning_rate'] = cfg['lr']
-    cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
-    cfg['model']['model_dir'] = cfg['model_dir']
-    cfg['model']['num_classes'] = cfg['dataset']['num_classes']
-    model_config = OmegaConf.merge(cfg.model, cfg.training)
-    return model_config
+#     neptune.set_property('num_classes',cfg['num_classes'])
+#     neptune.set_property('steps_per_epoch',cfg['steps_per_epoch'])
+#     neptune.set_property('validation_steps',cfg['validation_steps'])
 
 
-@RunAsCUDASubprocess()
-def train_single_fold(fold: DataFold, cfg : DictConfig, neptune,  verbose: bool=True) -> None:
-    import tensorflow as tf
-    set_tf_config()
-    preprocess_input(tf.zeros([4, 224, 224, 3]))
-    from tensorflow.keras import backend as K
-    K.clear_session()
+# def get_model_config(cfg: DictConfig):
+#     cfg['model']['base_learning_rate'] = cfg['lr']
+#     cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
+#     cfg['model']['model_dir'] = cfg['model_dir']
+#     cfg['model']['num_classes'] = cfg['dataset']['num_classes']
+#     model_config = OmegaConf.merge(cfg.model, cfg.training)
+#     return model_config
+
+
+# @RunAsCUDASubprocess()
+# def train_single_fold(fold: DataFold, cfg : DictConfig, neptune,  verbose: bool=True) -> None:
+#     import tensorflow as tf
+#     set_tf_config()
+#     preprocess_input(tf.zeros([4, 224, 224, 3]))
+#     from tensorflow.keras import backend as K
+#     K.clear_session()
 
     
-    cfg.tfrecord_dir = os.path.join(cfg.tfrecord_dir,fold.fold_name)
-    ensure_dir_exists(cfg.tfrecord_dir)
-    if verbose:
-        print('='*20)
-        print(f'RUNNING: fold {fold.fold_id}')
-        print(cfg.tfrecord_dir)
-        print('='*20)
+#     cfg.tfrecord_dir = os.path.join(cfg.tfrecord_dir,fold.fold_name)
+#     ensure_dir_exists(cfg.tfrecord_dir)
+#     if verbose:
+#         print('='*20)
+#         print(f'RUNNING: fold {fold.fold_id}')
+#         print(cfg.tfrecord_dir)
+#         print('='*20)
     
-    train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
-                                                                                batch_size=cfg.training.batch_size,
-                                                                                buffer_size=cfg.training.buffer_size,
-                                                                                exclude_classes=cfg.dataset.exclude_classes,
-                                                                                include_classes=cfg.dataset.include_classes,
-                                                                                target_size=cfg.dataset.target_size,
-                                                                                num_channels=cfg.dataset.num_channels,
-                                                                                color_mode=cfg.dataset.color_mode,
-                                                                                augmentations=cfg.training.augmentations,
-                                                                                seed=cfg.misc.seed,
-                                                                                use_tfrecords=cfg.misc.use_tfrecords,
-                                                                                tfrecord_dir=cfg.tfrecord_dir,
-                                                                                samples_per_shard=cfg.misc.samples_per_shard)
+#     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
+#                                                                                 batch_size=cfg.training.batch_size,
+#                                                                                 buffer_size=cfg.training.buffer_size,
+#                                                                                 exclude_classes=cfg.dataset.exclude_classes,
+#                                                                                 include_classes=cfg.dataset.include_classes,
+#                                                                                 target_size=cfg.dataset.target_size,
+#                                                                                 num_channels=cfg.dataset.num_channels,
+#                                                                                 color_mode=cfg.dataset.color_mode,
+#                                                                                 augmentations=cfg.training.augmentations,
+#                                                                                 seed=cfg.misc.seed,
+#                                                                                 use_tfrecords=cfg.misc.use_tfrecords,
+#                                                                                 tfrecord_dir=cfg.tfrecord_dir,
+#                                                                                 samples_per_shard=cfg.misc.samples_per_shard)
 
-    if verbose: print(f'Starting fold {fold.fold_id}')
-    log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
+#     if verbose: print(f'Starting fold {fold.fold_id}')
+#     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
 
-    # cfg['model']['base_learning_rate'] = cfg['lr']
-    # cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
-    # cfg['model']['model_dir'] = cfg['model_dir']
-    # cfg['model']['num_classes'] = cfg['dataset']['num_classes']
-    # model_config = OmegaConf.merge(cfg.model, cfg.training)
-    model_config = get_model_config(cfg=cfg)
+#     # cfg['model']['base_learning_rate'] = cfg['lr']
+#     # cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
+#     # cfg['model']['model_dir'] = cfg['model_dir']
+#     # cfg['model']['num_classes'] = cfg['dataset']['num_classes']
+#     # model_config = OmegaConf.merge(cfg.model, cfg.training)
+#     model_config = get_model_config(cfg=cfg)
 
-    gpu_device = setGPU(only_return=True)
-    with tf.Graph.as_default():
-        with tf.device(gpu_device.name): #.strip('/physical_device:')):
-            model = build_model(model_config)
+#     gpu_device = setGPU(only_return=True)
+#     with tf.Graph.as_default():
+#         with tf.device(gpu_device.name): #.strip('/physical_device:')):
+#             model = build_model(model_config)
 
-    model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-    pprint(cfg)
+#     model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+#     pprint(cfg)
 
-    from pyleaves.utils.neptune_utils import ImageLoggerCallback
+#     from pyleaves.utils.neptune_utils import ImageLoggerCallback
 
-    backup_callback = BackupAndRestore(cfg['checkpoints_path'])
-    backup_callback.set_model(model)
-    callbacks = [neptune_logger,
-                backup_callback,
-                tf.keras.callbacks.CSVLogger(cfg.log_dir, separator=',', append=False),
-                EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
-                ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
-                ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
+#     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
+#     backup_callback.set_model(model)
+#     callbacks = [neptune_logger,
+#                 backup_callback,
+#                 tf.keras.callbacks.CSVLogger(cfg.log_dir, separator=',', append=False),
+#                 EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
+#                 ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
+#                 ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
 
-    # import pdb; pdb.set_trace()
-    history = model.fit(train_data,
-                        epochs=cfg.training['num_epochs'],
-                        callbacks=callbacks,
-                        validation_data=test_data,
-                        shuffle=True,
-                        steps_per_epoch=cfg['steps_per_epoch'],
-                        validation_steps=cfg['validation_steps'])
-    return history.history
+#     # import pdb; pdb.set_trace()
+#     history = model.fit(train_data,
+#                         epochs=cfg.training['num_epochs'],
+#                         callbacks=callbacks,
+#                         validation_data=test_data,
+#                         shuffle=True,
+#                         steps_per_epoch=cfg['steps_per_epoch'],
+#                         validation_steps=cfg['validation_steps'])
+#     return history.history
+
+######################################################################
+######################################################################
 
 
 # from keras.wrappers.scikit_learn import KerasClassifier

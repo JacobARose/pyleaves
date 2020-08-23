@@ -6,6 +6,7 @@
 
 
 """
+(8/22/2020) Currently not being used (to my knowledge), user should prefer using code from the separate paleoai_data repo
 
 Based on repo wtfml:
 __url__: https://github.com/abhishekkrthakur/wtfml/blob/master/wtfml/cross_validation/fold_generator.py
