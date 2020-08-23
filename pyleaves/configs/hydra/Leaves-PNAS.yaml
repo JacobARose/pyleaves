@@ -86,3 +86,4 @@ tfrecord_dir: ???
 saved_model_path: ???
 checkpoints_path: ???
 n_jobs: 1
+num_gpus: 1

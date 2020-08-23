@@ -130,7 +130,7 @@ from paleoai_data.utils.kfold_cross_validation import DataFold
 from pyleaves.utils.multiprocessing_utils import RunAsCUDASubprocess
 
 # @RunAsCUDASubprocess()
-def train_single_fold(fold: DataFold, cfg : DictConfig, neptune, worker_id=None, verbose: bool=True) -> None:
+def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose: bool=True) -> None:
     print('WORKER {worker_id} INITIATED')
     from pyleaves.utils import set_tf_config, setGPU
     # gpu_device = setGPU(only_return=True)
@@ -143,7 +143,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, neptune, worker_id=None,
     from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model, log_data
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, LambdaCallback, LearningRateScheduler
     from pyleaves.utils.callback_utils import BackupAndRestore
-    from pyleaves.utils.neptune_utils import ImageLoggerCallback
+    from pyleaves.utils.neptune_utils import ImageLoggerCallback, neptune
     preprocess_input(tf.zeros([4, 224, 224, 3]))
     K.clear_session()
     

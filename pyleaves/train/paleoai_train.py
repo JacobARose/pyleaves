@@ -20,7 +20,6 @@ import copy
 from datetime import datetime, timedelta
 import hydra
 from more_itertools import unzip
-import neptune
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
 import pandas as pd
@@ -36,6 +35,7 @@ from pyleaves.datasets.base_dataset import BaseDataset
 from pyleaves.models import resnet, vgg16
 from pyleaves.utils.callback_utils import BackupAndRestore
 from pyleaves.utils import setGPU, set_tf_config
+from pyleaves.utils.neptune_utils import neptune
 from pyleaves.datasets import leaves_dataset, fossil_dataset, pnas_dataset, base_dataset
 from pyleaves.utils import ensure_dir_exists, img_aug_utils as iau
 from tfrecord_utils.encoders import TFRecordCoder
@@ -43,7 +43,7 @@ from paleoai_data.utils.kfold_cross_validation import DataFold
 from paleoai_data.utils.kfold_cross_validation import generate_KFoldDataset, export_folds_to_csv, KFoldLoader #, prep_dataset
 
 
-from pyleaves.utils.multiprocessing_utils import RunAsCUDASubprocess
+# from pyleaves.utils.multiprocessing_utils import RunAsCUDASubprocess
 ##########################################################################
 ##########################################################################
 CONFIG_DIR = str(Path(pyleaves.RESOURCES_DIR,'..','..','configs','hydra'))
