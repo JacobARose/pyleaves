@@ -131,7 +131,7 @@ from pyleaves.utils.multiprocessing_utils import RunAsCUDASubprocess
 
 # @RunAsCUDASubprocess()
 def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose: bool=True) -> None:
-    print('WORKER {worker_id} INITIATED')
+    print(f'WORKER {worker_id} INITIATED')
     from pyleaves.utils import set_tf_config, setGPU
     # gpu_device = setGPU(only_return=True)
     gpu_id = setGPU()
