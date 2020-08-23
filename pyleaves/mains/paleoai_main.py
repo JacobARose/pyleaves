@@ -131,8 +131,9 @@ from pyleaves.utils.multiprocessing_utils import RunAsCUDASubprocess
 
 # @RunAsCUDASubprocess()
 def train_single_fold(fold: DataFold, cfg : DictConfig, neptune, worker_id=None, verbose: bool=True) -> None:
-    print('WORKER {}worker_id} INITIATED')
+    print('WORKER {worker_id} INITIATED')
     from pyleaves.utils import set_tf_config, setGPU
+    # gpu_device = setGPU(only_return=True)
     gpu_id = setGPU()
     set_tf_config(gpu_id)
     
@@ -173,9 +174,8 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, neptune, worker_id=None,
 
     model_config = get_model_config(cfg=cfg)
 
-    gpu_device = setGPU(only_return=True)
     with tf.Graph().as_default():
-        with tf.device(gpu_device.name): #.strip('/physical_device:')):
+        with tf.device(f'GPU:{gpu_id}'): #.strip('/physical_device:')):
             model = build_model(model_config)
 
     model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
@@ -186,13 +186,13 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, neptune, worker_id=None,
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
     neptune_logger_callback = LambdaCallback(on_batch_end=lambda batch, logs: log_data(logs, neptune),
-                                            on_epoch_end=lambda epoch, logs: log_data(logs, neptune))
+                                             on_epoch_end=lambda epoch, logs: log_data(logs, neptune))
     callbacks = [neptune_logger_callback,
-                backup_callback,
-                tf.keras.callbacks.CSVLogger(cfg.log_dir, separator=',', append=False),
-                EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
-                ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
-                ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
+                 backup_callback,
+                 tf.keras.callbacks.CSVLogger(cfg.log_dir, separator=',', append=False),
+                 EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
+                 ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
+                 ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
 
     history = model.fit(train_data,
                         epochs=cfg.training['num_epochs'],
