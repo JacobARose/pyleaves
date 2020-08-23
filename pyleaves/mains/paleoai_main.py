@@ -174,8 +174,8 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
 
     model_config = get_model_config(cfg=cfg)
 
-    with tf.Graph().as_default():
-        # with tf.device(f'GPU:{gpu_id}'): #.strip('/physical_device:')):
+    # with tf.Graph().as_default():
+    with tf.device(f'GPU:{gpu_id}'): #.strip('/physical_device:')):
         model = build_model(model_config)
 
     model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
