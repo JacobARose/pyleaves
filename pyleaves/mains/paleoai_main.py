@@ -129,7 +129,7 @@ def get_model_config(cfg: DictConfig):
 from paleoai_data.utils.kfold_cross_validation import DataFold
 from pyleaves.utils.multiprocessing_utils import RunAsCUDASubprocess
 
-@RunAsCUDASubprocess()
+# @RunAsCUDASubprocess()
 def train_single_fold(fold: DataFold, cfg : DictConfig, neptune, worker_id=None, verbose: bool=True) -> None:
     print('WORKER {}worker_id} INITIATED')
     from pyleaves.utils import set_tf_config, setGPU
