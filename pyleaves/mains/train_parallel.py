@@ -15,10 +15,11 @@ from omegaconf import DictConfig, OmegaConf
 import itertools
 from typing import List
 import copy
+import time
 from paleoai_data.utils.kfold_cross_validation import KFoldLoader
 from pyleaves.mains.paleoai_main import restore_or_initialize_experiment, train_single_fold, log_config#, train_paleoai_dataset
 from pyleaves import RESOURCES_DIR
-from pyleaves.utils.multiprocessing_utils import perform_concurrent_tasks
+from pyleaves.utils.multiprocessing_utils import perform_concurrent_tasks, RunAsCUDASubprocess
 CONFIG_DIR = str(Path(RESOURCES_DIR,'..','..','configs','hydra'))
 import neptune
 
@@ -45,13 +46,15 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
     #                         tasks_to_do=((fold, copy.deepcopy(cfg_0), neptune, worker_id) for worker_id, fold in enumerate(kfold_iter)),
     #                         max_processes=n_jobs)
     # return histories
+    pool = RunAsCUDASubprocess(num_gpus=cfg.num_gpus, memory_fraction=0.9)
 
     histories = []
     for worker_id, fold in enumerate(itertools.islice(kfold_iter, n_jobs)):
     # for task in itertools.islice(tasks_to_do, max_processes)
         print(worker_id)
         print(fold)
-        histories.append(train_single_fold(fold, copy.deepcopy(cfg_0), neptune, worker_id))
+        histories.append(pool(train_single_fold)(fold, copy.deepcopy(cfg_0), neptune, worker_id))
+        time.wait(10)
     return histories
 
 

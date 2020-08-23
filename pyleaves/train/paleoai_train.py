@@ -60,9 +60,8 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 import tensorflow_datasets as tfds
 import tensorflow_addons as tfa
 from tensorflow.keras.callbacks import EarlyStopping, CSVLogger, LambdaCallback
-tf.debugging.set_log_device_placement(True)
-
-gpus = tf.config.experimental.list_logical_devices('GPU')
+# tf.debugging.set_log_device_placement(True)
+# gpus = tf.config.experimental.list_logical_devices('GPU')
 
 
 
