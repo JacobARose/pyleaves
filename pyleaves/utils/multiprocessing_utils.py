@@ -48,7 +48,9 @@ class RunAsCUDASubprocess:
         def wrapped_f(*args):
             print('LEN(ARGS) =',len(args))
             with Pool(1) as p:
-                return p.apply(RunAsCUDASubprocess._subprocess_code, (self._num_gpus, self._memory_fraction, cloudpickle.dumps(f), args))
+                result =  p.apply_async(RunAsCUDASubprocess._subprocess_code, (self._num_gpus, self._memory_fraction, cloudpickle.dumps(f), args))
+                print('Closed process')
+                return result
 
         return wrapped_f
 
