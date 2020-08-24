@@ -691,9 +691,9 @@ class CheckpointManager(object):
         if self._latest_checkpoint is not None:
             self._checkpoint.restore(self._latest_checkpoint)
             if self._checkpoint.ckpt_saved_epoch > 0:
-                print(f'Restoring model starting at {self._checkpoint.ckpt_saved_epoch}')
+                print(f'Restoring model starting at {self._checkpoint.ckpt_saved_epoch.numpy()}')
             else:
-                print('Initializing new checkpoint for model in epoch ',self._checkpoint.ckpt_saved_epoch)
+                print('Initializing new checkpoint for model in epoch 0')#,self._checkpoint.ckpt_saved_epoch)
             if self._checkpoint_interval is not None:
                 self._last_checkpoint_step = _evaluate(self._step_counter)
             return self._latest_checkpoint
