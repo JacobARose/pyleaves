@@ -155,7 +155,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
         print(f'RUNNING: fold {fold.fold_id} in process {worker_id or "None"}')
         print(cfg.tfrecord_dir)
         print('='*20)
-    
+    print('creating dataset')
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
                                                                                 batch_size=cfg.training.batch_size,
                                                                                 buffer_size=cfg.training.buffer_size,
@@ -172,6 +172,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
 
     
     if verbose: print(f'Starting fold {fold.fold_id}')
+    print('logging dataset')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
     # import pdb;pdb.set_trace()
     print('cfg', type(cfg), cfg)
