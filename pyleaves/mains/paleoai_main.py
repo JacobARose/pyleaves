@@ -186,9 +186,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
     # with tf.device(f'/device:GPU:0'):#{gpu_id}'): #.strip('/physical_device:')):
     model = build_model(model_config)
     print('Finished compiling model')
-    model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-    pprint(cfg)
-
+    # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
@@ -200,7 +198,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
                  EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
                  ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
                  ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
-
+    print('Initiating model.fit')
     history = model.fit(train_data,
                         epochs=cfg.training['num_epochs'],
                         callbacks=callbacks,
