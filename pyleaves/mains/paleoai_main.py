@@ -170,10 +170,10 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
                                                                                 tfrecord_dir=cfg.tfrecord_dir,
                                                                                 samples_per_shard=cfg.misc.samples_per_shard)
 
-    import pdb;pdb.set_trace()
+    
     if verbose: print(f'Starting fold {fold.fold_id}')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
-
+    import pdb;pdb.set_trace()
     model_config = get_model_config(cfg=cfg)
 
     # with tf.Graph().as_default():
