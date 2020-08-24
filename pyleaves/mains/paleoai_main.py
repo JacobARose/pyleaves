@@ -175,6 +175,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
 
     model_config = get_model_config(cfg=cfg)
 
+    import pdb;pdb.set_trace()
     # with tf.Graph().as_default():
     with tf.device(f'GPU:0'):#{gpu_id}'): #.strip('/physical_device:')):
         model = build_model(model_config)
