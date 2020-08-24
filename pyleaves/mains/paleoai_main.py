@@ -190,8 +190,8 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
     
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
-    neptune_logger_callback = LambdaCallback(on_batch_end=lambda batch, logs: log_data(logs, neptune),
-                                             on_epoch_end=lambda epoch, logs: log_data(logs, neptune))
+    neptune_logger_callback = LambdaCallback(on_batch_end=lambda batch, logs: log_data(logs=logs, neptune=neptune),
+                                             on_epoch_end=lambda epoch, logs: log_data(logs=logs, neptune=neptune))
     callbacks = [neptune_logger_callback,
                  backup_callback,
                  CSVLogger(Path(cfg.log_dir,'results.csv'), separator=',', append=False),
