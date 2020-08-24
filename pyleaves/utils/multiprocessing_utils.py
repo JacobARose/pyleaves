@@ -6,7 +6,9 @@
 
 import os
 import cloudpickle
-from multiprocessing import Pool
+import random
+from tqdm import tqdm
+from multiprocessing import Pool, freeze_support, RLock
 
 class RunAsCUDASubprocess:
 
@@ -44,16 +46,18 @@ class RunAsCUDASubprocess:
         # pickle (lambda functions, notebook code, etc.)
         return cloudpickle.loads(fn)(*args)
 
-    def __call__(self, f):
+    def __call__(self, f, n_jobs=1):
         def wrapped_f(*args):
-            print('LEN(ARGS) =',len(args))
-            with Pool(1) as p:
+            with Pool(n_jobs) as p:
                 result =  p.apply_async(RunAsCUDASubprocess._subprocess_code, (self._num_gpus, self._memory_fraction, cloudpickle.dumps(f), args))
                 print('Closed process')
                 return result.get()
 
         return wrapped_f
 
+    # def map(self, f, *args, **kwargs):
+    #     with Pool(n_jobs,initargs=(RLock(),), initializer=tqdm.set_lock)
+    # TODO: finish this function
 
 
 

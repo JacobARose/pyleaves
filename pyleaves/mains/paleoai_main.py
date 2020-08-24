@@ -193,7 +193,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
     neptune_logger_callback = LambdaCallback(on_batch_end=lambda batch, logs: log_data(logs=logs, neptune=neptune),
                                              on_epoch_end=lambda epoch, logs: log_data(logs=logs, neptune=neptune))
     callbacks = [backup_callback, #neptune_logger_callback,
-                 CSVLogger(Path(cfg.log_dir,'results.csv'), separator=',', append=False),
+                 CSVLogger(Path(cfg.log_dir,f'results-fold_{fold.fold_id}.csv'), separator=',', append=False),
                  EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
                 #  ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
                 #  ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
