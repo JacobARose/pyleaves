@@ -195,14 +195,15 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
     callbacks = [neptune_logger_callback,
                  backup_callback,
                  CSVLogger(Path(cfg.log_dir,'results.csv'), separator=',', append=False),
-                 EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True),
-                 ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
-                 ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
+                 EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
+                #  ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
+                #  ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
     print('Initiating model.fit')
     history = model.fit(train_data,
                         epochs=cfg.training['num_epochs'],
                         callbacks=callbacks,
                         validation_data=test_data,
+                        validation_freq=1,
                         shuffle=True,
                         steps_per_epoch=cfg['steps_per_epoch'],
                         validation_steps=cfg['validation_steps'])
