@@ -46,6 +46,7 @@ class RunAsCUDASubprocess:
 
     def __call__(self, f):
         def wrapped_f(*args):
+            print('LEN(ARGS) =',len(args))
             with Pool(1) as p:
                 return p.apply(RunAsCUDASubprocess._subprocess_code, (self._num_gpus, self._memory_fraction, cloudpickle.dumps(f), args))
 
