@@ -115,8 +115,8 @@ def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseD
     cfg['steps_per_epoch'] = cfg['dataset']['splits_size']['train']//cfg['training']['batch_size']
     cfg['validation_steps'] = cfg['dataset']['splits_size']['test']//cfg['training']['batch_size']
     print('updated cfg')
-    pprint(OmegaConf.to_container(cfg))
-    neptune.set_property('num_classes',cfg['num_classes'])
+    
+    # neptune.set_property('num_classes',cfg['num_classes'])
     # neptune.set_property('steps_per_epoch',cfg['steps_per_epoch'])
     # neptune.set_property('validation_steps',cfg['validation_steps'])
 
@@ -179,7 +179,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
     # import pdb;pdb.set_trace()
     print('cfg')
     print(type(cfg))
-    print(cfg)
+    pprint(OmegaConf.to_container(cfg))
     model_config = get_model_config(cfg=cfg)
     print(type(model_config), model_config)
     # with tf.Graph().as_default():
