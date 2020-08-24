@@ -43,6 +43,7 @@ def initialize_experiment(cfg, experiment_start_time=None):
 
     cfg.experiment.experiment_start_time = experiment_start_time or datetime.now().strftime(date_format)
     cfg.update(log_dir = os.path.join(cfg.experiment.experiment_dir, 'log_dir__'+cfg.experiment.experiment_start_time))
+    cfg['stage_0']['log_dir'] = cfg.log_dir
     cfg.update(model_dir = os.path.join(cfg.log_dir,'model_dir'))
     cfg['stage_0']['model_dir'] = cfg.model_dir #os.path.join(cfg.log_dir,'model_dir')
     cfg.stage_0.update(tfrecord_dir = os.path.join(cfg.log_dir,'tfrecord_dir'))
