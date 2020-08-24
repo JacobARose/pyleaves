@@ -175,7 +175,9 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
     print('logging dataset')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
     # import pdb;pdb.set_trace()
-    print('cfg', type(cfg), cfg)
+    print('cfg')
+    print(type(cfg))
+    print(cfg)
     model_config = get_model_config(cfg=cfg)
     print(type(model_config), model_config)
     # with tf.Graph().as_default():
