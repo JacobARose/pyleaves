@@ -128,7 +128,7 @@ def get_model_config(cfg: DictConfig):
     return model_config
 
 from paleoai_data.utils.kfold_cross_validation import DataFold
-from pyleaves.utils.multiprocessing_utils import RunAsCUDASubprocess
+# from pyleaves.utils.multiprocessing_utils import RunAsCUDASubprocess
 
 # @RunAsCUDASubprocess()
 def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose: bool=True) -> None:
@@ -170,12 +170,12 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
                                                                                 tfrecord_dir=cfg.tfrecord_dir,
                                                                                 samples_per_shard=cfg.misc.samples_per_shard)
 
+    import pdb;pdb.set_trace()
     if verbose: print(f'Starting fold {fold.fold_id}')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
 
     model_config = get_model_config(cfg=cfg)
 
-    import pdb;pdb.set_trace()
     # with tf.Graph().as_default():
     with tf.device(f'GPU:0'):#{gpu_id}'): #.strip('/physical_device:')):
         model = build_model(model_config)
