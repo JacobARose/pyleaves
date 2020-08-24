@@ -201,7 +201,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
     print('Initiating model.fit')
     history = model.fit(train_data,
                         epochs=cfg.training['num_epochs'],
-                        callbacks=callbacks,
+                        callbacks=None,#callbacks,
                         validation_data=test_data,
                         validation_freq=1,
                         shuffle=True,
