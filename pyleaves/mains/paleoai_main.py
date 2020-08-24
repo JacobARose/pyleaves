@@ -105,6 +105,7 @@ def log_config(cfg: DictConfig, neptune, verbose: bool=False):
 
 
 def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseDataset, neptune):
+    print('inside log dataset')
     cfg['dataset']['num_classes'] = train_dataset.num_classes
     cfg['dataset']['splits_size'] = {'train':{},
                           'test':{}}
@@ -113,7 +114,7 @@ def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseD
 
     cfg['steps_per_epoch'] = cfg['dataset']['splits_size']['train']//cfg['training']['batch_size']
     cfg['validation_steps'] = cfg['dataset']['splits_size']['test']//cfg['training']['batch_size']
-
+    print('updated cfg')
     neptune.set_property('num_classes',cfg['num_classes'])
     neptune.set_property('steps_per_epoch',cfg['steps_per_epoch'])
     neptune.set_property('validation_steps',cfg['validation_steps'])
