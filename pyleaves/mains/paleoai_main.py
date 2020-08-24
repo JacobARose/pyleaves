@@ -114,9 +114,9 @@ def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseD
     cfg['steps_per_epoch'] = cfg['dataset']['splits_size']['train']//cfg['training']['batch_size']
     cfg['validation_steps'] = cfg['dataset']['splits_size']['test']//cfg['training']['batch_size']
 
-    # neptune.set_property('num_classes',cfg['num_classes'])
-    # neptune.set_property('steps_per_epoch',cfg['steps_per_epoch'])
-    # neptune.set_property('validation_steps',cfg['validation_steps'])
+    neptune.set_property('num_classes',cfg['num_classes'])
+    neptune.set_property('steps_per_epoch',cfg['steps_per_epoch'])
+    neptune.set_property('validation_steps',cfg['validation_steps'])
 
 
 def get_model_config(cfg: DictConfig):
@@ -174,10 +174,9 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
     if verbose: print(f'Starting fold {fold.fold_id}')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
     # import pdb;pdb.set_trace()
-    print('Getting model config')
+    
     model_config = get_model_config(cfg=cfg)
 
-    print('Building model')
     # with tf.Graph().as_default():
     with tf.device(f'GPU:0'):#{gpu_id}'): #.strip('/physical_device:')):
         model = build_model(model_config)
