@@ -54,7 +54,7 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
         print(worker_id)
         print(fold)
         histories.append(pool(train_single_fold)(fold, copy.deepcopy(cfg_0), worker_id))
-        time.wait(10)
+        time.sleep(10)
     return histories
 
 
