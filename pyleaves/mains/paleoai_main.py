@@ -115,9 +115,10 @@ def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseD
     cfg['steps_per_epoch'] = cfg['dataset']['splits_size']['train']//cfg['training']['batch_size']
     cfg['validation_steps'] = cfg['dataset']['splits_size']['test']//cfg['training']['batch_size']
     print('updated cfg')
+    pprint(OmegaConf.to_json(cfg, indent='\t'))
     neptune.set_property('num_classes',cfg['num_classes'])
-    neptune.set_property('steps_per_epoch',cfg['steps_per_epoch'])
-    neptune.set_property('validation_steps',cfg['validation_steps'])
+    # neptune.set_property('steps_per_epoch',cfg['steps_per_epoch'])
+    # neptune.set_property('validation_steps',cfg['validation_steps'])
 
 
 def get_model_config(cfg: DictConfig):
