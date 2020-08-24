@@ -50,7 +50,7 @@ class RunAsCUDASubprocess:
             with Pool(1) as p:
                 result =  p.apply_async(RunAsCUDASubprocess._subprocess_code, (self._num_gpus, self._memory_fraction, cloudpickle.dumps(f), args))
                 print('Closed process')
-                return result
+                return result.get()
 
         return wrapped_f
 
