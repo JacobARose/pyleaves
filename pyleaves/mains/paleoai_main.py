@@ -186,7 +186,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     model = build_model(model_config)
     
     # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=Path(cfg.log_dir,f'tb_results-fold_{fold.fold_id}'),
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(Path(cfg.log_dir,f'tb_results-fold_{fold.fold_id}')),
                                                           profile_batch=5)
 
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
@@ -195,7 +195,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     print('building callbacks')
     callbacks = [backup_callback, #neptune_logger_callback,                 NeptuneMonitor(),
                  tensorboard_callback,
-                 CSVLogger(Path(cfg.log_dir,f'results-fold_{fold.fold_id}.csv'), separator=',', append=True),#False),
+                 CSVLogger(str(Path(cfg.log_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),#False),
                  EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
                 #  ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
                 #  ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
