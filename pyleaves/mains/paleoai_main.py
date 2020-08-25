@@ -242,7 +242,7 @@ def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full
     x_true, y_true = [], []
     for x, y in pred_data:
         x_true.append(x.numpy())
-        y.append(y.numpy())
+        y_true.append(y.numpy())
 
     x_true = np.array(x_true)
     y_pred = model.predict(x_true)
