@@ -523,7 +523,6 @@ def build_model(cfg):
                 'METRICS':['accuracy']
                 }
     '''
-    print('picking model')
 
     if cfg['model_name']=='vgg16':
         if cfg['num_channels']==1:
@@ -536,7 +535,6 @@ def build_model(cfg):
         model_builder = resnet.ResNet(cfg)
         build_base = model_builder.build_base
 
-    print('picked model')
     base = build_base()
     model = build_head(base, num_classes=cfg['num_classes'])
 

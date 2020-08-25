@@ -142,6 +142,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
     
     import tensorflow as tf
     from tensorflow.keras import backend as K
+    from neptunecontrib.monitoring.keras import NeptuneMonitor
 
     from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model, log_data
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, LambdaCallback, LearningRateScheduler
@@ -157,7 +158,6 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
         print(f'RUNNING: fold {fold.fold_id} in process {worker_id or "None"}')
         print(cfg.tfrecord_dir)
         print('='*20)
-    print('creating dataset')
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
                                                                                 batch_size=cfg.training.batch_size,
                                                                                 buffer_size=cfg.training.buffer_size,
@@ -174,30 +174,27 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
 
     
     if verbose: print(f'Starting fold {fold.fold_id}')
-    print('logging dataset')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
     # import pdb;pdb.set_trace()
-    print('cfg')
-    print(type(cfg))
     pprint(OmegaConf.to_container(cfg))
     model_config = get_model_config(cfg=cfg)
-    print(type(model_config), model_config)
     # with tf.Graph().as_default():
     # with tf.device(f'/device:GPU:0'):#{gpu_id}'): #.strip('/physical_device:')):
     model = build_model(model_config)
-    print('Finished compiling model')
+    
     # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
-    neptune_logger_callback = LambdaCallback(on_batch_end=lambda batch, logs: log_data(logs=logs, neptune=neptune),
-                                             on_epoch_end=lambda epoch, logs: log_data(logs=logs, neptune=neptune))
+    # neptune_logger_callback = LambdaCallback(on_batch_end=lambda batch, logs: log_data(logs=logs, neptune=neptune),
+    #                                          on_epoch_end=lambda epoch, logs: log_data(logs=logs, neptune=neptune))
     callbacks = [backup_callback, #neptune_logger_callback,
+                 NeptuneMonitor,
                  CSVLogger(Path(cfg.log_dir,f'results-fold_{fold.fold_id}.csv'), separator=',', append=False),
                  EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
                 #  ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
                 #  ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
-    print('Initiating model.fit')
+    print(f'Initiating model.fit for fold-{fold.fold_id}')
     history = model.fit(train_data,
                         epochs=cfg.training['num_epochs'],
                         callbacks=callbacks,
@@ -205,7 +202,8 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
                         validation_freq=1,
                         shuffle=True,
                         steps_per_epoch=cfg['steps_per_epoch'],
-                        validation_steps=cfg['validation_steps'])
+                        validation_steps=cfg['validation_steps'],
+                        verbose=0)
     return history.history
 
 
