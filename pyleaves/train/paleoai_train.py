@@ -539,15 +539,14 @@ def build_model(cfg):
     model = build_head(base, num_classes=cfg['num_classes'])
 
 
-    initial_learning_rate = cfg['lr']
-    lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-                            initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True
-    )
+    # initial_learning_rate = cfg['lr']
+    lr_schedule = cfg['lr'] #tf.keras.optimizers.schedules.ExponentialDecay(
+                            # initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True
+    # )
 
 
         # optimizer = keras.optimizers.RMSprop(learning_rate=lr_schedule)
     if cfg['optimizer']=='Adam':
-
         optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
 
     if cfg['loss']=='categorical_crossentropy':
