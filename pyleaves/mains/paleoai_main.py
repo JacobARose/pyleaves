@@ -91,10 +91,10 @@ def restore_or_initialize_experiment(cfg, restore_last=False, prefix='log_dir__'
 
 
 
-def log_config(cfg: DictConfig, neptune, verbose: bool=False):
+def log_config(cfg: DictConfig, neptune=None, verbose: bool=False):
     if verbose: print(cfg.pretty())
 
-    cfg_0 = cfg.stage_0
+    # cfg_0 = cfg.stage_0
     ensure_dir_exists(cfg['log_dir'])
     ensure_dir_exists(cfg['model_dir'])
     # neptune.append_tag(cfg_0.dataset.dataset_name)
@@ -142,12 +142,12 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     
     import tensorflow as tf
     from tensorflow.keras import backend as K
-    from neptunecontrib.monitoring.keras import NeptuneMonitor
+    # from neptunecontrib.monitoring.keras import NeptuneMonitor
 
     from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model, log_data
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, LambdaCallback, LearningRateScheduler
     from pyleaves.utils.callback_utils import BackupAndRestore
-    from pyleaves.utils.neptune_utils import ImageLoggerCallback#, neptune
+    # from pyleaves.utils.neptune_utils import ImageLoggerCallback#, neptune
 
     
 
@@ -186,12 +186,15 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     model = build_model(model_config)
     
     # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-    
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=Path(cfg.log_dir,f'tb_results-fold_{fold.fold_id}'),
+                                                          profile_batch=5)
+
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
 
     print('building callbacks')
     callbacks = [backup_callback, #neptune_logger_callback,                 NeptuneMonitor(),
+                 tensorboard_callback,
                  CSVLogger(Path(cfg.log_dir,f'results-fold_{fold.fold_id}.csv'), separator=',', append=True),#False),
                  EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
                 #  ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
@@ -215,12 +218,12 @@ def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, 
     # gpu_id = setGPU()
     # set_tf_config(gpu_id)
     
-    from pyleaves.utils.neptune_utils import neptune
-    neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
-    log_config(cfg=cfg, verbose=verbose, neptune=neptune)
-    params=OmegaConf.to_container(cfg)
-    with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(fold.fold_id), params=params):
-        train_single_fold(fold, copy.deepcopy(cfg.stage_0), worker_id, neptune=neptune)
+    # from pyleaves.utils.neptune_utils import neptune
+    # neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
+    log_config(cfg=cfg, verbose=verbose)#, neptune=neptune)
+    # params=OmegaConf.to_container(cfg)
+    # with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(fold.fold_id), params=params):
+    train_single_fold(fold, copy.deepcopy(cfg.stage_0), worker_id)#, neptune=neptune)
 # from keras.wrappers.scikit_learn import KerasClassifier
 # from tune_sklearn import TuneGridSearchCV
 # from joblib import Parallel, delayed
