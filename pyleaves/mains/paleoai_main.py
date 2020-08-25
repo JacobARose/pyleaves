@@ -239,16 +239,16 @@ def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full
                                                                  color_mode=cfg.dataset.color_mode,
                                                                  seed=cfg.misc.seed)
 
-    x, y_true = [], []
+    x_true, y_true = [], []
     for x, y in pred_data:
-        x.append(x)
-        y.append(y)
+        x_true.append(x.numpy())
+        y.append(y.numpy())
 
-    x = np.array(x)
-    y_pred = model.predict(x)
+    x_true = np.array(x_true)
+    y_pred = model.predict(x_true)
     y_pred = np.argmax(y_pred, axis=1)
     if save:
-        np.savez_compressed(Path(results_dir,f'predictions_fold-{fold.fold_id}.npz'),{'x':x, 'y_true':y_true, 'y_pred':y_pred})
+        np.savez_compressed(Path(results_dir,f'predictions_fold-{fold.fold_id}.npz'),{'x':x_true, 'y_true':y_true, 'y_pred':y_pred})
 
     return y_true, y_pred
     
