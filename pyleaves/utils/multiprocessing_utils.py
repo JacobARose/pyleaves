@@ -55,9 +55,18 @@ class RunAsCUDASubprocess:
 
         return wrapped_f
 
-    # def map(self, f, *args, **kwargs):
-    #     with Pool(n_jobs,initargs=(RLock(),), initializer=tqdm.set_lock)
-    # TODO: finish this function
+    def map(self, f, n_jobs=1, *args, **kwargs):
+        with Pool(n_jobs,initargs=(RLock(),), initializer=tqdm.set_lock) as pool:
+            if type(args[0])==tuple:
+                result = pool.starmap(RunAsCUDASubprocess._subprocess_code, (
+                                    (
+                                        (self._num_gpus, self._memory_fraction, cloudpickle.dumps(f), arguments)
+                                            for arguments in args
+                                    )
+                                )
+                            )
+        return result
+            
 
 
 
