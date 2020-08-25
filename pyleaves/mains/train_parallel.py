@@ -47,7 +47,7 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
 
     args=[]
     for worker_id, fold in enumerate(itertools.islice(kfold_iter, n_jobs)):
-        args.append((fold, copy.deepcopy(cfg_0), worker_id))
+        args.append((fold, copy.deepcopy(cfg), worker_id))
     args = tuple(args)
 
     
