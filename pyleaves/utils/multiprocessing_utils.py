@@ -72,9 +72,9 @@ class RunAsCUDASubprocess:
         return wrapped_f
 
     def map(self, f, n_jobs=1, *args, **kwargs):
-        try:
-            import py3nvml
-            num_grabbed = py3nvml.grab_gpus(num_gpus, gpu_fraction=memory_fraction)
+        # try:
+        #     import py3nvml
+        #     num_grabbed = py3nvml.grab_gpus(num_gpus, gpu_fraction=memory_fraction)
         with Pool(n_jobs,initargs=(RLock(),), initializer=tqdm.set_lock) as pool:
             if type(args[0])==tuple:
                 result = pool.starmap(RunAsCUDASubprocess._subprocess_code, (
