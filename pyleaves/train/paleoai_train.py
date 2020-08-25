@@ -69,63 +69,63 @@ from tensorflow.keras.callbacks import EarlyStopping, CSVLogger, LambdaCallback
 
 
 
-def initialize_experiment(cfg, experiment_start_time=None):
+# def initialize_experiment(cfg, experiment_start_time=None):
 
-    # if 'stage_1' in cfg.pipeline:
-    #     for stage in cfg.pipeline:
-    #         cfg.experiment.experiment_name = '_'.join([config.dataset.dataset_name, config.model.model_name for config in ])
-    # else:
+#     # if 'stage_1' in cfg.pipeline:
+#     #     for stage in cfg.pipeline:
+#     #         cfg.experiment.experiment_name = '_'.join([config.dataset.dataset_name, config.model.model_name for config in ])
+#     # else:
 
-    cfg_0 = cfg.stage_0
-    cfg.experiment.experiment_name = '_'.join([cfg_0.dataset.dataset_name, cfg_0.model.model_name])
-    cfg.experiment.experiment_dir = os.path.join(cfg.experiment.neptune_experiment_dir, cfg.experiment.experiment_name)
+#     cfg_0 = cfg.stage_0
+#     cfg.experiment.experiment_name = '_'.join([cfg_0.dataset.dataset_name, cfg_0.model.model_name])
+#     cfg.experiment.experiment_dir = os.path.join(cfg.experiment.neptune_experiment_dir, cfg.experiment.experiment_name)
 
-    cfg.experiment.experiment_start_time = experiment_start_time or datetime.now().strftime(date_format)
-    cfg.update(log_dir = os.path.join(cfg.experiment.experiment_dir, 'log_dir__'+cfg.experiment.experiment_start_time))
-    cfg.update(model_dir = os.path.join(cfg.log_dir,'model_dir'))
-    cfg['stage_0']['model_dir'] = cfg.model_dir #os.path.join(cfg.log_dir,'model_dir')
-    cfg.stage_0.update(tfrecord_dir = os.path.join(cfg.log_dir,'tfrecord_dir'))
-    cfg.update(tfrecord_dir = cfg.stage_0.tfrecord_dir)
-    cfg.saved_model_path = str(Path(cfg.model_dir) / Path('saved_model'))
-    cfg.checkpoints_path = str(Path(cfg.model_dir) / Path('checkpoints'))
-    cfg['stage_0']['checkpoints_path'] = cfg.checkpoints_path
-    for k,v in cfg.items():
-        if '_dir' in k:
-            ensure_dir_exists(v)
+#     cfg.experiment.experiment_start_time = experiment_start_time or datetime.now().strftime(date_format)
+#     cfg.update(log_dir = os.path.join(cfg.experiment.experiment_dir, 'log_dir__'+cfg.experiment.experiment_start_time))
+#     cfg.update(model_dir = os.path.join(cfg.log_dir,'model_dir'))
+#     cfg['stage_0']['model_dir'] = cfg.model_dir #os.path.join(cfg.log_dir,'model_dir')
+#     cfg.stage_0.update(tfrecord_dir = os.path.join(cfg.log_dir,'tfrecord_dir'))
+#     cfg.update(tfrecord_dir = cfg.stage_0.tfrecord_dir)
+#     cfg.saved_model_path = str(Path(cfg.model_dir) / Path('saved_model'))
+#     cfg.checkpoints_path = str(Path(cfg.model_dir) / Path('checkpoints'))
+#     cfg['stage_0']['checkpoints_path'] = cfg.checkpoints_path
+#     for k,v in cfg.items():
+#         if '_dir' in k:
+#             ensure_dir_exists(v)
 
-def restore_or_initialize_experiment(cfg, restore_last=False, prefix='log_dir__', verbose=0):
-#     date_format = '%Y-%m-%d_%H-%M-%S'
-    cfg = copy.deepcopy(cfg)
-    cfg.experiment.experiment_name = '_'.join([cfg.stage_0.dataset.dataset_name, cfg.stage_0.model.model_name])
-    cfg.experiment.experiment_dir = os.path.join(cfg.experiment.neptune_experiment_dir, cfg.experiment.experiment_name)
-    ensure_dir_exists(cfg.experiment.experiment_dir)
+# def restore_or_initialize_experiment(cfg, restore_last=False, prefix='log_dir__', verbose=0):
+# #     date_format = '%Y-%m-%d_%H-%M-%S'
+#     cfg = copy.deepcopy(cfg)
+#     cfg.experiment.experiment_name = '_'.join([cfg.stage_0.dataset.dataset_name, cfg.stage_0.model.model_name])
+#     cfg.experiment.experiment_dir = os.path.join(cfg.experiment.neptune_experiment_dir, cfg.experiment.experiment_name)
+#     ensure_dir_exists(cfg.experiment.experiment_dir)
 
-    if restore_last:
-        experiment_files = [(exp_name.split(prefix)[-1], exp_name) for exp_name in os.listdir(cfg.experiment.experiment_dir)]
-        keep_files = []
-        for i in range(len(experiment_files)):
-            exp = experiment_files[i]
-            try:
-                keep_files.append((datetime.strptime(exp[0], date_format), exp[1]))
-                if verbose >= 1: print(f'Found previous experiment {exp[1]}')
-            except ValueError:
-                if verbose >=2: print(f'skipping invalid file {exp[1]}')
-                pass
+#     if restore_last:
+#         experiment_files = [(exp_name.split(prefix)[-1], exp_name) for exp_name in os.listdir(cfg.experiment.experiment_dir)]
+#         keep_files = []
+#         for i in range(len(experiment_files)):
+#             exp = experiment_files[i]
+#             try:
+#                 keep_files.append((datetime.strptime(exp[0], date_format), exp[1]))
+#                 if verbose >= 1: print(f'Found previous experiment {exp[1]}')
+#             except ValueError:
+#                 if verbose >=2: print(f'skipping invalid file {exp[1]}')
+#                 pass
 
-        experiment_files = sorted(keep_files, key= lambda exp: exp[0])
-        if type(experiment_files)==list and len(experiment_files)>0:
-            experiment_file = experiment_files[-1]
-            cfg.experiment.experiment_start_time = experiment_file[0].strftime(date_format)
-            initialize_experiment(cfg, experiment_start_time=cfg.experiment.experiment_start_time)
-            if verbose >= 1: print(f'Continuing experiment with start time =', cfg.experiment.experiment_start_time)
-            return cfg
-        else:
-            print('No previous experiment in',cfg.experiment.experiment_dir, 'with prefix',prefix)
+#         experiment_files = sorted(keep_files, key= lambda exp: exp[0])
+#         if type(experiment_files)==list and len(experiment_files)>0:
+#             experiment_file = experiment_files[-1]
+#             cfg.experiment.experiment_start_time = experiment_file[0].strftime(date_format)
+#             initialize_experiment(cfg, experiment_start_time=cfg.experiment.experiment_start_time)
+#             if verbose >= 1: print(f'Continuing experiment with start time =', cfg.experiment.experiment_start_time)
+#             return cfg
+#         else:
+#             print('No previous experiment in',cfg.experiment.experiment_dir, 'with prefix',prefix)
 
-    cfg.experiment.experiment_start_time = datetime.now().strftime(date_format)
-    initialize_experiment(cfg, experiment_start_time=cfg.experiment.experiment_start_time)
-    if verbose >= 1: print('Initializing new experiment at time:', cfg.experiment.experiment_start_time )
-    return cfg
+#     cfg.experiment.experiment_start_time = datetime.now().strftime(date_format)
+#     initialize_experiment(cfg, experiment_start_time=cfg.experiment.experiment_start_time)
+#     if verbose >= 1: print('Initializing new experiment at time:', cfg.experiment.experiment_start_time )
+#     return cfg
 
 
 

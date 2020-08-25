@@ -44,6 +44,7 @@ def initialize_experiment(cfg, experiment_start_time=None):
     cfg.experiment.experiment_start_time = experiment_start_time or datetime.now().strftime(date_format)
     cfg.update(log_dir = os.path.join(cfg.experiment.experiment_dir, 'log_dir__'+cfg.experiment.experiment_start_time))
     cfg['stage_0']['log_dir'] = cfg.log_dir
+    cfg['stage_0']['tensorboard_log_dir'] = str(Path(cfg.log_dir,'tensorboard_logs'))
     cfg.update(model_dir = os.path.join(cfg.log_dir,'model_dir'))
     cfg['stage_0']['model_dir'] = cfg.model_dir #os.path.join(cfg.log_dir,'model_dir')
     cfg.stage_0.update(tfrecord_dir = os.path.join(cfg.log_dir,'tfrecord_dir'))
@@ -186,8 +187,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     model = build_model(model_config)
     
     # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(Path(cfg.log_dir,f'tb_results-fold_{fold.fold_id}')),
-                                                          profile_batch=5)
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(Path(cfg.tensorboard_log_dir,f'tb_results-fold_{fold.fold_id}')))
 
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
