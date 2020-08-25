@@ -23,7 +23,7 @@ from pyleaves.utils.multiprocessing_utils import perform_concurrent_tasks, RunAs
 from pyleaves.utils import multiprocessing_utils
 from pyleaves.mains import paleoai_main
 CONFIG_DIR = str(Path(RESOURCES_DIR,'..','..','configs','hydra'))
-import neptune
+from pyleaves.utils.neptune_utils import neptune
 
 
 def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int=1, verbose: bool=False) -> None:

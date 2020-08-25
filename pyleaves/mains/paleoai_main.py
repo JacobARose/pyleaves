@@ -189,8 +189,6 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
     
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
-    # neptune_logger_callback = LambdaCallback(on_batch_end=lambda batch, logs: log_data(logs=logs, neptune=neptune),
-    #                                          on_epoch_end=lambda epoch, logs: log_data(logs=logs, neptune=neptune))
 
     print('building callbacks')
     callbacks = [backup_callback, #neptune_logger_callback,
@@ -215,8 +213,8 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
 def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose: bool=True) -> None:
     print(f'WORKER {worker_id} INITIATED')
     from pyleaves.utils import set_tf_config, setGPU
-    gpu_id = setGPU()
-    set_tf_config(gpu_id)
+    # gpu_id = setGPU()
+    # set_tf_config(gpu_id)
     
     from pyleaves.utils.neptune_utils import ImageLoggerCallback, neptune
 
