@@ -29,7 +29,7 @@ import random
 import os
 from pprint import pprint
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 import pyleaves
 from pyleaves.datasets.base_dataset import BaseDataset
 from pyleaves.models import resnet, vgg16
@@ -446,7 +446,6 @@ def create_dataset(data_fold: DataFold,
                    use_tfrecords=False,
                    tfrecord_dir=None,
                    samples_per_shard=800):
-    # import pdb; pdb.set_trace()
 
     dataset, train_dataset, test_dataset, encoder = load_data(data_fold=data_fold,
                                                               exclude_classes=exclude_classes,
@@ -484,9 +483,110 @@ def create_dataset(data_fold: DataFold,
 
     return train_data, test_data, train_dataset, test_dataset, encoder
 
+##########################################################################
+##########################################################################
+
+def initialize_prediction_data_from_paleoai(fold: DataFold,
+                                            predict_on_full_dataset: bool=False,
+                                            exclude_classes=[],
+                                            include_classes=[]):
+
+
+    encoder = base_dataset.LabelEncoder(fold.metadata.class_names)
+    classes = list((set(encoder.classes)-set(exclude_classes)).union(set(include_classes)))
+
+    if predict_on_full_dataset:
+        pred_dataset = fold.full_dataset
+    else:
+        pred_dataset = fold.test_dataset
+
+    pred_dataset, _ = pred_dataset.enforce_class_whitelist(class_names=classes)
+    
+    pred_x = [str(p) for p in list(pred_dataset.data['path'].values)]
+    pred_y = np.array(encoder.encode(pred_dataset.data['family']))
+
+    pred_data = (pred_x, pred_y)
+
+    return pred_data, pred_dataset, encoder
+
+
+
+def load_prediction_data_from_tensor_slices(pred_data: Tuple[np.ndarray]):
+    pred_x = tf.data.Dataset.from_tensor_slices(pred_data[0])
+    pred_y = tf.data.Dataset.from_tensor_slices(pred_data[1])
+    pred_data = tf.data.Dataset.zip((pred_x, pred_y))
+    pred_data = pred_data.cache()
+    pred_data = pred_data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
+
+    return pred_data
+
+
+def load_prediction_data(data_fold: DataFold,
+                         predict_on_full_dataset: bool=False,
+                         exclude_classes=[],
+                         include_classes=[]):
+
+    pred_data, full_dataset, encoder = initialize_prediction_data_from_paleoai(fold=data_fold,
+                                                                               predict_on_full_dataset=predict_on_full_dataset,
+                                                                               exclude_classes=exclude_classes,
+                                                                               include_classes=include_classes)
+
+    pred_data = load_prediction_data_from_tensor_slices(pred_data)
+
+    return pred_data, full_dataset,  encoder
+
+
+def create_prediction_dataset(data_fold: DataFold,
+                              predict_on_full_dataset=False,
+                              batch_size=32,
+                              exclude_classes=[],
+                              include_classes=[],
+                              target_size=(512,512),
+                              num_channels=1,
+                              color_mode='grayscale',
+                              seed=None):
+    """[summary]
+
+    Args:
+        data_fold (DataFold): [description]
+        predict_on_full_dataset (bool, optional): If true, produces a single tf.data.Dataset consisting of the full train+test sets from data_fold. If False, produces the same dataset, but only consisting of samples from the test set. Defaults to False.
+        batch_size (int, optional): [description]. Defaults to 32.
+        exclude_classes (list, optional): [description]. Defaults to [].
+        include_classes (list, optional): [description]. Defaults to [].
+        target_size (tuple, optional): [description]. Defaults to (512,512).
+        num_channels (int, optional): [description]. Defaults to 1.
+        color_mode (str, optional): [description]. Defaults to 'grayscale'.
+        seed ([type], optional): [description]. Defaults to None.
+
+    Returns:
+        [type]: [description]
+    """    
+
+    pred_data, full_dataset,  encoder = load_prediction_data(data_fold=data_fold,
+                                                             predict_on_full_dataset=predict_on_full_dataset,
+                                                             exclude_classes=exclude_classes,
+                                                             include_classes=include_classes)
+    num_classes = full_dataset.num_classes
+
+
+    pred_data = prep_dataset(pred_data,
+                             batch_size=batch_size,
+                             target_size=target_size,
+                             num_channels=num_channels,
+                             color_mode=color_mode,
+                             num_classes=num_classes,
+                             training=False,
+                             seed=seed)
+
+    return pred_data, full_dataset, encoder
+
 
 ##########################################################################
 ##########################################################################
+
+
+
+
 
 
 def build_base_vgg16_RGB(cfg):

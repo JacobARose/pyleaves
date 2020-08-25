@@ -13,11 +13,13 @@ python '/home/jacob/projects/pyleaves/pyleaves/mains/paleoai_main.py'
 '''
 import copy
 from datetime import datetime
+import numpy as np
 from omegaconf import DictConfig, OmegaConf
 import os
 from pathlib import Path
 from pprint import pprint
 from pyleaves.utils import ensure_dir_exists
+from typing import Tuple
 # from pyleaves.datasets.base_dataset import BaseDataset
 from paleoai_data.dataset_drivers.base_dataset import BaseDataset
 # import hydra
@@ -43,6 +45,7 @@ def initialize_experiment(cfg, experiment_start_time=None):
 
     cfg.experiment.experiment_start_time = experiment_start_time or datetime.now().strftime(date_format)
     cfg.update(log_dir = os.path.join(cfg.experiment.experiment_dir, 'log_dir__'+cfg.experiment.experiment_start_time))
+    cfg.update(results_dir = os.path.join(cfg.log_dir,'results'))
     cfg['stage_0']['log_dir'] = cfg.log_dir
     cfg['stage_0']['tensorboard_log_dir'] = str(Path(cfg.log_dir,'tensorboard_logs'))
     cfg.update(model_dir = os.path.join(cfg.log_dir,'model_dir'))
@@ -163,18 +166,18 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
         print(cfg.tfrecord_dir)
         print('='*20)
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
-                                                                                batch_size=cfg.training.batch_size,
-                                                                                buffer_size=cfg.training.buffer_size,
-                                                                                exclude_classes=cfg.dataset.exclude_classes,
-                                                                                include_classes=cfg.dataset.include_classes,
-                                                                                target_size=cfg.dataset.target_size,
-                                                                                num_channels=cfg.dataset.num_channels,
-                                                                                color_mode=cfg.dataset.color_mode,
-                                                                                augmentations=cfg.training.augmentations,
-                                                                                seed=cfg.misc.seed,
-                                                                                use_tfrecords=cfg.misc.use_tfrecords,
-                                                                                tfrecord_dir=cfg.tfrecord_dir,
-                                                                                samples_per_shard=cfg.misc.samples_per_shard)
+                                                                                 batch_size=cfg.training.batch_size,
+                                                                                 buffer_size=cfg.training.buffer_size,
+                                                                                 exclude_classes=cfg.dataset.exclude_classes,
+                                                                                 include_classes=cfg.dataset.include_classes,
+                                                                                 target_size=cfg.dataset.target_size,
+                                                                                 num_channels=cfg.dataset.num_channels,
+                                                                                 color_mode=cfg.dataset.color_mode,
+                                                                                 augmentations=cfg.training.augmentations,
+                                                                                 seed=cfg.misc.seed,
+                                                                                 use_tfrecords=cfg.misc.use_tfrecords,
+                                                                                 tfrecord_dir=cfg.tfrecord_dir,
+                                                                                 samples_per_shard=cfg.misc.samples_per_shard)
 
     
     if verbose: print(f'Starting fold {fold.fold_id}')
@@ -188,12 +191,11 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     
     # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(Path(cfg.tensorboard_log_dir,f'tb_results-fold_{fold.fold_id}')))
-
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
 
     print('building callbacks')
-    callbacks = [backup_callback, #neptune_logger_callback,                 NeptuneMonitor(),
+    callbacks = [backup_callback, #neptune_logger_callback,NeptuneMonitor(),
                  tensorboard_callback,
                  CSVLogger(str(Path(cfg.log_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),#False),
                  EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
@@ -209,8 +211,48 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                         steps_per_epoch=cfg['steps_per_epoch'],
                         validation_steps=cfg['validation_steps'],
                         verbose=1)
+
+    y_true, y_pred = predict_single_fold(model=model,
+                                         fold=fold,
+                                         cfg=cfg,
+                                         predict_on_full_dataset=False,
+                                         worker_id=worker_id,
+                                         save=True,
+                                         verbose=verbose)
+
+    
+
+    
     return history.history
 
+def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full_dataset=False, worker_id=None, save=True, verbose: bool=True) -> Tuple[np.ndarray, np.ndarray]:
+    from pyleaves.train.paleoai_train import create_prediction_dataset
+    results_dir = cfg.results_dir
+    
+    pred_data, pred_dataset, encoder = create_prediction_dataset(data_fold = fold,
+                                                                 predict_on_full_dataset=predict_on_full_dataset,
+                                                                 batch_size=1,
+                                                                 exclude_classes=cfg.dataset.exclude_classes,
+                                                                 include_classes=cfg.dataset.include_classes,
+                                                                 target_size=cfg.dataset.target_size,
+                                                                 num_channels=cfg.dataset.num_channels,
+                                                                 color_mode=cfg.dataset.color_mode,
+                                                                 seed=cfg.misc.seed)
+
+    x, y_true = [], []
+    for x, y in pred_data:
+        x.append(x)
+        y.append(y)
+
+    x = np.array(x)
+    y_pred = model.predict(x)
+    y_pred = np.argmax(y_pred, axis=1)
+    if save:
+        np.savez_compressed(Path(results_dir,f'predictions_fold-{fold.fold_id}.npz'),{'x':x, 'y_true':y_true, 'y_pred':y_pred})
+
+    return y_true, y_pred
+    
+    
 
 def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose: bool=True) -> None:
     print(f'WORKER {worker_id} INITIATED')
