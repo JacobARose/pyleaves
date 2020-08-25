@@ -39,26 +39,33 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
     log_config(cfg=cfg, verbose=verbose, neptune=neptune)
     kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
     kfold_iter = kfold_loader.iter_folds(repeats=1)
-    # histories = CUDA_ERROR_NOT_INITIALIZED: initialization error Parallel(n_jobs=n_jobs)(delayed(train_single_fold)(fold=fold, cfg=copy.deepcopy(cfg_0), gpu_device=gpus[i]) for i, fold in enumerate(kfold_iter) if i < n_jobs)
-    histories = []
+    # histories = []
     print(f'Beginning training of models with fold_ids: {fold_ids}')
+    pool = RunAsCUDASubprocess(num_gpus=cfg.num_gpus, memory_fraction=0.9)
+
+    histories = []
+    args=[]
+    for worker_id, fold in enumerate(itertools.islice(kfold_iter, n_jobs)):
+        args.append((fold, copy.deepcopy(cfg_0), worker_id))
+    args = tuple(args)
+
+    
+    pool = multiprocessing_utils.RunAsCUDASubprocess(num_gpus=cfg.num_gpus, memory_fraction=0.9)
+    result = pool.map(paleoai_main.neptune_train_single_fold, n_jobs, *args)
+    return result
+
+    #     print(worker_id)
+    #     print(fold)
+    #     histories.append(pool(train_single_fold)(fold, copy.deepcopy(cfg_0), worker_id))
+    #     time.sleep(10)
+    # return histories
+
+
+
     # histories = perform_concurrent_tasks(train_single_fold,
     #                         tasks_to_do=((fold, copy.deepcopy(cfg_0), neptune, worker_id) for worker_id, fold in enumerate(kfold_iter)),
     #                         max_processes=n_jobs)
     # return histories
-    pool = RunAsCUDASubprocess(num_gpus=cfg.num_gpus, memory_fraction=0.9)
-
-    histories = []
-    for worker_id, fold in enumerate(itertools.islice(kfold_iter, n_jobs)):
-    # for task in itertools.islice(tasks_to_do, max_processes)
-        print(worker_id)
-        print(fold)
-        histories.append(pool(train_single_fold)(fold, copy.deepcopy(cfg_0), worker_id))
-        time.sleep(10)
-    return histories
-
-
-
 
     # pool = Pool(processes=n_jobs)
     # for i, fold in enumerate(kfold_iter):

@@ -134,11 +134,11 @@ from paleoai_data.utils.kfold_cross_validation import DataFold
 
 # @RunAsCUDASubprocess()
 def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose: bool=True) -> None:
-    print(f'WORKER {worker_id} INITIATED')
-    from pyleaves.utils import set_tf_config, setGPU
-    # gpu_device = setGPU(only_return=True)
-    gpu_id = setGPU()
-    set_tf_config(gpu_id)
+    # print(f'WORKER {worker_id} INITIATED')
+    # from pyleaves.utils import set_tf_config, setGPU
+    # # gpu_device = setGPU(only_return=True)
+    # gpu_id = setGPU()
+    # set_tf_config(gpu_id)
     
     import tensorflow as tf
     from tensorflow.keras import backend as K
@@ -148,6 +148,9 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, LambdaCallback, LearningRateScheduler
     from pyleaves.utils.callback_utils import BackupAndRestore
     from pyleaves.utils.neptune_utils import ImageLoggerCallback, neptune
+
+    
+
     preprocess_input(tf.zeros([4, 224, 224, 3]))
     K.clear_session()
     
@@ -209,6 +212,18 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
     return history.history
 
 
+def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose: bool=True) -> None:
+    print(f'WORKER {worker_id} INITIATED')
+    from pyleaves.utils import set_tf_config, setGPU
+    gpu_id = setGPU()
+    set_tf_config(gpu_id)
+    
+    from pyleaves.utils.neptune_utils import ImageLoggerCallback, neptune
+
+    neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
+    params=OmegaConf.to_container(cfg)
+    with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(cfg.fold_id), params=params):
+        train_single_fold(fold, copy.deepcopy(cfg.stage_0), worker_id)
 # from keras.wrappers.scikit_learn import KerasClassifier
 # from tune_sklearn import TuneGridSearchCV
 # from joblib import Parallel, delayed
