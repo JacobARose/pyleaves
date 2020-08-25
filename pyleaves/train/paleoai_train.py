@@ -544,7 +544,6 @@ def build_model(cfg):
                             # initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True
     # )
 
-
         # optimizer = keras.optimizers.RMSprop(learning_rate=lr_schedule)
     if cfg['optimizer']=='Adam':
         optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)

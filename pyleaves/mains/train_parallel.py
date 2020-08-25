@@ -49,7 +49,6 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
     for worker_id, fold in enumerate(itertools.islice(kfold_iter, n_jobs)):
         args.append((fold, copy.deepcopy(cfg), worker_id))
     args = tuple(args)
-
     
     pool = multiprocessing_utils.RunAsCUDASubprocess(num_gpus=cfg.num_gpus, memory_fraction=0.9)
     result = pool.map(paleoai_main.neptune_train_single_fold, n_jobs, *args)
