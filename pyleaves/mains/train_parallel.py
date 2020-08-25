@@ -101,11 +101,11 @@ def train(cfg : DictConfig) -> None:
     cfg = restore_or_initialize_experiment(cfg, restore_last=True, prefix='log_dir__', verbose=0)
 
 
-    neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
-    params=OmegaConf.to_container(cfg)
-    with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(cfg.fold_id), params=params):
+    # neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
+    # params=OmegaConf.to_container(cfg)
+    # with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(cfg.fold_id), params=params):
         # train_pyleaves_dataset(cfg)
-        train_paleoai_dataset(cfg=cfg, fold_ids=list(range(10)), n_jobs=cfg.n_jobs, verbose=True)
+    train_paleoai_dataset(cfg=cfg, fold_ids=list(range(10)), n_jobs=cfg.n_jobs, verbose=True)
 
 if __name__=="__main__":
 
