@@ -145,7 +145,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     from tensorflow.keras import backend as K
     # from neptunecontrib.monitoring.keras import NeptuneMonitor
 
-    from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model, log_data
+    from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model#, log_data
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, LambdaCallback, LearningRateScheduler
     from pyleaves.utils.callback_utils import BackupAndRestore
     # from pyleaves.utils.neptune_utils import ImageLoggerCallback#, neptune
@@ -208,7 +208,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                         shuffle=True,
                         steps_per_epoch=cfg['steps_per_epoch'],
                         validation_steps=cfg['validation_steps'],
-                        verbose=0)
+                        verbose=1)
     return history.history
 
 

@@ -35,7 +35,7 @@ from pyleaves.datasets.base_dataset import BaseDataset
 from pyleaves.models import resnet, vgg16
 from pyleaves.utils.callback_utils import BackupAndRestore
 from pyleaves.utils import setGPU, set_tf_config
-from pyleaves.utils.neptune_utils import neptune
+# from pyleaves.utils.neptune_utils import neptune
 from pyleaves.datasets import leaves_dataset, fossil_dataset, pnas_dataset, base_dataset
 from pyleaves.utils import ensure_dir_exists, img_aug_utils as iau
 from tfrecord_utils.encoders import TFRecordCoder
@@ -129,13 +129,13 @@ from tensorflow.keras.callbacks import EarlyStopping, CSVLogger, LambdaCallback
 
 
 
-def log_data(logs, neptune):
-    for k, v in logs.items():
-        neptune.log_metric(k, v)
+# def log_data(logs, neptune):
+#     for k, v in logs.items():
+#         neptune.log_metric(k, v)
 
-def log_neptune_data(logs, neptune):
-    for k, v in logs.items():
-        neptune.log_metric(k, v)
+# def log_neptune_data(logs, neptune):
+#     for k, v in logs.items():
+#         neptune.log_metric(k, v)
 
 
 
@@ -595,11 +595,11 @@ def log_config(cfg: DictConfig, neptune, verbose: bool=False):
     cfg_0 = cfg.stage_0
     ensure_dir_exists(cfg['log_dir'])
     ensure_dir_exists(cfg['model_dir'])
-    neptune.append_tag(cfg_0.dataset.dataset_name)
-    neptune.append_tag(cfg_0.model.model_name)
-    neptune.append_tag(str(cfg_0.dataset.target_size))
-    neptune.append_tag(cfg_0.dataset.num_channels)
-    neptune.append_tag(cfg_0.dataset.color_mode)
+    # neptune.append_tag(cfg_0.dataset.dataset_name)
+    # neptune.append_tag(cfg_0.model.model_name)
+    # neptune.append_tag(str(cfg_0.dataset.target_size))
+    # neptune.append_tag(cfg_0.dataset.num_channels)
+    # neptune.append_tag(cfg_0.dataset.color_mode)
 
 
 # def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseDataset, neptune):
