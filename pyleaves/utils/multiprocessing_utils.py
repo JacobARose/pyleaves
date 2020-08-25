@@ -24,12 +24,28 @@ class RunAsCUDASubprocess:
         self._memory_fraction = memory_fraction
 
     @staticmethod
-    def _subprocess_code(num_gpus, memory_fraction, fn, args):
+    def _grab_gpus(num_gpus, memory_fraction):
         # set the env vars inside the subprocess so that we don't alter the parent env
         os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see tensorflow issue #152
         try:
             import py3nvml
             num_grabbed = py3nvml.grab_gpus(num_gpus, gpu_fraction=memory_fraction)
+        except:
+            # either CUDA is not installed on the system or py3nvml is not installed (which probably means the env
+            # does not have CUDA-enabled packages). Either way, block the visible devices to be sure.
+            num_grabbed = 0
+            os.environ['CUDA_VISIBLE_DEVICES'] = ""
+
+    @staticmethod
+    def _subprocess_code(num_gpus, memory_fraction, fn, args, kwargs: dict):
+        # set the env vars inside the subprocess so that we don't alter the parent env
+        os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see tensorflow issue #152
+        try:
+            import py3nvml
+            if 'gpu_select' in kwargs:
+                gpu_select = kwargs['gpu_select']
+
+            num_grabbed = py3nvml.grab_gpus(num_gpus, gpu_fraction=memory_fraction, gpu_select=gpu_select)
         except:
             # either CUDA is not installed on the system or py3nvml is not installed (which probably means the env
             # does not have CUDA-enabled packages). Either way, block the visible devices to be sure.
@@ -56,11 +72,14 @@ class RunAsCUDASubprocess:
         return wrapped_f
 
     def map(self, f, n_jobs=1, *args, **kwargs):
+        try:
+            import py3nvml
+            num_grabbed = py3nvml.grab_gpus(num_gpus, gpu_fraction=memory_fraction)
         with Pool(n_jobs,initargs=(RLock(),), initializer=tqdm.set_lock) as pool:
             if type(args[0])==tuple:
                 result = pool.starmap(RunAsCUDASubprocess._subprocess_code, (
                                     (
-                                        (self._num_gpus, self._memory_fraction, cloudpickle.dumps(f), arguments)
+                                        (self._num_gpus, self._memory_fraction, cloudpickle.dumps(f), arguments, {'gpu_select':arguments[-1]})
                                             for arguments in args
                                     )
                                 )
