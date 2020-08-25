@@ -133,7 +133,7 @@ from paleoai_data.utils.kfold_cross_validation import DataFold
 # from pyleaves.utils.multiprocessing_utils import RunAsCUDASubprocess
 
 # @RunAsCUDASubprocess()
-def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose: bool=True) -> None:
+def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=None, verbose: bool=True) -> None:
     # print(f'WORKER {worker_id} INITIATED')
     # from pyleaves.utils import set_tf_config, setGPU
     # # gpu_device = setGPU(only_return=True)
@@ -147,7 +147,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
     from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model, log_data
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, LambdaCallback, LearningRateScheduler
     from pyleaves.utils.callback_utils import BackupAndRestore
-    from pyleaves.utils.neptune_utils import ImageLoggerCallback, neptune
+    from pyleaves.utils.neptune_utils import ImageLoggerCallback#, neptune
 
     
 
@@ -212,17 +212,16 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose:
 
 def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose: bool=True) -> None:
     print(f'WORKER {worker_id} INITIATED')
-    from pyleaves.utils import set_tf_config, setGPU
+    # from pyleaves.utils import set_tf_config, setGPU
     # gpu_id = setGPU()
     # set_tf_config(gpu_id)
     
-    from pyleaves.utils.neptune_utils import ImageLoggerCallback, neptune
-
+    from pyleaves.utils.neptune_utils import neptune
     neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
     log_config(cfg=cfg, verbose=verbose, neptune=neptune)
     params=OmegaConf.to_container(cfg)
     with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(cfg.fold_id), params=params):
-        train_single_fold(fold, copy.deepcopy(cfg.stage_0), worker_id)
+        train_single_fold(fold, copy.deepcopy(cfg.stage_0), worker_id, neptune=neptune)
 # from keras.wrappers.scikit_learn import KerasClassifier
 # from tune_sklearn import TuneGridSearchCV
 # from joblib import Parallel, delayed
