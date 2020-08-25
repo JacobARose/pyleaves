@@ -2,7 +2,7 @@
 This is meant to be a basic script for launching 
 
 
-python '/home/jacob/projects/pyleaves/pyleaves/mains/train_parallel.py' stage_0.misc.use_tfrecords=False
+python '/home/jacob/projects/pyleaves/pyleaves/mains/train_parallel.py' stage_0.misc.use_tfrecords=False num_gpus=4 n_jobs=4
 
 '''
 
@@ -38,7 +38,7 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
 
     cfg_0 = cfg.stage_0
     # cfg_1 = cfg.stage_1
-    log_config(cfg=cfg, verbose=verbose, neptune=neptune)
+    # log_config(cfg=cfg, verbose=verbose, neptune=neptune)
     kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
     kfold_iter = kfold_loader.iter_folds(repeats=1)
     # histories = []
