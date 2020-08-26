@@ -203,7 +203,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                 #  ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
     print(f'Initiating model.fit for fold-{fold.fold_id}')
     history = model.fit(train_data,
-                        epochs=cfg.training['num_epochs'],
+                        epochs=1,#cfg.training['num_epochs'],
                         callbacks=callbacks,
                         validation_data=test_data,
                         validation_freq=1,
