@@ -1,0 +1,3 @@
+- stage_0.misc.use_tfrecords=False
+- num_gpus=1
+- n_jobs=1

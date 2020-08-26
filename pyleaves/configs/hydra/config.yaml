@@ -1,0 +1,19 @@
+defaults:
+    - model@stage_0/model: resnet_50_v2
+    - dataset@stage_0/dataset: Leaves-PNAS
+    
+    - model@stage_1/model: resnet_50_v2
+    - dataset@stage_1/dataset: Fossil
+    
+pipeline:
+    - stage_0
+    - stage_1
+
+log_dir: ???
+model_dir: ???
+tfrecord_dir: ???
+results_dir: ???
+saved_model_path: ???
+checkpoints_path: ???
+n_jobs: 1
+num_gpus: 1

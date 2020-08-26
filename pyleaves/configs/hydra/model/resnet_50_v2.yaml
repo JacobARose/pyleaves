@@ -1,0 +1,19 @@
+# @package _group_.name
+
+model_name: 'resnet_50_v2'
+optimizer: 'Adam'
+loss: 'categorical_crossentropy'
+lr: 4.0e-5
+regularization:
+    l1: 3e-4
+METRICS: ['accuracy','precision','recall']
+
+training:
+    batch_size: 16
+    buffer_size: 200
+    num_epochs: 150
+    frozen_layers: null
+    augmentations:
+        - flip: 1.0
+misc:
+    seed: 45
