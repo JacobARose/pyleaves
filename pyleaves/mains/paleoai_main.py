@@ -252,7 +252,9 @@ def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full
     y_pred = model.predict(x_true, steps=x_true.shape[0])
     y_pred = np.argmax(y_pred, axis=1)
     if save:
-        np.savez_compressed(Path(results_dir,f'predictions_fold-{fold.fold_id}.npz'),{'x':x_true, 'y_true':y_true, 'y_pred':y_pred})
+        predictions_path = str(Path(results_dir,f'predictions_fold-{fold.fold_id}.npz'))
+        np.savez_compressed(predictions_path,{'x':x_true, 'y_true':y_true, 'y_pred':y_pred})
+        print(f'Saved predictions at location: {predictions_path}')
 
     return y_true, y_pred
     
