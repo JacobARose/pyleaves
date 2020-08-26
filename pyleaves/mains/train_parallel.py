@@ -4,6 +4,8 @@ This is meant to be a basic script for launching
 
 python '/home/jacob/projects/pyleaves/pyleaves/mains/train_parallel.py' stage_0.misc.use_tfrecords=False num_gpus=4 n_jobs=4
 
+
+python '/home/jacob/projects/pyleaves/pyleaves/mains/train_parallel.py' stage_0.dataset.dataset_name="Leaves-PNAS"
 '''
 
 import hydra
