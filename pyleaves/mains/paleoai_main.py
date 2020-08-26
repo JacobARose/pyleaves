@@ -249,8 +249,8 @@ def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full
         x_true.append(x.numpy())
         y_true.append(y.numpy())
 
-    x_true = np.array(x_true)
-    y_true = np.array(y_true)
+    x_true = np.vstack(x_true)
+    y_true = np.vstack(y_true)
     print(x_true.shape)
     print(y_true.shape)
     y_pred = model.predict(x_true, steps=x_true.shape[0])
