@@ -154,7 +154,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
 
     from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model#, log_data
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, LambdaCallback, LearningRateScheduler
-    from pyleaves.utils.callback_utils import BackupAndRestore
+    from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback
     # from pyleaves.utils.neptune_utils import ImageLoggerCallback#, neptune
 
     
@@ -199,6 +199,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     print('building callbacks')
     callbacks = [backup_callback, #neptune_logger_callback,
                  NeptuneMonitor(),
+                 NeptuneVisualizationCallback(),
                  tensorboard_callback,
                  CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),#False),
                  EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,

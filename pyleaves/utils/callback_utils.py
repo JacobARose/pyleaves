@@ -41,6 +41,7 @@ import cv2
 # from mlxtend import evaluate, plotting
 from pyleaves.models.vgg16 import visualize_activations#, get_layers_by_index
 from pyleaves.utils.model_utils import WorkerTrainingState
+from pyleaves.utils.neptune_utils import neptune
 
 class BackupAndRestore(Callback):
 	"""
