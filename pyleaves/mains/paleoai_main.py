@@ -191,7 +191,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     
     # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(Path(cfg.tensorboard_log_dir,f'tb_results-fold_{fold.fold_id}')))
-    backup_callback = BackupAndRestore(cfg['checkpoints_path'])
+    backup_callback = BackupAndRestore(str(Path(cfg['checkpoints_path'],f'fold-{fold.fold_id}')))
     backup_callback.set_model(model)
 
     print('building callbacks')
@@ -209,7 +209,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                         validation_freq=1,
                         shuffle=True,
                         steps_per_epoch=10,#cfg['steps_per_epoch'],
-                        validation_steps=cfg['validation_steps'],
+                        validation_steps=1,#cfg['validation_steps'],
                         verbose=1)
 
     y_true, y_pred = predict_single_fold(model=model,
