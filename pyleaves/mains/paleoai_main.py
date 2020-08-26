@@ -205,7 +205,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     print('building callbacks')
     callbacks = [backup_callback, #neptune_logger_callback,
                  NeptuneMonitor(),
-                 NeptuneVisualizationCallback(),
+                 NeptuneVisualizationCallback(np.vstack([batch for batch in iter(test_data)])),
                  tensorboard_callback,
                  CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),#False),
                  EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
