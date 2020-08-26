@@ -208,7 +208,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                         validation_data=test_data,
                         validation_freq=1,
                         shuffle=True,
-                        steps_per_epoch=cfg['steps_per_epoch'],
+                        steps_per_epoch=10,#cfg['steps_per_epoch'],
                         validation_steps=cfg['validation_steps'],
                         verbose=1)
 
