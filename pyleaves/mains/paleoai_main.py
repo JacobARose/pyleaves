@@ -247,7 +247,9 @@ def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full
         y_true.append(y.numpy())
 
     x_true = np.array(x_true)
-    y_pred = model.predict(x_true)
+    y_true = np.array(y_true)
+    print(x_true.shape)
+    y_pred = model.predict(x_true, steps=x_true.shape[0])
     y_pred = np.argmax(y_pred, axis=1)
     if save:
         np.savez_compressed(Path(results_dir,f'predictions_fold-{fold.fold_id}.npz'),{'x':x_true, 'y_true':y_true, 'y_pred':y_pred})
