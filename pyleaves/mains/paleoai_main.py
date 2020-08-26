@@ -101,14 +101,15 @@ def restore_or_initialize_experiment(cfg, restore_last=False, prefix='log_dir__'
 def log_config(cfg: DictConfig, neptune=None, verbose: bool=False):
     if verbose: print(cfg.pretty())
 
-    # cfg_0 = cfg.stage_0
     ensure_dir_exists(cfg['log_dir'])
     ensure_dir_exists(cfg['model_dir'])
-    # neptune.append_tag(cfg_0.dataset.dataset_name)
-    # neptune.append_tag(cfg_0.model.model_name)
-    # neptune.append_tag(str(cfg_0.dataset.target_size))
-    # neptune.append_tag(cfg_0.dataset.num_channels)
-    # neptune.append_tag(cfg_0.dataset.color_mode)
+    if neptune is not None:
+        cfg_0 = cfg.stage_0
+        neptune.append_tag(cfg_0.dataset.dataset_name)
+        neptune.append_tag(cfg_0.model.model_name)
+        neptune.append_tag(str(cfg_0.dataset.target_size))
+        neptune.append_tag(cfg_0.dataset.num_channels)
+        neptune.append_tag(cfg_0.dataset.color_mode)
 
 
 def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseDataset, neptune):
@@ -205,13 +206,13 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                 #  ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
     print(f'Initiating model.fit for fold-{fold.fold_id}')
     history = model.fit(train_data,
-                        epochs=1,#cfg.training['num_epochs'],
+                        epochs=cfg.training['num_epochs'],
                         callbacks=callbacks,
                         validation_data=test_data,
                         validation_freq=1,
                         shuffle=True,
-                        steps_per_epoch=10,#cfg['steps_per_epoch'],
-                        validation_steps=1,#cfg['validation_steps'],
+                        steps_per_epoch=cfg['steps_per_epoch'],
+                        validation_steps=cfg['validation_steps'],
                         verbose=1)
 
     y_true, y_pred = predict_single_fold(model=model,
@@ -257,6 +258,7 @@ def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full
     print(x_true.shape)
     print(y_true.shape)
     y_prob = model.predict(x_true, steps=x_true.shape[0])
+    y_true = np.argmax(y_true, axis=1)
     y_pred = np.argmax(y_prob, axis=1)
     if save:
         predictions_path = str(Path(results_dir,f'predictions_fold-{fold.fold_id}.npz'))
@@ -274,9 +276,11 @@ def evaluate_predictions(results_dir):
     for p, path in prediction_paths.items():
         data = np.load(path, allow_pickle=True)
 
-        y_true, y_pred = data['y_true'], data['y_pred']
-        results.append({'ROC_AUC':roc_auc_score(y_true, y_pred),
-                        'accuracy':accuracy_score(y_true, y_pred)})
+        y_true, y_pred, y_prob = data['y_true'], data['y_pred'], data['y_prob']
+
+        if y_true.ndim>1:
+            y_true=np.argmax(y_true, axis=1)
+        results.append({'accuracy':accuracy_score(y_true, y_pred)})
     
     accuracy_sum=0
     num_results = len(results)
@@ -284,6 +288,7 @@ def evaluate_predictions(results_dir):
         accuracy_sum += result['accuracy']
     avg_accuracy = accuracy_sum / num_results
     
+    print(f'Evaluating average performance on {len(prediction_paths)} data folds')
     print(f'average accuracy: {avg_accuracy}')
 
     return results

@@ -40,7 +40,6 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
     #         histories.append(None)
     cfg_0 = cfg.stage_0
     # cfg_1 = cfg.stage_1
-    # log_config(cfg=cfg, verbose=verbose, neptune=neptune)
     kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
     kfold_iter = kfold_loader.iter_folds(repeats=1)
     # histories = []
@@ -51,10 +50,14 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
     
     results = []
     for worker_id, fold in enumerate(kfold_iter):
-        args = (fold, copy.deepcopy(cfg), worker_id)
+        # args = (fold, copy.deepcopy(cfg), worker_id)
+        args = (fold, copy.deepcopy(cfg_0), worker_id)
         with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(fold.fold_id), params=params):
             result = paleoai_main.neptune_train_single_fold(*args)
             results.append(result)
+            log_config(cfg=cfg, verbose=verbose, neptune=neptune)
+
+    print(paleoai_main.evaluate_predictions(results_dir=cfg.results_dir))
     return results
 
 
