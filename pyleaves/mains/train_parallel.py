@@ -23,7 +23,7 @@ from pyleaves.utils.multiprocessing_utils import perform_concurrent_tasks, RunAs
 from pyleaves.utils import multiprocessing_utils
 from pyleaves.mains import paleoai_main
 CONFIG_DIR = str(Path(RESOURCES_DIR,'..','..','configs','hydra'))
-# from pyleaves.utils.neptune_utils import neptune
+from pyleaves.utils.neptune_utils import neptune
 
 
 def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int=1, verbose: bool=False) -> None:
@@ -46,7 +46,7 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
     params=OmegaConf.to_container(cfg)
     
     results = []
-    for worker_id, fold in enumerate(kfold_iter)):
+    for worker_id, fold in enumerate(kfold_iter):
         args = (fold, copy.deepcopy(cfg), worker_id)
         with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(fold.fold_id), params=params):
             result = paleoai_main.neptune_train_single_fold(*args)

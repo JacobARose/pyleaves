@@ -265,7 +265,7 @@ def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, 
     log_config(cfg=cfg, verbose=verbose)#, neptune=neptune)
     # params=OmegaConf.to_container(cfg)
     # with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(fold.fold_id), params=params):
-    train_single_fold(fold, copy.deepcopy(cfg.stage_0), worker_id)#, neptune=neptune)
+    return train_single_fold(fold, copy.deepcopy(cfg.stage_0), worker_id)#, neptune=neptune)
 
 
 # from keras.wrappers.scikit_learn import KerasClassifier
