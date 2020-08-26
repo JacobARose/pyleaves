@@ -156,7 +156,7 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
 
 
 
-@hydra.main(config_path=Path(CONFIG_DIR,'Leaves-PNAS.yaml'))
+@hydra.main(config_path=Path(CONFIG_DIR,'config.yaml'))
 def train(cfg : DictConfig) -> None:
 
     OmegaConf.set_struct(cfg, False)
