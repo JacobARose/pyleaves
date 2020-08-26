@@ -34,8 +34,6 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
     #         histories.append(history)
     #     except:
     #         histories.append(None)
-
-
     cfg_0 = cfg.stage_0
     # cfg_1 = cfg.stage_1
     # log_config(cfg=cfg, verbose=verbose, neptune=neptune)
@@ -43,17 +41,39 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
     kfold_iter = kfold_loader.iter_folds(repeats=1)
     # histories = []
     print(f'Beginning training of models with fold_ids: {fold_ids}')
-    pool = RunAsCUDASubprocess(num_gpus=cfg.num_gpus, memory_fraction=0.9)
-
-    args=[]
-    for worker_id, fold in enumerate(itertools.islice(kfold_iter, n_jobs)):
-        args.append((fold, copy.deepcopy(cfg), worker_id))
-    args = tuple(args)
     
-    pool = multiprocessing_utils.RunAsCUDASubprocess(num_gpus=cfg.num_gpus, memory_fraction=0.9)
-    result = pool.map(paleoai_main.neptune_train_single_fold, n_jobs, *args)
-    return result
+    neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
+    params=OmegaConf.to_container(cfg)
+    
+    results = []
+    for worker_id, fold in enumerate(kfold_iter)):
+        args = (fold, copy.deepcopy(cfg), worker_id)
+        with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(fold.fold_id), params=params):
+            result = paleoai_main.neptune_train_single_fold(*args)
+            results.append(result)
+    return results
 
+    # cfg_0 = cfg.stage_0
+    # # cfg_1 = cfg.stage_1
+    # # log_config(cfg=cfg, verbose=verbose, neptune=neptune)
+    # kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
+    # kfold_iter = kfold_loader.iter_folds(repeats=1)
+    # # histories = []
+    # print(f'Beginning training of models with fold_ids: {fold_ids}')
+    # pool = RunAsCUDASubprocess(num_gpus=cfg.num_gpus, memory_fraction=0.9)
+
+    # args=[]
+    # start_id = 0
+    # while start_id < len(fold_ids):
+    #     for worker_id, fold in enumerate(itertools.islice(kfold_iter, start_id, start_id+n_jobs)):
+    #         args.append((fold, copy.deepcopy(cfg), worker_id))
+    #     start_id += len(args)
+    #     args = tuple(args)
+        
+    #     pool = multiprocessing_utils.RunAsCUDASubprocess(num_gpus=cfg.num_gpus, memory_fraction=0.9)
+    #     result = pool.map(paleoai_main.neptune_train_single_fold, n_jobs, *args)
+    # return result
+################################################################
     #     print(worker_id)
     #     print(fold)
     #     histories.append(pool(train_single_fold)(fold, copy.deepcopy(cfg_0), worker_id))
