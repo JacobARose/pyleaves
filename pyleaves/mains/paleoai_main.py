@@ -48,6 +48,7 @@ def initialize_experiment(cfg, experiment_start_time=None):
     cfg.update(log_dir = os.path.join(cfg.experiment.experiment_dir, 'log_dir__'+cfg.experiment.experiment_start_time))
     cfg.update(results_dir = os.path.join(cfg.log_dir,'results'))
     cfg['stage_0']['log_dir'] = cfg.log_dir
+    cfg['stage_0']['results_dir'] = cfg.results_dir
     cfg['stage_0']['tensorboard_log_dir'] = str(Path(cfg.log_dir,'tensorboard_logs'))
     cfg.update(model_dir = os.path.join(cfg.log_dir,'model_dir'))
     cfg['stage_0']['model_dir'] = cfg.model_dir #os.path.join(cfg.log_dir,'model_dir')
