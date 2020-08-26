@@ -23,6 +23,7 @@ from typing import Tuple
 from tqdm import tqdm, trange
 # from pyleaves.datasets.base_dataset import BaseDataset
 from paleoai_data.dataset_drivers.base_dataset import BaseDataset
+from sklearn.metrics import roc_auc_score, accuracy_score
 # import hydra
 # import neptune
 # ##########################################################################
@@ -198,7 +199,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     callbacks = [backup_callback, #neptune_logger_callback,
                  NeptuneMonitor(),
                  tensorboard_callback,
-                 CSVLogger(str(Path(cfg.log_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),#False),
+                 CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),#False),
                  EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
                 #  ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
                 #  ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
@@ -255,14 +256,38 @@ def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full
     y_idx = np.array(fold.test_idx)
     print(x_true.shape)
     print(y_true.shape)
-    y_pred = model.predict(x_true, steps=x_true.shape[0])
-    y_pred = np.argmax(y_pred, axis=1)
+    y_prob = model.predict(x_true, steps=x_true.shape[0])
+    y_pred = np.argmax(y_prob, axis=1)
     if save:
         predictions_path = str(Path(results_dir,f'predictions_fold-{fold.fold_id}.npz'))
-        np.savez_compressed(predictions_path,{'y_idx':y_idx, 'y_true':y_true, 'y_pred':y_pred})
+        np.savez_compressed(predictions_path,**{'y_idx':y_idx, 'y_true':y_true, 'y_pred':y_pred, 'y_prob':y_prob})
         print(f'Saved predictions at location: {predictions_path}')
 
     return y_true, y_pred
+
+
+def evaluate_predictions(results_dir):
+
+    prediction_paths = {p:os.path.join(results_dir, p) for p in os.listdir(results_dir) if p.endswith('.npz')}
+
+    results = []
+    for p, path in prediction_paths.items():
+        data = np.load(path, allow_pickle=True)
+
+        y_true, y_pred = data['y_true'], data['y_pred']
+        results.append({'ROC_AUC':roc_auc_score(y_true, y_pred),
+                        'accuracy':accuracy_score(y_true, y_pred)})
+    
+    accuracy_sum=0
+    num_results = len(results)
+    for i, result in enumerate(results):
+        accuracy_sum += result['accuracy']
+    avg_accuracy = accuracy_sum / num_results
+    
+    print(f'average accuracy: {avg_accuracy}')
+
+    return results
+
     
     
 
