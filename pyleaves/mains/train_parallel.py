@@ -26,6 +26,10 @@ CONFIG_DIR = str(Path(RESOURCES_DIR,'..','..','configs','hydra'))
 from pyleaves.utils.neptune_utils import neptune
 
 
+
+
+
+
 def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int=1, verbose: bool=False) -> None:
 
     # histories = []
@@ -52,6 +56,42 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
             result = paleoai_main.neptune_train_single_fold(*args)
             results.append(result)
     return results
+
+
+
+
+
+
+# def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int=1, verbose: bool=False) -> None:
+
+#     # histories = []
+#     # def log_history(history: dict):
+#     #     try:
+#     #         histories.append(history)
+#     #     except:
+#     #         histories.append(None)
+#     cfg_0 = cfg.stage_0
+#     # cfg_1 = cfg.stage_1
+#     # log_config(cfg=cfg, verbose=verbose, neptune=neptune)
+#     kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
+#     kfold_iter = kfold_loader.iter_folds(repeats=1)
+#     # histories = []
+#     print(f'Beginning training of models with fold_ids: {fold_ids}')
+    
+#     neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
+#     params=OmegaConf.to_container(cfg)
+    
+#     results = []
+#     for worker_id, fold in enumerate(kfold_iter):
+#         args = (fold, copy.deepcopy(cfg), worker_id)
+#         with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(fold.fold_id), params=params):
+#             result = paleoai_main.neptune_train_single_fold(*args)
+#             results.append(result)
+#     return results
+
+
+##############################################################################################################################
+
 
     # cfg_0 = cfg.stage_0
     # # cfg_1 = cfg.stage_1

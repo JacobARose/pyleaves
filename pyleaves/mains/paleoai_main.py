@@ -20,6 +20,7 @@ from pathlib import Path
 from pprint import pprint
 from pyleaves.utils import ensure_dir_exists
 from typing import Tuple
+from tqdm import tqdm
 # from pyleaves.datasets.base_dataset import BaseDataset
 from paleoai_data.dataset_drivers.base_dataset import BaseDataset
 # import hydra
@@ -109,7 +110,7 @@ def log_config(cfg: DictConfig, neptune=None, verbose: bool=False):
 
 
 def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseDataset, neptune):
-    print('inside log dataset')
+    # print('inside log dataset')
     cfg['dataset']['num_classes'] = train_dataset.num_classes
     cfg['dataset']['splits_size'] = {'train':{},
                           'test':{}}
@@ -118,7 +119,7 @@ def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseD
 
     cfg['steps_per_epoch'] = cfg['dataset']['splits_size']['train']//cfg['training']['batch_size']
     cfg['validation_steps'] = cfg['dataset']['splits_size']['test']//cfg['training']['batch_size']
-    print('updated cfg')
+    # print('updated cfg')
     
     # neptune.set_property('num_classes',cfg['num_classes'])
     # neptune.set_property('steps_per_epoch',cfg['steps_per_epoch'])
@@ -146,7 +147,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     
     import tensorflow as tf
     from tensorflow.keras import backend as K
-    # from neptunecontrib.monitoring.keras import NeptuneMonitor
+    from neptunecontrib.monitoring.keras import NeptuneMonitor
 
     from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model#, log_data
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, LambdaCallback, LearningRateScheduler
@@ -182,11 +183,9 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     
     if verbose: print(f'Starting fold {fold.fold_id}')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
-    # import pdb;pdb.set_trace()
+
     pprint(OmegaConf.to_container(cfg))
     model_config = get_model_config(cfg=cfg)
-    # with tf.Graph().as_default():
-    # with tf.device(f'/device:GPU:0'):#{gpu_id}'): #.strip('/physical_device:')):
     model = build_model(model_config)
     
     # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
@@ -195,7 +194,8 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     backup_callback.set_model(model)
 
     print('building callbacks')
-    callbacks = [backup_callback, #neptune_logger_callback,NeptuneMonitor(),
+    callbacks = [backup_callback, #neptune_logger_callback,
+                 NeptuneMonitor(),
                  tensorboard_callback,
                  CSVLogger(str(Path(cfg.log_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),#False),
                  EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
@@ -242,7 +242,7 @@ def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full
                                                                  seed=cfg.misc.seed)
 
     x_true, y_true = [], []
-    for x, y in pred_data:
+    for x, y in tqdm(pred_data, total=pred_dataset.num_samples):
         x_true.append(x.numpy())
         y_true.append(y.numpy())
 
