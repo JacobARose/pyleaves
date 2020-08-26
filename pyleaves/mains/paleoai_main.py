@@ -256,8 +256,8 @@ def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full
 
 def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose: bool=True) -> None:
     print(f'WORKER {worker_id} INITIATED')
-    # from pyleaves.utils import set_tf_config, setGPU
-    # gpu_id = setGPU()
+    from pyleaves.utils import set_tf_config, setGPU
+    gpu_id = setGPU()
     # set_tf_config(gpu_id)
     
     # from pyleaves.utils.neptune_utils import neptune
