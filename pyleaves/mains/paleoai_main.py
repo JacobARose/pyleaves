@@ -20,7 +20,7 @@ from pathlib import Path
 from pprint import pprint
 from pyleaves.utils import ensure_dir_exists
 from typing import Tuple
-from tqdm import tqdm
+from tqdm import tqdm, trange
 # from pyleaves.datasets.base_dataset import BaseDataset
 from paleoai_data.dataset_drivers.base_dataset import BaseDataset
 # import hydra
@@ -243,7 +243,9 @@ def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full
 
     x_true, y_true = [], []
     print(pred_dataset.num_samples)
-    for x, y in tqdm(pred_data, total=pred_dataset.num_samples):
+    data_iter = iter(pred_data)
+    for i in trange(pred_dataset.num_samples):
+        x, y = next(data_iter)
         x_true.append(x.numpy())
         y_true.append(y.numpy())
 
