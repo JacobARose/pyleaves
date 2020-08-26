@@ -147,6 +147,12 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     # # gpu_device = setGPU(only_return=True)
     # gpu_id = setGPU()
     # set_tf_config(gpu_id)
+    predictions_path = str(Path(cfg.results_dir,f'predictions_fold-{fold.fold_id}.npz'))
+    if os.path.isfile(predictions_path):
+        print(f'predictions for fold_id={fold.fold_id} found, skipping training')
+        return predictions_path
+        
+
     
     import tensorflow as tf
     from tensorflow.keras import backend as K
@@ -225,7 +231,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                                          verbose=verbose)
 
     
-
+    tf.reset_default_graph()
     
     return history.history
 
