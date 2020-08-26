@@ -242,6 +242,7 @@ def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full
                                                                  seed=cfg.misc.seed)
 
     x_true, y_true = [], []
+    print(pred_dataset.num_samples)
     for x, y in tqdm(pred_data, total=pred_dataset.num_samples):
         x_true.append(x.numpy())
         y_true.append(y.numpy())
@@ -249,6 +250,7 @@ def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full
     x_true = np.array(x_true)
     y_true = np.array(y_true)
     print(x_true.shape)
+    print(y_true.shape)
     y_pred = model.predict(x_true, steps=x_true.shape[0])
     y_pred = np.argmax(y_pred, axis=1)
     if save:
