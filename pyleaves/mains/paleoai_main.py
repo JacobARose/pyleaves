@@ -321,7 +321,7 @@ def evaluate_predictions(results_dir):
 def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose: bool=True) -> None:
     print(f'WORKER {worker_id} INITIATED')
     from pyleaves.utils import set_tf_config
-    set_tf_config(seed=cfg.misc.seed)
+    set_tf_config(seed=cfg.stage_0.misc.seed)
 
     
     # from pyleaves.utils.neptune_utils import neptune
