@@ -37,19 +37,49 @@ def setGPU(only_return=False):
     return bestGPU
 
 
-def set_tf_config(gpu_id: int=0, seed: int=None):
+# gpu_num = setGPU(only_return=True)
+
+# import tensorflow as tf
+# gpus = tf.config.experimental.list_physical_devices('GPU')
+# for gpu in gpus:
+#     tf.config.experimental.set_memory_growth(gpu, True)
+
+# print('gpu_num =',gpu_num, 'gpus[gpu_num] =', gpus[gpu_num])
+# tf.config.experimental.set_visible_devices(gpus[gpu_num], 'GPU')
+
+# print(gpus[gpu_num])
+
+
+
+
+
+def set_tf_config(gpu_num: int=None, seed: int=None):
+    
+    if gpu_num is None:
+        gpu_num = setGPU(only_return=True)
 
     import tensorflow as tf
     assert using_tensorflow2()
     gpus = tf.config.experimental.list_physical_devices('GPU')
-    # import pdb; pdb.set_trace()
+
     try:
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
 
         if gpus:
-            tf.config.experimental.set_visible_devices(f'GPU:{gpu_id}', 'GPU') #[gpu for gpu in gpus if gpu_id in gpu.name], 'GPU')
-    except:
+            gpu = [gpu_device for gpu_device in gpus if str(gpu_num) in gpu_device.name]
+            tf.config.experimental.set_visible_devices(gpu, 'GPU')# gpus[gpu_num], 'GPU')
+        print('Successfully set memory_growth=True and limited GPUs visible to tensorflow.')
+        print('Now using GPU(s):\n')
+        if type(gpu)==list:
+            if len(gpu)==1:
+                print(gpu[0].name)
+            else:
+                print([g.name for g in gpu])
+        else:
+            print(gpu.name)
+    except Exception as e:
+        print(e)
         print('setting memory growth failed, continuing anyway.')
 
     random.seed(seed)

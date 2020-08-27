@@ -143,10 +143,10 @@ from paleoai_data.utils.kfold_cross_validation import DataFold
 # @RunAsCUDASubprocess()
 def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=None, verbose: bool=True) -> None:
     # print(f'WORKER {worker_id} INITIATED')
-    # from pyleaves.utils import set_tf_config, setGPU
+    from pyleaves.utils import set_tf_config
     # # gpu_device = setGPU(only_return=True)
     # gpu_id = setGPU()
-    # set_tf_config(gpu_id)
+    set_tf_config(seed=cfg.misc.seed)
     predictions_path = str(Path(cfg.results_dir,f'predictions_fold-{fold.fold_id}.npz'))
     if os.path.isfile(predictions_path):
         print(f'predictions for fold_id={fold.fold_id} found, skipping training')
@@ -158,15 +158,15 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     from tensorflow.keras import backend as K
     from neptunecontrib.monitoring.keras import NeptuneMonitor
 
-    from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model#, log_data
+    from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model, tf_data2np#, log_data
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, LambdaCallback, LearningRateScheduler
     from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback
     # from pyleaves.utils.neptune_utils import ImageLoggerCallback#, neptune
 
-    
 
-    preprocess_input(tf.zeros([4, 224, 224, 3]))
     K.clear_session()
+    preprocess_input(tf.zeros([4, 224, 224, 3]))
+    
     
     cfg.tfrecord_dir = os.path.join(cfg.tfrecord_dir,fold.fold_name)
     ensure_dir_exists(cfg.tfrecord_dir)
@@ -175,6 +175,9 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
         print(f'RUNNING: fold {fold.fold_id} in process {worker_id or "None"}')
         print(cfg.tfrecord_dir)
         print('='*20)
+#     with tf.Graph().as_default():
+#         preprocess_input(tf.zeros([4, 224, 224, 3]))
+        
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
                                                                                  batch_size=cfg.training.batch_size,
                                                                                  buffer_size=cfg.training.buffer_size,
@@ -189,28 +192,33 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                                                                                  tfrecord_dir=cfg.tfrecord_dir,
                                                                                  samples_per_shard=cfg.misc.samples_per_shard)
 
-    
+    test_iter = iter(test_data)
+    validation_data_np = tf_data2np(data=test_data, num_batches=4)
+#     with tf.Graph().as_default():
     if verbose: print(f'Starting fold {fold.fold_id}')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
 
     pprint(OmegaConf.to_container(cfg))
     model_config = get_model_config(cfg=cfg)
     model = build_model(model_config)
-    
+
     # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(Path(cfg.tensorboard_log_dir,f'tb_results-fold_{fold.fold_id}')))
     backup_callback = BackupAndRestore(str(Path(cfg['checkpoints_path'],f'fold-{fold.fold_id}')))
     backup_callback.set_model(model)
 
+
+    print(f'Shape of validation data provided to NeptuneVisualizerCallback: {validation_data_np[0].shape}, {validation_data_np[1].shape}')
+
     print('building callbacks')
     callbacks = [backup_callback, #neptune_logger_callback,
                  NeptuneMonitor(),
-                 NeptuneVisualizationCallback(np.vstack([batch for batch in iter(test_data)])),
-                 tensorboard_callback,
+                 NeptuneVisualizationCallback(validation_data_np, num_classes=cfg.dataset.num_classes),#                  tensorboard_callback,
                  CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),#False),
                  EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
                 #  ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
                 #  ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
+
     print(f'Initiating model.fit for fold-{fold.fold_id}')
     history = model.fit(train_data,
                         epochs=cfg.training['num_epochs'],
@@ -230,9 +238,16 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                                          save=True,
                                          verbose=verbose)
 
+    try:
+        history_path = str(Path(cfg.results_dir),f'training-history_fold-{fold.fold_id}.json')
+        with open(path,'w') as f:
+            json.dump(history, f)
+    except Exception as e:
+        print(e)
+        print(f'WARNING:  Failed saving training history for fold {fold.fold_id} into json file.\n Continuing anyway.')
+        
     
-    tf.reset_default_graph()
-    
+   
     return history.history
 
 def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full_dataset=False, worker_id=None, save=True, verbose: bool=True) -> Tuple[np.ndarray, np.ndarray]:

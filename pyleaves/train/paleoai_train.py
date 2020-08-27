@@ -30,6 +30,7 @@ import os
 from pprint import pprint
 from pathlib import Path
 from typing import List, Tuple
+from tqdm import trange
 import pyleaves
 from pyleaves.datasets.base_dataset import BaseDataset
 from pyleaves.models import resnet, vgg16
@@ -136,6 +137,14 @@ from tensorflow.keras.callbacks import EarlyStopping, CSVLogger, LambdaCallback
 # def log_neptune_data(logs, neptune):
 #     for k, v in logs.items():
 #         neptune.log_metric(k, v)
+def tf_data2np(data: tf.data.Dataset, num_batches: int=4):
+    x_val, y_val = [], []
+    data_iter = iter(data)
+    for i in trange(num_batches):
+        x, y = next(data_iter)
+        x_val.append(x)
+        y_val.append(y)
+    return np.vstack(x_val), np.vstack(y_val)
 
 
 

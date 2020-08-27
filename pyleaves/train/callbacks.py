@@ -88,7 +88,8 @@ class BaseCallback(Callback):
 
 
 class NeptuneVisualizationCallback(Callback):
-    """Callback for logging to Neptune.
+    """DEPRECATED: FUNCTION MOVED TO utils.callback_utils
+    Callback for logging to Neptune.
 
     1. on_batch_end: Logs all performance metrics to neptune
     2. on_epoch_end: Logs all performance metrics + confusion matrix + roc plot to neptune
@@ -114,9 +115,13 @@ class NeptuneVisualizationCallback(Callback):
     validation_data
 
     """
-    def __init__(self, validation_data):
+    def __init__(self, validation_data, num_classes: int=None):
         super().__init__()
         # self.model = model
+        if validation_data[1].ndim > 1:
+            validation_data[1] = np.argmax(validation_data[1], axis=1)
+        self.num_classes = num_classes or set(validation_data[1])
+        
         self.validation_data = validation_data
 
     def on_batch_end(self, batch, logs={}):
@@ -127,18 +132,19 @@ class NeptuneVisualizationCallback(Callback):
         for log_name, log_value in logs.items():
             neptune.log_metric(f'epoch_{log_name}', log_value)
 
-        y_pred = np.asarray(self.model.predict(self.validation_data[0]))
+        y_prob = np.asarray(self.model.predict(self.validation_data[0]))
         y_true = self.validation_data[1]
-
-        y_pred_class = np.argmax(y_pred, axis=1)
+        
+        y_pred = np.argmax(y_prob, axis=1)
 
         fig, ax = plt.subplots(figsize=(16, 12))
-        plot_confusion_matrix(y_true, y_pred_class, ax=ax)
+        plot_confusion_matrix(y_true, y_pred, ax=ax)
         neptune.log_image('confusion_matrix', fig)
 
-        fig, ax = plt.subplots(figsize=(16, 12))
-        plot_roc(y_true, y_pred, ax=ax)
-        neptune.log_image('roc_curve', fig)
+        if self.num_classes == 2:
+            fig, ax = plt.subplots(figsize=(16, 12))
+            plot_roc(y_true, y_prob, ax=ax)
+            neptune.log_image('roc_curve', fig)
 
 
 
