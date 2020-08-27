@@ -525,11 +525,10 @@ def load_prediction_data_from_tensor_slices(pred_data: Tuple[np.ndarray]):
     pred_x = tf.data.Dataset.from_tensor_slices(pred_data[0])
     pred_y = tf.data.Dataset.from_tensor_slices(pred_data[1])
     pred_data = tf.data.Dataset.zip((pred_x, pred_y))
-    pred_data = pred_data.cache()
     pred_data = pred_data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
 
     return pred_data
-
+# pred_data = pred_data.cache()
 
 def load_prediction_data(data_fold: DataFold,
                          predict_on_full_dataset: bool=False,
