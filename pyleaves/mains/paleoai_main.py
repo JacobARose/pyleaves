@@ -240,6 +240,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
             json.dump(history, f)
         if os.path.isfile(history_path):
             print(f'Saved history results for fold-{fold.fold_id} to {history_path}')
+            cfg.training['history_results_path'] = history_path
         else:
             raise Exception('File save failed')
     except Exception as e:
@@ -248,7 +249,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
         
     
    
-    return history.history
+    return cfg
 
 def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full_dataset=False, worker_id=None, save=True, verbose: bool=True) -> Tuple[np.ndarray, np.ndarray]:
     from pyleaves.train.paleoai_train import create_prediction_dataset
@@ -326,10 +327,12 @@ def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, 
     
     # from pyleaves.utils.neptune_utils import neptune
     # neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
-    log_config(cfg=cfg, verbose=False)#, neptune=neptune)
+#     log_config(cfg=cfg, verbose=False)#, neptune=neptune)
     # params=OmegaConf.to_container(cfg)
     # with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(fold.fold_id), params=params):
-    return train_single_fold(fold, copy.deepcopy(cfg.stage_0), worker_id)#, neptune=neptune)
+    cfg.stage_0 = train_single_fold(fold, copy.deepcopy(cfg.stage_0), worker_id)
+    log_config(cfg=cfg, verbose=False)
+    return cfg
 
 
 # from keras.wrappers.scikit_learn import KerasClassifier
