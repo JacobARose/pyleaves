@@ -34,17 +34,11 @@ from pyleaves.utils.neptune_utils import neptune
 
 def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int=1, verbose: bool=False) -> None:
 
-    # histories = []
-    # def log_history(history: dict):
-    #     try:
-    #         histories.append(history)
-    #     except:
-    #         histories.append(None)
     cfg_0 = cfg.stage_0
     # cfg_1 = cfg.stage_1
     kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
     kfold_iter = kfold_loader.iter_folds(repeats=1)
-    # histories = []
+    
     print(f'Beginning training of models with fold_ids: {fold_ids}')
     
     neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
@@ -162,7 +156,7 @@ def train_paleoai_dataset(cfg : DictConfig, fold_ids: List[int]=[0], n_jobs: int
 def train(cfg : DictConfig) -> None:
 
     OmegaConf.set_struct(cfg, False)
-    cfg = restore_or_initialize_experiment(cfg, restore_last=True, prefix='log_dir__', verbose=0)
+    cfg = restore_or_initialize_experiment(cfg, restore_last=cfg.experiment.restore_last, prefix='log_dir__', verbose=0)
 
 
     # neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)

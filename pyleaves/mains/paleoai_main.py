@@ -143,15 +143,12 @@ from paleoai_data.utils.kfold_cross_validation import DataFold
 # @RunAsCUDASubprocess()
 def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=None, verbose: bool=True) -> None:
     # print(f'WORKER {worker_id} INITIATED')
-    from pyleaves.utils import set_tf_config
-    # # gpu_device = setGPU(only_return=True)
-    # gpu_id = setGPU()
-    set_tf_config(seed=cfg.misc.seed)
+#     from pyleaves.utils import set_tf_config
+#     set_tf_config(seed=cfg.misc.seed)
     predictions_path = str(Path(cfg.results_dir,f'predictions_fold-{fold.fold_id}.npz'))
     if os.path.isfile(predictions_path):
         print(f'predictions for fold_id={fold.fold_id} found, skipping training')
         return predictions_path
-        
 
     
     import tensorflow as tf
@@ -194,11 +191,11 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
 
     test_iter = iter(test_data)
     validation_data_np = tf_data2np(data=test_data, num_batches=4)
-#     with tf.Graph().as_default():
+
     if verbose: print(f'Starting fold {fold.fold_id}')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
 
-    pprint(OmegaConf.to_container(cfg))
+#     pprint(OmegaConf.to_container(cfg))
     model_config = get_model_config(cfg=cfg)
     model = build_model(model_config)
 
@@ -206,7 +203,6 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(Path(cfg.tensorboard_log_dir,f'tb_results-fold_{fold.fold_id}')))
     backup_callback = BackupAndRestore(str(Path(cfg['checkpoints_path'],f'fold-{fold.fold_id}')))
     backup_callback.set_model(model)
-
 
     print(f'Shape of validation data provided to NeptuneVisualizerCallback: {validation_data_np[0].shape}, {validation_data_np[1].shape}')
 
@@ -242,6 +238,10 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
         history_path = str(Path(cfg.results_dir),f'training-history_fold-{fold.fold_id}.json')
         with open(path,'w') as f:
             json.dump(history, f)
+        if os.path.isfile(history_path):
+            print(f'Saved history results for fold-{fold.fold_id} to {history_path}')
+        else:
+            raise Exception('File save failed')
     except Exception as e:
         print(e)
         print(f'WARNING:  Failed saving training history for fold {fold.fold_id} into json file.\n Continuing anyway.')
@@ -320,9 +320,9 @@ def evaluate_predictions(results_dir):
 
 def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose: bool=True) -> None:
     print(f'WORKER {worker_id} INITIATED')
-    from pyleaves.utils import set_tf_config, setGPU
-    gpu_id = setGPU()
-    # set_tf_config(gpu_id)
+    from pyleaves.utils import set_tf_config
+    set_tf_config(seed=cfg.misc.seed)
+
     
     # from pyleaves.utils.neptune_utils import neptune
     # neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)

@@ -27,6 +27,7 @@ experiment:
     experiment_name: ???
     experiment_dir: ???
     experiment_start_time: ???
+    restore_last: True
     
     
     

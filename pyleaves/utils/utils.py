@@ -73,11 +73,11 @@ def set_tf_config(gpu_num: int=None, seed: int=None):
         print('Now using GPU(s):\n')
         if type(gpu)==list:
             if len(gpu)==1:
-                print(gpu[0].name)
+                print('gpu[0].name =',gpu[0].name)
             else:
-                print([g.name for g in gpu])
+                print('[g.name for g in gpu] =',[g.name for g in gpu])
         else:
-            print(gpu.name)
+            print('gpu.name =',gpu.name)
     except Exception as e:
         print(e)
         print('setting memory growth failed, continuing anyway.')
