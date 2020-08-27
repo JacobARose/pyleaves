@@ -34,6 +34,7 @@ from tqdm import trange
 import pyleaves
 from pyleaves.datasets.base_dataset import BaseDataset
 from pyleaves.models import resnet, vgg16
+from pyleaves.models import base_model
 from pyleaves.utils.callback_utils import BackupAndRestore
 from pyleaves.utils import setGPU, set_tf_config
 # from pyleaves.utils.neptune_utils import neptune
@@ -647,6 +648,8 @@ def build_model(cfg):
     base = build_base()
     model = build_head(base, num_classes=cfg['num_classes'])
 
+    
+    model = base_model.Model.add_regularization(model, **cfg.regularization)
 
     # initial_learning_rate = cfg['lr']
     lr_schedule = cfg['lr'] #tf.keras.optimizers.schedules.ExponentialDecay(
