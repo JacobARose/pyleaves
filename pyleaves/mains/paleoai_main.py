@@ -190,7 +190,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                                                                                  samples_per_shard=cfg.misc.samples_per_shard)
 
     test_iter = iter(test_data)
-    validation_data_np = tf_data2np(data=test_data, num_batches=4)
+    validation_data_np = tf_data2np(data=test_data, num_batches=2)
 
     if verbose: print(f'Starting fold {fold.fold_id}')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
@@ -247,6 +247,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
         print(e)
         print(f'WARNING:  Failed saving training history for fold {fold.fold_id} into json file.\n Continuing anyway.')
         
+    K.clear_session()
     
    
     return cfg
