@@ -189,7 +189,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                                                                                  tfrecord_dir=cfg.tfrecord_dir,
                                                                                  samples_per_shard=cfg.misc.samples_per_shard)
 
-    test_iter = iter(test_data)
+
     validation_data_np = tf_data2np(data=test_data, num_batches=2)
 
     if verbose: print(f'Starting fold {fold.fold_id}')
@@ -199,8 +199,18 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     model_config = get_model_config(cfg=cfg)
     model = build_model(model_config)
 
+
+    def lr_scheduler(epoch, lr):
+        decay_rate = cfg.lr_decay or 1.0
+        decay_step = cfg.lr_step or 10
+        if epoch % decay_step == 0 and epoch:
+            return lr * decay_rate
+        return lr
+    
+    lr_callback = LearningRateScheduler(lr_scheduler, verbose=1)
+
     # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(Path(cfg.tensorboard_log_dir,f'tb_results-fold_{fold.fold_id}')))
+    # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(Path(cfg.tensorboard_log_dir,f'tb_results-fold_{fold.fold_id}')))
     backup_callback = BackupAndRestore(str(Path(cfg['checkpoints_path'],f'fold-{fold.fold_id}')))
     backup_callback.set_model(model)
 
@@ -208,6 +218,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
 
     print('building callbacks')
     callbacks = [backup_callback, #neptune_logger_callback,
+                 lr_callback,
                  NeptuneMonitor(),
                  NeptuneVisualizationCallback(validation_data_np, num_classes=cfg.dataset.num_classes),#                  tensorboard_callback,
                  CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),#False),
