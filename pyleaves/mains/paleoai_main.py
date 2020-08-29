@@ -201,8 +201,10 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
 
 
     def lr_scheduler(epoch, lr):
-        decay_rate = cfg.lr_decay or 1.0
-        decay_step = cfg.lr_step or 10
+        decay_rate = cfg.lr_decay or 0.9
+        decay_step = cfg.lr_decay_epochs or 10
+
+        print('decay_rate=', decay_rate, 'decay_step=', decay_step, 'epoch=', epoch, f'|lr={lr:.6f}')
         if epoch % decay_step == 0 and epoch:
             return lr * decay_rate
         return lr
