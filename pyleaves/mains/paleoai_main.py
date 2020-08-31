@@ -13,6 +13,7 @@ python '/home/jacob/projects/pyleaves/pyleaves/mains/paleoai_main.py'
 '''
 import copy
 from datetime import datetime
+import json
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
 import os
@@ -248,8 +249,8 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                                          verbose=verbose)
 
     try:
-        history_path = str(Path(cfg.results_dir),f'training-history_fold-{fold.fold_id}.json')
-        with open(path,'w') as f:
+        history_path = str(Path(cfg.results_dir,f'training-history_fold-{fold.fold_id}.json'))
+        with open(history_path,'w') as f:
             json.dump(history, f)
         if os.path.isfile(history_path):
             print(f'Saved history results for fold-{fold.fold_id} to {history_path}')
