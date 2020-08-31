@@ -142,12 +142,12 @@ from paleoai_data.utils.kfold_cross_validation import DataFold
 
 def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=None, verbose: bool=True) -> None:
     print(f'WORKER {worker_id} INITIATED')
-    from pyleaves.utils import set_tf_config
-    set_tf_config(num_gpus=1, seed=cfg.misc.seed)
-    predictions_path = str(Path(cfg.results_dir,f'predictions_fold-{fold.fold_id}.npz'))
-    if os.path.isfile(predictions_path):
-        print(f'predictions for fold_id={fold.fold_id} found, skipping training')
-        return predictions_path
+    # from pyleaves.utils import set_tf_config
+    # set_tf_config(num_gpus=1, seed=cfg.misc.seed)
+    # predictions_path = str(Path(cfg.results_dir,f'predictions_fold-{fold.fold_id}.npz'))
+    # if os.path.isfile(predictions_path):
+    #     print(f'predictions for fold_id={fold.fold_id} found, skipping training')
+    #     return predictions_path
 
     
     import tensorflow as tf
