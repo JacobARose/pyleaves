@@ -56,7 +56,7 @@ def set_tf_config(gpu_num: List[int]=None, num_gpus: int=None, seed: int=None):
             tf.config.experimental.set_visible_devices(keep, 'GPU')
         print('Successfully set memory_growth=True and limited GPUs visible to tensorflow.\n')
         print('Now using GPU(s):')
-        print('[g.name for g in gpu] =',[g.name for g in gpu])
+        print([g.name for g in keep])
     except Exception as e:
         print(e)
         print('setting memory growth failed, continuing anyway.')
