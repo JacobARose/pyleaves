@@ -18,28 +18,35 @@ from pprint import pprint
 import random
 from typing import List
 
-def setGPU(only_return=False, num_gpus: int=None) -> List[int]:
+def setGPU(gpu_num: List[int]=None, only_return: bool=False, num_gpus: int=None) -> List[int]:
     num_gpus = num_gpus or 1
-    stats = gpustat.GPUStatCollection.new_query()
-    ids = map(lambda gpu: int(gpu.entry['index']), stats)
-    ratios = map(lambda gpu: float(gpu.entry['memory.used'])/float(gpu.entry['memory.total']), stats)
-    pairs = list(zip(ids, ratios))
-    random.shuffle(pairs)
-    # bestGPU = min(pairs, key=lambda x: x[1])[0]
-    bestGPU = [x[0] for x in sorted(pairs, key=lambda x: x[1])][:num_gpus]
+    if gpu_num is None:
+        stats = gpustat.GPUStatCollection.new_query()
+        ids = map(lambda gpu: int(gpu.entry['index']), stats)
+        ratios = map(lambda gpu: float(gpu.entry['memory.used'])/float(gpu.entry['memory.total']), stats)
+        pairs = list(zip(ids, ratios))
+        random.shuffle(pairs)
+        # bestGPU = min(pairs, key=lambda x: x[1])[0]
+        gpu_num = [x[0] for x in sorted(pairs, key=lambda x: x[1])][:num_gpus]
+    elif type(gpu_num)==str:
+        gpu_num = [int(gpu_num)]
+    elif type(gpu_num)==int:
+        gpu_num = [gpu_num]
+
+
 
     if only_return:
-        return bestGPU
-    print(f"setGPU: Setting GPU to: {bestGPU}")
+        return gpu_num
+    print(f"setGPU: Setting GPU to: {gpu_num}")
     # os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
-    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(gpu) for gpu in bestGPU])
-    return bestGPU
+    os.environ['CUDA_VISIBLE_DEVICES'] = ','.join([str(gpu) for gpu in gpu_num])
+    return gpu_num
 
 
-def set_tf_config(gpu_num: List[int]=None, num_gpus: int=None, seed: int=None):
+def set_tf_config(gpu_num: List[int]=None, num_gpus: int=None, set_cuda_devices_first=True, seed: int=None):
     
-    if gpu_num is None:
-        gpu_num = setGPU(only_return=True, num_gpus=num_gpus)
+    only_return = not set_cuda_devices_first
+    gpu_num = setGPU(gpu_num=gpu_num, only_return=only_return, num_gpus=num_gpus)
 
     import tensorflow as tf
     assert using_tensorflow2()
@@ -64,6 +71,7 @@ def set_tf_config(gpu_num: List[int]=None, num_gpus: int=None, seed: int=None):
     random.seed(seed)
     np.random.seed(seed)
     tf.random.set_seed(seed)
+    return keep
 
 
 def using_tensorflow2() -> bool:
