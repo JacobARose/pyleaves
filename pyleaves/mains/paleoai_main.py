@@ -139,9 +139,7 @@ def get_model_config(cfg: DictConfig):
     return model_config
 
 from paleoai_data.utils.kfold_cross_validation import DataFold
-# from pyleaves.utils.multiprocessing_utils import RunAsCUDASubprocess
 
-# @RunAsCUDASubprocess()
 def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=None, verbose: bool=True) -> None:
     # print(f'WORKER {worker_id} INITIATED')
 #     from pyleaves.utils import set_tf_config
@@ -240,6 +238,9 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                         validation_steps=cfg['validation_steps'],
                         verbose=1)
 
+    ## Latest Note: Actually, nevermind. This correctly only tests on the test set.
+    ## Note: Testing on full dataset is incorrect here, since we just fit model on the train set part of it.
+    ## This may be better put to use in a separate fine-tune() function, when placed before model.fit
     y_true, y_pred = predict_single_fold(model=model,
                                          fold=fold,
                                          cfg=cfg,
@@ -353,3 +354,6 @@ def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, 
 # from keras.wrappers.scikit_learn import KerasClassifier
 # from tune_sklearn import TuneGridSearchCV
 # from joblib import Parallel, delayed
+
+
+
