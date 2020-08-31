@@ -143,7 +143,7 @@ from paleoai_data.utils.kfold_cross_validation import DataFold
 def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=None, verbose: bool=True) -> None:
     print(f'WORKER {worker_id} INITIATED')
     from pyleaves.utils import set_tf_config
-    set_tf_config(seed=cfg.misc.seed)
+    set_tf_config(num_gpus=1, seed=cfg.misc.seed)
     predictions_path = str(Path(cfg.results_dir,f'predictions_fold-{fold.fold_id}.npz'))
     if os.path.isfile(predictions_path):
         print(f'predictions for fold_id={fold.fold_id} found, skipping training')
@@ -223,7 +223,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
                  NeptuneMonitor(),
                  NeptuneVisualizationCallback(validation_data_np, num_classes=cfg.dataset.num_classes),#                  tensorboard_callback,
                  CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),#False),
-                 EarlyStopping(monitor='val_loss', patience=25, verbose=1, restore_best_weights=True)]#,
+                 EarlyStopping(monitor='val_loss', patience=20, verbose=1, restore_best_weights=True)]#,
                 #  ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
                 #  ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
 
@@ -336,9 +336,9 @@ def evaluate_predictions(results_dir):
     
 
 def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, verbose: bool=True) -> None:
-    print(f'WORKER {worker_id} INITIATED')
-    from pyleaves.utils import set_tf_config
-    set_tf_config(seed=cfg.stage_0.misc.seed)
+    # print(f'WORKER {worker_id} INITIATED')
+    # from pyleaves.utils import set_tf_config
+    # set_tf_config(seed=cfg.stage_0.misc.seed)
 
     
     # from pyleaves.utils.neptune_utils import neptune
