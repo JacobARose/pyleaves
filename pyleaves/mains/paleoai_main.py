@@ -141,9 +141,9 @@ def get_model_config(cfg: DictConfig):
 from paleoai_data.utils.kfold_cross_validation import DataFold
 
 def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=None, verbose: bool=True) -> None:
-    # print(f'WORKER {worker_id} INITIATED')
-#     from pyleaves.utils import set_tf_config
-#     set_tf_config(seed=cfg.misc.seed)
+    print(f'WORKER {worker_id} INITIATED')
+    from pyleaves.utils import set_tf_config
+    set_tf_config(seed=cfg.misc.seed)
     predictions_path = str(Path(cfg.results_dir,f'predictions_fold-{fold.fold_id}.npz'))
     if os.path.isfile(predictions_path):
         print(f'predictions for fold_id={fold.fold_id} found, skipping training')
@@ -347,7 +347,7 @@ def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, 
     # params=OmegaConf.to_container(cfg)
     # with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(fold.fold_id), params=params):
     cfg.stage_0 = train_single_fold(fold, copy.deepcopy(cfg.stage_0), worker_id)
-    log_config(cfg=cfg, verbose=False)
+    # log_config(cfg=cfg, verbose=False)
     return cfg
 
 
