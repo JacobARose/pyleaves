@@ -54,6 +54,7 @@ def set_tf_config(gpu_num: List[int]=None, num_gpus: int=None, set_cuda_devices_
     only_return = not set_cuda_devices_first
     gpu_num = setGPU(gpu_num=gpu_num, only_return=only_return, num_gpus=num_gpus, wait=wait)
 
+    gpu_num = list(range(len(gpu_num)))
     import tensorflow as tf
     assert using_tensorflow2()
     gpus = tf.config.experimental.list_physical_devices('GPU')
