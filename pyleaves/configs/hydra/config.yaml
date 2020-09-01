@@ -1,4 +1,6 @@
 defaults:
+    - db@db : sqlite
+
     - model@stage_0/model: resnet_50_v2
     - dataset@stage_0/dataset: Leaves-PNAS
     
@@ -44,3 +46,8 @@ saved_model_path: ???
 checkpoints_path: ???
 n_jobs: 1
 num_gpus: 1
+
+
+study_name : null
+n_trials: 5
+gc_after_trial: true

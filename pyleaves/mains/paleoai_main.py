@@ -24,6 +24,7 @@ from typing import Tuple
 from tqdm import tqdm, trange
 # from pyleaves.datasets.base_dataset import BaseDataset
 from paleoai_data.dataset_drivers.base_dataset import BaseDataset
+from paleoai_data.utils.kfold_cross_validation import DataFold
 from sklearn.metrics import roc_auc_score, accuracy_score
 # import hydra
 # import neptune
@@ -45,6 +46,8 @@ def initialize_experiment(cfg, experiment_start_time=None):
     cfg_0 = cfg.stage_0
     cfg.experiment.experiment_name = '_'.join([cfg_0.dataset.dataset_name, cfg_0.model.model_name])
     cfg.experiment.experiment_dir = os.path.join(cfg.experiment.neptune_experiment_dir, cfg.experiment.experiment_name)
+    if 'db' in cfg:
+        ensure_dir_exists("/" + cfg.db.storage.strip('sqlite:/'))
 
     cfg.experiment.experiment_start_time = experiment_start_time or datetime.now().strftime(date_format)
     cfg.update(log_dir = os.path.join(cfg.experiment.experiment_dir, 'log_dir__'+cfg.experiment.experiment_start_time))
@@ -54,7 +57,8 @@ def initialize_experiment(cfg, experiment_start_time=None):
     cfg['stage_0']['tensorboard_log_dir'] = str(Path(cfg.log_dir,'tensorboard_logs'))
     cfg.update(model_dir = os.path.join(cfg.log_dir,'model_dir'))
     cfg['stage_0']['model_dir'] = cfg.model_dir #os.path.join(cfg.log_dir,'model_dir')
-    cfg.stage_0.update(tfrecord_dir = os.path.join(cfg.log_dir,'tfrecord_dir'))
+    if 'tfrecord_dir' not in cfg.stage_0:
+        cfg.stage_0.update(tfrecord_dir = os.path.join(cfg.log_dir,'tfrecord_dir'))
     cfg.update(tfrecord_dir = cfg.stage_0.tfrecord_dir)
     cfg.saved_model_path = str(Path(cfg.model_dir) / Path('saved_model'))
     cfg.checkpoints_path = str(Path(cfg.model_dir) / Path('checkpoints'))
@@ -138,12 +142,48 @@ def get_model_config(cfg: DictConfig):
     model_config = OmegaConf.merge(cfg.model, cfg.training)
     return model_config
 
-from paleoai_data.utils.kfold_cross_validation import DataFold
+
+        # def lr_scheduler(epoch, lr):
+    #     decay_rate = model_config.lr_decay or 0.9
+    #     decay_step = model_config.lr_decay_epochs or 10
+
+    #     print('|decay_rate=', decay_rate, '|decay_step=', decay_step, '|epoch=', epoch, f'|lr={lr:.6f}')
+    #     if epoch % decay_step == 0 and epoch:
+    #         return lr * decay_rate
+    #     return lr
+    
+    # lr_callback = LearningRateScheduler(lr_scheduler, verbose=1)
+def get_callbacks(cfg, model_config, model, fold, test_data):
+    from neptunecontrib.monitoring.keras import NeptuneMonitor
+    from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger
+    from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback, ReduceLROnPlateau
+
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
+                                  patience=10, min_lr=model_config.lr*.1)
+
+    # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+    # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(Path(cfg.tensorboard_log_dir,f'tb_results-fold_{fold.fold_id}')))
+    backup_callback = BackupAndRestore(str(Path(cfg['checkpoints_path'],f'fold-{fold.fold_id}')))
+    backup_callback.set_model(model)
+
+    validation_data_np = tf_data2np(data=test_data, num_batches=2)
+    neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=cfg.dataset.num_classes)
+
+    print('building callbacks')
+    callbacks = [backup_callback, #neptune_logger_callback,
+                 reduce_lr,
+                 NeptuneMonitor(),
+                 neptune_visualization_callback,
+                 CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),
+                 EarlyStopping(monitor='val_loss', patience=20, verbose=1, restore_best_weights=True)]#,
+                #  ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
+                #  ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
+    return callbacks
 
 def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=None, verbose: bool=True) -> None:
     print(f'WORKER {worker_id} INITIATED')
-    # from pyleaves.utils import set_tf_config
-    # set_tf_config(num_gpus=1, seed=cfg.misc.seed)
+    from pyleaves.utils import set_tf_config
+    set_tf_config(num_gpus=1, seed=cfg.misc.seed)
     # predictions_path = str(Path(cfg.results_dir,f'predictions_fold-{fold.fold_id}.npz'))
     # if os.path.isfile(predictions_path):
     #     print(f'predictions for fold_id={fold.fold_id} found, skipping training')
@@ -152,17 +192,16 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     
     import tensorflow as tf
     from tensorflow.keras import backend as K
-    from neptunecontrib.monitoring.keras import NeptuneMonitor
+    # from neptunecontrib.monitoring.keras import NeptuneMonitor
 
     from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model, tf_data2np#, log_data
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, LambdaCallback, LearningRateScheduler
-    from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback
+    from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback, ReduceLROnPlateau
     # from pyleaves.utils.neptune_utils import ImageLoggerCallback#, neptune
 
 
     K.clear_session()
     preprocess_input(tf.zeros([4, 224, 224, 3]))
-    
     
     cfg.tfrecord_dir = os.path.join(cfg.tfrecord_dir,fold.fold_name)
     ensure_dir_exists(cfg.tfrecord_dir)
@@ -175,59 +214,14 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
 #         preprocess_input(tf.zeros([4, 224, 224, 3]))
         
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
-                                                                                 batch_size=cfg.training.batch_size,
-                                                                                 buffer_size=cfg.training.buffer_size,
-                                                                                 exclude_classes=cfg.dataset.exclude_classes,
-                                                                                 include_classes=cfg.dataset.include_classes,
-                                                                                 target_size=cfg.dataset.target_size,
-                                                                                 num_channels=cfg.dataset.num_channels,
-                                                                                 color_mode=cfg.dataset.color_mode,
-                                                                                 augmentations=cfg.training.augmentations,
-                                                                                 seed=cfg.misc.seed,
-                                                                                 use_tfrecords=cfg.misc.use_tfrecords,
-                                                                                 tfrecord_dir=cfg.tfrecord_dir,
-                                                                                 samples_per_shard=cfg.misc.samples_per_shard)
-
-
-    validation_data_np = tf_data2np(data=test_data, num_batches=2)
-
-    if verbose: print(f'Starting fold {fold.fold_id}')
+                                                                                 cfg=cfg)
+    print(f'Starting fold {fold.fold_id}')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
 
-#     pprint(OmegaConf.to_container(cfg))
     model_config = get_model_config(cfg=cfg)
     model = build_model(model_config)
 
-
-    def lr_scheduler(epoch, lr):
-        decay_rate = model_config.lr_decay or 0.9
-        decay_step = model_config.lr_decay_epochs or 10
-
-        print('|decay_rate=', decay_rate, '|decay_step=', decay_step, '|epoch=', epoch, f'|lr={lr:.6f}')
-        if epoch % decay_step == 0 and epoch:
-            return lr * decay_rate
-        return lr
-    
-    # lr_callback = LearningRateScheduler(lr_scheduler, verbose=1)
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
-                                  patience=10, min_lr=model_config.lr*.1)
-
-    # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-    # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(Path(cfg.tensorboard_log_dir,f'tb_results-fold_{fold.fold_id}')))
-    backup_callback = BackupAndRestore(str(Path(cfg['checkpoints_path'],f'fold-{fold.fold_id}')))
-    backup_callback.set_model(model)
-
-    print(f'Shape of validation data provided to NeptuneVisualizerCallback: {validation_data_np[0].shape}, {validation_data_np[1].shape}')
-
-    print('building callbacks')
-    callbacks = [backup_callback, #neptune_logger_callback,
-                 reduce_lr,
-                 NeptuneMonitor(),
-                 NeptuneVisualizationCallback(validation_data_np, num_classes=cfg.dataset.num_classes),#                  tensorboard_callback,
-                 CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),#False),
-                 EarlyStopping(monitor='val_loss', patience=20, verbose=1, restore_best_weights=True)]#,
-                #  ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune),
-                #  ImageLoggerCallback(data=test_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune)]
+    callbacks = get_callbacks(cfg, model_config, model, fold, test_data)
 
     print(f'Initiating model.fit for fold-{fold.fold_id}')
     history = model.fit(train_data,
@@ -267,7 +261,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     K.clear_session()
     
    
-    return cfg
+    return history
 
 def predict_single_fold(model, fold: DataFold, cfg : DictConfig, predict_on_full_dataset=False, worker_id=None, save=True, verbose: bool=True) -> Tuple[np.ndarray, np.ndarray]:
     from pyleaves.train.paleoai_train import create_prediction_dataset
@@ -348,7 +342,7 @@ def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, 
 #     log_config(cfg=cfg, verbose=False)#, neptune=neptune)
     # params=OmegaConf.to_container(cfg)
     # with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(fold.fold_id), params=params):
-    cfg.stage_0 = train_single_fold(fold, copy.deepcopy(cfg.stage_0), worker_id)
+    history = train_single_fold(fold, cfg.stage_0, worker_id)
     # log_config(cfg=cfg, verbose=False)
     return cfg
 
@@ -359,3 +353,74 @@ def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, 
 
 
 
+def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=None, verbose: bool=True) -> None:
+    print(f'WORKER {worker_id} INITIATED')
+    from pyleaves.utils import set_tf_config
+    set_tf_config(num_gpus=1, seed=cfg.misc.seed)
+    
+    import tensorflow as tf
+    from tensorflow.keras import backend as K
+    from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model
+
+    K.clear_session()
+    preprocess_input(tf.zeros([4, 224, 224, 3]))
+    
+    cfg.tfrecord_dir = os.path.join(cfg.tfrecord_dir,fold.fold_name)
+    ensure_dir_exists(cfg.tfrecord_dir)
+    if verbose:
+        print('='*20)
+        print(f'RUNNING: fold {fold.fold_id} in process {worker_id or "None"}')
+        print(cfg.tfrecord_dir)
+        print('='*20)
+#     with tf.Graph().as_default():
+#         preprocess_input(tf.zeros([4, 224, 224, 3]))
+        
+    train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
+                                                                                 cfg=cfg)
+    print(f'Starting fold {fold.fold_id}')
+    log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
+
+    model_config = cfg.model
+    model = build_model(model_config)
+
+    callbacks = get_callbacks(cfg, model_config, model, fold, test_data)
+
+    print(f'Initiating model.fit for fold-{fold.fold_id}')
+    history = model.fit(train_data,
+                        epochs=cfg.training['num_epochs'],
+                        callbacks=callbacks,
+                        validation_data=test_data,
+                        validation_freq=1,
+                        shuffle=True,
+                        steps_per_epoch=cfg['steps_per_epoch'],
+                        validation_steps=cfg['validation_steps'],
+                        verbose=1)
+
+    ## Latest Note: Actually, nevermind. This correctly only tests on the test set.
+    ## Note: Testing on full dataset is incorrect here, since we just fit model on the train set part of it.
+    ## This may be better put to use in a separate fine-tune() function, when placed before model.fit
+    y_true, y_pred = predict_single_fold(model=model,
+                                         fold=fold,
+                                         cfg=cfg,
+                                         predict_on_full_dataset=False,
+                                         worker_id=worker_id,
+                                         save=True,
+                                         verbose=verbose)
+
+    try:
+        history_path = str(Path(cfg.results_dir,f'training-history_fold-{fold.fold_id}.json'))
+        with open(history_path,'w') as f:
+            json.dump(history.history, f)
+        if os.path.isfile(history_path):
+            print(f'Saved history results for fold-{fold.fold_id} to {history_path}')
+            cfg.training['history_results_path'] = history_path
+        else:
+            raise Exception('File save failed')
+    except Exception as e:
+        print(e)
+        print(f'WARNING:  Failed saving training history for fold {fold.fold_id} into json file.\n Continuing anyway.')
+        
+    K.clear_session()
+    
+   
+    return history

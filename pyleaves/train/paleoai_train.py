@@ -444,18 +444,20 @@ def load_data(data_fold: DataFold,
 
 
 def create_dataset(data_fold: DataFold,
-                   batch_size=32,
-                   buffer_size=200,
-                   exclude_classes=[],
-                   include_classes=[],
-                   target_size=(512,512),
-                   num_channels=1,
-                   color_mode='grayscale',
-                   augmentations=[{}],
-                   seed=None,
-                   use_tfrecords=False,
-                   tfrecord_dir=None,
-                   samples_per_shard=800):
+                   cfg: DictConfig):
+
+    batch_size=cfg.training.batch_size
+    buffer_size=cfg.training.buffer_size
+    exclude_classes=cfg.dataset.exclude_classes
+    include_classes=cfg.dataset.include_classes
+    target_size=cfg.dataset.target_size
+    num_channels=cfg.dataset.num_channels
+    color_mode=cfg.dataset.color_mode
+    augmentations=cfg.training.augmentations
+    seed=cfg.misc.seed
+    use_tfrecords=cfg.misc.use_tfrecords
+    tfrecord_dir=cfg.tfrecord_dir
+    samples_per_shard=cfg.misc.samples_per_shard
 
     dataset, train_dataset, test_dataset, encoder = load_data(data_fold=data_fold,
                                                               exclude_classes=exclude_classes,
@@ -464,8 +466,6 @@ def create_dataset(data_fold: DataFold,
                                                               tfrecord_dir=tfrecord_dir,
                                                               samples_per_shard=samples_per_shard,
                                                               seed=seed)
-    # if type(target_size)=='str':
-    #     target_size = tuple(map(int, target_size.strip('()').split(',')))
     num_classes = train_dataset.num_classes
 
     train_data = prep_dataset(dataset['train'],
@@ -646,16 +646,19 @@ def build_model(cfg):
 
     base = build_base()
     model = build_head(base, num_classes=cfg['num_classes'])
-
     
     model = base_model.Model.add_regularization(model, **cfg.regularization)
 
     # initial_learning_rate = cfg['lr']
-    lr_schedule = cfg['lr'] #tf.keras.optimizers.schedules.ExponentialDecay(
+    # lr_schedule = cfg['lr'] #tf.keras.optimizers.schedules.ExponentialDecay(
                             # initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True
-    # )
 
-        # optimizer = keras.optimizers.RMSprop(learning_rate=lr_schedule)
+    if cfg['optimizer'] == "RMSprop":
+        optimizer = tf.keras.optimizers.SGD(learning_rate=cfg['lr'], momentum=cfg['momentum'], decay=cfg['decay'])
+    elif cfg['optimizer'] == "SGD":
+        optimizer = tf.keras.optimizers.SGD(learning_rate=cfg['lr'], momentum=cfg['momentum'])
+    elif cfg['optimizer'] == "Adam":
+        optimizer = tf.keras.optimizers.Adam(learning_rate=cfg['lr'])
     if cfg['optimizer']=='Adam':
         optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
 

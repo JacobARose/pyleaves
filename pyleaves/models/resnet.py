@@ -28,10 +28,10 @@ from pyleaves.models.base_model import add_regularization
 # from pyleaves.config import DatasetConfig, TrainConfig, ExperimentConfig, ModelConfig
 # from pyleaves.models.base_model import BaseModel
 
-from pyleaves.base.base_model import BaseModel
+from pyleaves.base.base_model import BaseModel, Model
 from pyleaves.train.metrics import METRICS
 
-
+# class ResNet(Model):
 class ResNet(BaseModel):
     '''
     Example usage:

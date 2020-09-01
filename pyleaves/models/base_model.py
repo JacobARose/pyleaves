@@ -75,19 +75,13 @@ class BaseModel:
         self.num_classes = model_config.num_classes
         self.frozen_layers = model_config.frozen_layers
         self.input_shape = model_config.input_shape
-        self.base_learning_rate = model_config.base_learning_rate
+        if 'lr' in model_config:
+            self.lr = model_config.lr
+        else:
+            self.lr = model_config.base_learning_rate
         self.regularization = model_config.regularization
 
         self.init_dirs()
-
-#         self.model = self.build_model()
-
-
-#         self.weights = self.model.get_weights()
-#         json_config = self.model.to_json()
-#         self.model.save_weights(weights_filepath)
-#         with open(config_filepath,'w') as json_file:
-#             json_file.write(json_config)
 
     def build_base(self):
         '''
@@ -108,7 +102,7 @@ class BaseModel:
         model = self.build_head(base)
 
         model = self.add_regularization(model)
-        model.compile(optimizer=tf.keras.optimizers.Adam(lr=self.base_learning_rate),
+        model.compile(optimizer=tf.keras.optimizers.Adam(lr=self.lr),
                       loss='categorical_crossentropy',
                       metrics=METRICS)
         self.model = model

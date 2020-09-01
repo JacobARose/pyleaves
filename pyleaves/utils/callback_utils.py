@@ -24,12 +24,14 @@ from tensorflow.python.distribute import distribute_lib
 from tensorflow.python.distribute import distributed_file_utils
 from tensorflow.python.distribute import mirrored_strategy
 from tensorflow.python.framework import ops
-from tensorflow.compat.v1.keras.callbacks import (Callback,
-												  CSVLogger,
-												  ModelCheckpoint,
-												  TensorBoard,
-												  LearningRateScheduler,
-												  EarlyStopping)
+# from tensorflow.compat.v1.keras.callbacks import 
+from tensorflow.keras.callbacks import (Callback,
+										CSVLogger,
+										ModelCheckpoint,
+										TensorBoard,
+										LearningRateScheduler,
+										ReduceLROnPlateau,
+										EarlyStopping)
 
 import numpy as np
 import pandas as pd
