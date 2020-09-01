@@ -92,7 +92,12 @@ class Objective:
         worker_id = psutil.Process(os.getpid())
 
         gpu_num = self.gpus[trial.number % self.num_gpus]
-        history = paleoai_main.optuna_train_single_fold(fold, config.stage_0, worker_id, gpu_num)
+        print('GPU NUMBER ',gpu_num)
+
+        neptune.init(project_qualified_name=config.experiment.neptune_project_name)
+        params=OmegaConf.to_container(config)
+        with neptune.create_experiment(name=config.experiment.experiment_name+'-'+str(config.stage_0.dataset.dataset_name), params=params):
+            history = paleoai_main.optuna_train_single_fold(fold, config.stage_0, worker_id, gpu_num)
 
         best_accuracy = np.max(history.history['val_accuracy'])
 
@@ -142,12 +147,12 @@ def main(cfg : DictConfig) -> None:
 
     
 
-    neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
-    params=OmegaConf.to_container(cfg)
-    # with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(cfg.fold_id), params=params):
-        # train_pyleaves_dataset(cfg)
-    with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name), params=params):
-        optimize_hyperparameters(cfg=cfg, fold_ids=list(range(10)), n_trials=cfg.n_trials, n_jobs=cfg.n_jobs, gc_after_trial=cfg.gc_after_trial, verbose=True)
+    # neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
+    # params=OmegaConf.to_container(cfg)
+    # # with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(cfg.fold_id), params=params):
+    #     # train_pyleaves_dataset(cfg)
+    # with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name), params=params):
+    optimize_hyperparameters(cfg=cfg, fold_ids=list(range(10)), n_trials=cfg.n_trials, n_jobs=cfg.n_jobs, gc_after_trial=cfg.gc_after_trial, verbose=True)
 
 if __name__=="__main__":
 
