@@ -94,7 +94,7 @@ class Objective:
 def optimize_hyperparameters(cfg : DictConfig, fold_ids: List[int]=[0], n_trials: int=5, n_jobs: int=1, gc_after_trial=True, verbose: bool=False) -> None:
 
     print(f'Beginning training of models with fold_ids: {fold_ids}')
-        
+    import pdb; pdb.set_trace()
     neptune_callback = opt_utils.NeptuneCallback(log_study=True, log_charts=True)
 
     sampler = TPESampler(seed=cfg.stage_0.misc.seed)
