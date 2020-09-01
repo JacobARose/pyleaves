@@ -48,7 +48,7 @@ n_jobs: 1
 num_gpus: 1
 
 
-study_name : null
+study_name : 'default_study'
 n_trials: 5
 gc_after_trial: true
 debug: false
