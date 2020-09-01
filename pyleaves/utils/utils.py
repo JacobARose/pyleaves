@@ -68,8 +68,9 @@ def set_tf_config(gpu_num: List[int]=None, num_gpus: int=None, set_cuda_devices_
                     if str(n) in gpu.name:
                         keep.append(gpu)
 
-            if len(keep)==0: keep = gpus[:len(gpu_num)]                        
+            if len(keep)==0: keep = gpus[:len(gpu_num)]
             tf.config.experimental.set_visible_devices(keep, 'GPU')
+        print(f'visible GPUs: {gpus}')
         print('Successfully set memory_growth=True and limited GPUs visible to tensorflow.\n')
         print('Now using GPU(s):')
         print([g.name for g in keep])
