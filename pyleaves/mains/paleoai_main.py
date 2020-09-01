@@ -208,7 +208,9 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
             return lr * decay_rate
         return lr
     
-    lr_callback = LearningRateScheduler(lr_scheduler, verbose=1)
+    # lr_callback = LearningRateScheduler(lr_scheduler, verbose=1)
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
+                                  patience=10, min_lr=model_config.lr*.1)
 
     # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(Path(cfg.tensorboard_log_dir,f'tb_results-fold_{fold.fold_id}')))
@@ -219,7 +221,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
 
     print('building callbacks')
     callbacks = [backup_callback, #neptune_logger_callback,
-                 lr_callback,
+                 reduce_lr,
                  NeptuneMonitor(),
                  NeptuneVisualizationCallback(validation_data_np, num_classes=cfg.dataset.num_classes),#                  tensorboard_callback,
                  CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),#False),
@@ -252,7 +254,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     try:
         history_path = str(Path(cfg.results_dir,f'training-history_fold-{fold.fold_id}.json'))
         with open(history_path,'w') as f:
-            json.dump(history, f)
+            json.dump(history.history, f)
         if os.path.isfile(history_path):
             print(f'Saved history results for fold-{fold.fold_id} to {history_path}')
             cfg.training['history_results_path'] = history_path
