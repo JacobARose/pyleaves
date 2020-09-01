@@ -361,7 +361,8 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
     import tensorflow as tf
     from tensorflow.keras import backend as K
     from pyleaves.train.paleoai_train import preprocess_input, create_dataset, build_model
-
+    if neptune is None:
+        import neptune
     K.clear_session()
     preprocess_input(tf.zeros([4, 224, 224, 3]))
     
@@ -386,6 +387,11 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
     model = build_model(model_config)
 
     callbacks = get_callbacks(cfg, model_config, model, fold, test_data)
+
+    # log_config(cfg=cfg, verbose=verbose, neptune=neptune)
+    # log_config(cfg=cfg.model, verbose=verbose, neptune=neptune)
+    for k,v in model_config:
+        neptune.set_property(k, v)
 
     print(f'Initiating model.fit for fold-{fold.fold_id}')
     history = model.fit(train_data,
