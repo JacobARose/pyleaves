@@ -59,7 +59,6 @@ def get_model_config(trial, cfg: DictConfig):
     cfg['model']['lr'] = cfg['lr']
     cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
     cfg['model']['model_dir'] = cfg['model_dir']
-    cfg['model']['num_classes'] = cfg['dataset']['num_classes']
 
     optimizer_params = get_optimizer_config(trial)
     model_config = OmegaConf.merge(cfg.model, cfg.training, optimizer_params)

@@ -380,7 +380,9 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, n
     print(f'Starting fold {fold.fold_id}')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
 
+    cfg['model']['num_classes'] = cfg['dataset']['num_classes']
     model_config = cfg.model
+
     model = build_model(model_config)
 
     callbacks = get_callbacks(cfg, model_config, model, fold, test_data)
