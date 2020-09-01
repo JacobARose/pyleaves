@@ -79,12 +79,12 @@ class Objective:
 
     def __call__(self, trial):
         config = copy.deepcopy(self.config)
-        config.model = get_model_config(trial, config)
+        config['stage_0'].update(model= get_model_config(trial, config.stage_0))
 
         fold_id = trial.number % self.num_splits
         fold = self.kfold_loader.folds[fold_id]
         worker_id = psutil.Process(os.getpid())
-        history = paleoai_main.optuna_train_single_fold(fold, config, worker_id)
+        history = paleoai_main.optuna_train_single_fold(fold, config.stage_0, worker_id)
 
         best_accuracy = np.max(history.history['val_accuracy'])
 
