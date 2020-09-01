@@ -47,7 +47,7 @@ def initialize_experiment(cfg, experiment_start_time=None):
     cfg.experiment.experiment_name = '_'.join([cfg_0.dataset.dataset_name, cfg_0.model.model_name])
     cfg.experiment.experiment_dir = os.path.join(cfg.experiment.neptune_experiment_dir, cfg.experiment.experiment_name)
     if 'db' in cfg:
-        ensure_dir_exists("/" + cfg.db.storage.strip('sqlite:/'))
+        ensure_dir_exists(Path("/" + cfg.db.storage.strip('sqlite:/')).parent)
 
     cfg.experiment.experiment_start_time = experiment_start_time or datetime.now().strftime(date_format)
     cfg.update(log_dir = os.path.join(cfg.experiment.experiment_dir, 'log_dir__'+cfg.experiment.experiment_start_time))
