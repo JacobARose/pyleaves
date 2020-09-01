@@ -17,9 +17,15 @@ import gpustat
 from pprint import pprint
 import random
 from typing import List
+import time
 
-def setGPU(gpu_num: List[int]=None, only_return: bool=False, num_gpus: int=None) -> List[int]:
+
+def setGPU(gpu_num: List[int]=None, only_return: bool=False, num_gpus: int=None, wait: bool=True) -> List[int]:
     num_gpus = num_gpus or 1
+
+    if wait:
+        time.sleep(random.randint(1,10))
+
     if gpu_num is None:
         stats = gpustat.GPUStatCollection.new_query()
         ids = map(lambda gpu: int(gpu.entry['index']), stats)
@@ -43,10 +49,10 @@ def setGPU(gpu_num: List[int]=None, only_return: bool=False, num_gpus: int=None)
     return gpu_num
 
 
-def set_tf_config(gpu_num: List[int]=None, num_gpus: int=None, set_cuda_devices_first=True, seed: int=None):
+def set_tf_config(gpu_num: List[int]=None, num_gpus: int=None, set_cuda_devices_first=True, seed: int=None, wait: bool=True):
     
     only_return = not set_cuda_devices_first
-    gpu_num = setGPU(gpu_num=gpu_num, only_return=only_return, num_gpus=num_gpus)
+    gpu_num = setGPU(gpu_num=gpu_num, only_return=only_return, num_gpus=num_gpus, wait=wait)
 
     import tensorflow as tf
     assert using_tensorflow2()
