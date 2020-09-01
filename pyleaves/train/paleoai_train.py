@@ -659,8 +659,6 @@ def build_model(cfg):
         optimizer = tf.keras.optimizers.SGD(learning_rate=cfg['lr'], momentum=cfg['momentum'])
     elif cfg['optimizer'] == "Adam":
         optimizer = tf.keras.optimizers.Adam(learning_rate=cfg['lr'])
-    if cfg['optimizer']=='Adam':
-        optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
 
     if cfg['loss']=='categorical_crossentropy':
         loss = 'categorical_crossentropy'
