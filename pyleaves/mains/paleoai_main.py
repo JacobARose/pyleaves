@@ -356,7 +356,7 @@ def neptune_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, 
 def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, gpu_num: int=None, neptune=None, verbose: bool=True) -> None:
     print(f'WORKER {worker_id} INITIATED')
     from pyleaves.utils import set_tf_config
-    set_tf_config(gpu_num=gpu_num, num_gpus=1, seed=cfg.misc.seed)
+    set_tf_config(gpu_num=gpu_num, num_gpus=1, seed=cfg.misc.seed, wait=fold.fold_id)
     
     import tensorflow as tf
     from tensorflow.keras import backend as K
