@@ -129,8 +129,11 @@ def optimize_hyperparameters(cfg : DictConfig, fold_ids: List[int]=[0], n_trials
 def main(cfg : DictConfig) -> None:
 
     OmegaConf.set_struct(cfg, False)
+
+    cfg['stage_0']['tfrecord_dir'] = f'/media/data/jacob/{cfg.study_name}/tfrecords/{cfg.stage_0.dataset.dataset_name}'
     cfg = restore_or_initialize_experiment(cfg, restore_last=cfg.experiment.restore_last, prefix='log_dir__', verbose=0)
 
+    
 
     neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
     params=OmegaConf.to_container(cfg)
