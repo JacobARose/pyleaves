@@ -20,11 +20,11 @@ from typing import List
 import time
 
 
-def setGPU(gpu_num: List[int]=None, only_return: bool=False, num_gpus: int=None, wait: bool=True) -> List[int]:
+def setGPU(gpu_num: List[int]=None, only_return: bool=False, num_gpus: int=None, wait: int=0) -> List[int]:
     num_gpus = num_gpus or 1
 
     if wait:
-        time.sleep(random.randint(1,10))
+        time.sleep(random.randint(0,wait))
 
     if gpu_num is None:
         stats = gpustat.GPUStatCollection.new_query()

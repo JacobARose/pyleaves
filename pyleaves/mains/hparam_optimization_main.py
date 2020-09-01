@@ -4,7 +4,7 @@ hparam_optimization_main.py
 
 This is meant to be a basic script for initiating or resuming an Optuna hyperparameter-optimization study.
 
- python '/home/jacob/projects/pyleaves/pyleaves/mains/hparam_optimization_main.py' stage_0.misc.use_tfrecords=True num_gpus=4 n_jobs=3 n_trials=20 study_name='hparam_study_Leaves-PNAS' stage_0.dataset.dataset_name='Leaves-PNAS' experiment.experiment_name='hparam_studies_Leaves-PNAS_resnet_50_v2_res512' debug=False stage_0.dataset.target_size=[768,768]
+python '/home/jacob/projects/pyleaves/pyleaves/mains/hparam_optimization_main.py' stage_0.misc.use_tfrecords=True num_gpus=4 n_jobs=3 n_trials=20 study_name='hparam_study_Leaves-PNAS' stage_0.dataset.dataset_name='Leaves-PNAS' experiment.experiment_name='hparam_studies_Leaves-PNAS_resnet_50_v2_res512' debug=False stage_0.dataset.target_size=[768,768] study_name='Leaves-PNAS_initial_study'
 
 python '/home/jacob/projects/pyleaves/pyleaves/mains/hparam_optimization_main.py' stage_0.misc.use_tfrecords=False num_gpus=4 n_jobs=4 n_trials=5 study_name='hparam_study_Leaves-PNAS' stage_0.dataset.dataset_name='Leaves-PNAS' experiment.experiment_name='hparam_studies_Leaves-PNAS_resnet_50_v2_res512'
 
@@ -76,6 +76,9 @@ class Objective:
         cfg_0 = cfg.stage_0
         self.kfold_loader = KFoldLoader(root_dir=cfg_0.dataset.fold_dir)
         self.num_splits = self.kfold_loader.num_splits
+        self.num_gpus = cfg.num_gpus
+        from pyleaves.utils import setGPU
+        self.gpus = setGPU(only_return=True, num_gpus=self.num_gpus, wait=0)
 
     def __call__(self, trial):
         config = copy.deepcopy(self.config)
@@ -87,7 +90,9 @@ class Objective:
         fold_id = trial.number % self.num_splits
         fold = self.kfold_loader.folds[fold_id]
         worker_id = psutil.Process(os.getpid())
-        history = paleoai_main.optuna_train_single_fold(fold, config.stage_0, worker_id)
+
+        gpu_num = self.gpus[trial.number % self.num_gpus]
+        history = paleoai_main.optuna_train_single_fold(fold, config.stage_0, worker_id, gpu_num)
 
         best_accuracy = np.max(history.history['val_accuracy'])
 
