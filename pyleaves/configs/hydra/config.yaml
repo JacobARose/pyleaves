@@ -51,3 +51,4 @@ num_gpus: 1
 study_name : null
 n_trials: 5
 gc_after_trial: true
+debug: false

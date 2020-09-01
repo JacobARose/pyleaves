@@ -155,7 +155,7 @@ def get_model_config(cfg: DictConfig):
     # lr_callback = LearningRateScheduler(lr_scheduler, verbose=1)
 def get_callbacks(cfg, model_config, model, fold, test_data):
     from neptunecontrib.monitoring.keras import NeptuneMonitor
-    from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger
+    from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, tf_data2np
     from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback, ReduceLROnPlateau
 
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,

@@ -79,7 +79,8 @@ class Objective:
     def __call__(self, trial):
         config = copy.deepcopy(self.config)
 
-        import pdb;pdb.set_trace()
+        if config.debug:
+            import pdb;pdb.set_trace()
         config['stage_0'].update(model= get_model_config(trial, config.stage_0))
 
         fold_id = trial.number % self.num_splits
