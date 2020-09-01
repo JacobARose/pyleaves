@@ -114,6 +114,8 @@ def optimize_hyperparameters(cfg : DictConfig, fold_ids: List[int]=[0], n_trials
         print("    {}: {}".format(key, value))
 
     log_config(cfg=cfg, verbose=verbose, neptune=neptune)
+    log_config(cfg=cfg.stage_0.model, verbose=verbose, neptune=neptune)
+    log_config(cfg=cfg.stage_0.dataset, verbose=verbose, neptune=neptune)
 
     return trial
 
