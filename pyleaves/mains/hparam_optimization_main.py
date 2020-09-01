@@ -60,7 +60,8 @@ def get_model_config(trial, cfg: DictConfig):
     cfg['model']['model_dir'] = cfg['model_dir']
 
     optimizer_params = get_optimizer_config(trial)
-    model_config = OmegaConf.merge(cfg.model, cfg.training, optimizer_params)
+    model_config = OmegaConf.merge(cfg.model, cfg.training)
+    model_config.update(**optimizer_params)
     # model_config['n_layers'] = trial.suggest_int("n_layers", 1, 3)
     model_config['regularization'] = {'l2':trial.suggest_float("l2", 1e-10, 1e-3, log=True)}
 
