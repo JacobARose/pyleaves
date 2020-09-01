@@ -56,7 +56,6 @@ def get_optimizer_config(trial):
 
 
 def get_model_config(trial, cfg: DictConfig):
-    cfg['model']['lr'] = cfg['lr']
     cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
     cfg['model']['model_dir'] = cfg['model_dir']
 
