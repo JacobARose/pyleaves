@@ -132,7 +132,7 @@ def main(cfg : DictConfig) -> None:
     params=OmegaConf.to_container(cfg)
     # with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(cfg.fold_id), params=params):
         # train_pyleaves_dataset(cfg)
-    with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(fold.fold_id), params=params):
+    with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name), params=params):
         optimize_hyperparameters(cfg=cfg, fold_ids=list(range(10)), n_trials=cfg.n_trials, n_jobs=cfg.n_jobs, gc_after_trial=cfg.gc_after_trial, verbose=True)
 
 if __name__=="__main__":
