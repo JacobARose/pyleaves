@@ -390,7 +390,7 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
 
     # log_config(cfg=cfg, verbose=verbose, neptune=neptune)
     # log_config(cfg=cfg.model, verbose=verbose, neptune=neptune)
-    for k,v in model_config:
+    for k,v in model_config.items():
         neptune.set_property(k, v)
 
     print(f'Initiating model.fit for fold-{fold.fold_id}')
