@@ -5,7 +5,7 @@ hparam_optimization_main.py
 This is meant to be a basic script for initiating or resuming an Optuna hyperparameter-optimization study.
 
 
-python '/home/jacob/projects/pyleaves/pyleaves/mains/train_parallel.py' stage_0.misc.use_tfrecords=False num_gpus=4 n_jobs=4
+python '/home/jacob/projects/pyleaves/pyleaves/mains/hparam_optimization_main.py' stage_0.misc.use_tfrecords=False num_gpus=4 n_jobs=4 n_trials=5 study_name='hparam_study_Leaves-PNAS' stage_0.dataset.dataset_name='Leaves-PNAS' experiment.experiment_name='hparam_studies_Leaves-PNAS_resnet_50_v2_res512'
 
 
 python '/home/jacob/projects/pyleaves/pyleaves/mains/train_parallel.py' stage_0.dataset.dataset_name="Leaves-PNAS"

@@ -269,3 +269,23 @@ class BaseModel:
 
 # TODO: Implement export and import() methods for save_format='tf' rather than 'h5'
 # import pdb;pdb.set_trace();print(__file__)
+
+
+class Model(BaseModel):
+    '''
+    Inherits from BaseClass that implements basic model load/save methods for subclasses. Model building to be delegated to each individual subclass.
+    '''
+
+    @classmethod
+    def add_regularization(cls, model, l1: float=None, l2: float=None):
+        
+        if l1 is not None:
+            regularizer = tf.keras.regularizers.l1(l1)
+        elif l2 is not None:
+            regularizer = tf.keras.regularizers.l2(l2)
+        else:
+            return model
+
+        model = add_regularization(model, regularizer)
+
+        return model
