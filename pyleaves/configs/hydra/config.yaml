@@ -19,7 +19,7 @@ stage_0:
     misc:
         seed: 45
         use_tfrecords: true
-        samples_per_shard: 500
+        samples_per_shard: 300
     
     
     
