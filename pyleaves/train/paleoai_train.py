@@ -607,16 +607,27 @@ def build_base_vgg16_RGB(cfg):
     return base
 
 
-def build_head(base, num_classes=10):
-    global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
-    dense1 = tf.keras.layers.Dense(2048,activation='relu',name='dense1')
-    dense2 = tf.keras.layers.Dense(512,activation='relu',name='dense2')
-    prediction_layer = tf.keras.layers.Dense(num_classes, activation='softmax')
-    model = tf.keras.Sequential([
-        base,
-        global_average_layer,dense1,dense2,
-        prediction_layer
-        ])
+def build_head(base, num_classes=10, cfg: DictConfig=None):
+    if cfg is None:
+        global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
+        dense1 = tf.keras.layers.Dense(2048,activation='relu',name='dense1')
+        dense2 = tf.keras.layers.Dense(512,activation='relu',name='dense2')
+        prediction_layer = tf.keras.layers.Dense(num_classes, activation='softmax')
+        model = tf.keras.Sequential([
+            base,
+            global_average_layer,dense1,dense2,
+            prediction_layer
+            ])
+
+    else:
+        layers = [base]
+        layers.append(tf.keras.layers.GlobalAveragePooling2D())
+        for layer_num, layer_units in enumerate(cfg.head_layers):
+            layers.append(tf.keras.layers.Dense(layer_units,activation='relu',name=f'dense{layer_num}'))
+        
+        layers.append(tf.keras.layers.Dense(num_classes, activation='softmax'))
+        model = tf.keras.Sequential(layers)
+
     return model
 
 
@@ -664,6 +675,8 @@ def build_model(cfg):
         loss = 'categorical_crossentropy'
 
     METRICS = []
+    if 'f1' in cfg['METRICS']:
+        METRICS.append('f1')
     if 'accuracy' in cfg['METRICS']:
         METRICS.append('accuracy')
     if 'precision' in cfg['METRICS']:
