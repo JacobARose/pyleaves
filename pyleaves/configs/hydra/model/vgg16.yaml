@@ -10,6 +10,4 @@ regularization:
     l1: 3e-4
 METRICS: ['accuracy','precision','recall']
 
-head_layers:
-    - 1024
-    - 256
+head_layers: [1024,256]
