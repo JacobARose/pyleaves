@@ -432,16 +432,21 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
     print('Saved model located at:', fold_model_path)
     neptune.set_property('model_path',fold_model_path)
     print(f'Initiating model.fit for fold-{fold.fold_id}')
-    history = model.fit(train_data,
-                        epochs=cfg.training['num_epochs'],
-                        callbacks=callbacks,
-                        validation_data=test_data,
-                        validation_freq=1,
-                        shuffle=True,
-                        steps_per_epoch=cfg['steps_per_epoch'],
-                        validation_steps=cfg['validation_steps'],
-                        verbose=1)
 
+    try:
+        history = model.fit(train_data,
+                            epochs=cfg.training['num_epochs'],
+                            callbacks=callbacks,
+                            validation_data=test_data,
+                            validation_freq=1,
+                            shuffle=True,
+                            steps_per_epoch=cfg['steps_per_epoch'],
+                            validation_steps=cfg['validation_steps'],
+                            verbose=1)
+    except Exception as e:
+        model.save(str(Path(cfg['saved_model_path'],f'fold-{fold.fold_id}')))
+        print('[Caught Exception, saving model first.\nSaved trained model located at:', fold_model_path)
+        raise e    
     print('Saved trained model located at:', fold_model_path)
     model.save(str(Path(cfg['saved_model_path'],f'fold-{fold.fold_id}')))
     ## Latest Note: Actually, nevermind. This correctly only tests on the test set.
