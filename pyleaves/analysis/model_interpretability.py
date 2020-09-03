@@ -41,7 +41,7 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
     import tensorflow as tf
 
     target_size=cfg.dataset.target_size
-
+    num_channels = cfg.dataset.num_channels
 
     gap_weights = model.layers[-1].get_weights()[0]
     for i, l in enumerate(model.layers[::-1]):
@@ -51,7 +51,8 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
     cam_model = tf.keras.models.Model(inputs=model.input,
                       outputs=(CAM_output_layer.output, model_output_layer.output)) 
 
-    cam_model(model.input)
+    inputs = tf.keras.Input(shape=(target_size,num_channels))
+    cam_model(inputs)
     cam_model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
 
     pred_data, pred_dataset, encoder = create_prediction_dataset(data_fold = fold,
