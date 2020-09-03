@@ -40,7 +40,6 @@ date_format = '%Y-%m-%d_%H-%M-%S'
 def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[int,str]='all', neptune=None):
     import tensorflow as tf
 
-
     target_size=cfg.dataset.target_size
 
 
@@ -52,7 +51,8 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
     cam_model = tf.keras.models.Model(inputs=model.input,
                       outputs=(CAM_output_layer.output, model_output_layer.output)) 
 
-
+    cam_model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+    
     pred_data, pred_dataset, encoder = create_prediction_dataset(data_fold = fold,
                                                                  predict_on_full_dataset=False,
                                                                  batch_size=1,
