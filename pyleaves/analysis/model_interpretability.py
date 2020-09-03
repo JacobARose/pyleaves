@@ -43,7 +43,7 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
     target_size=cfg.dataset.target_size
     num_channels = cfg.dataset.num_channels
 
-    inputs = tf.keras.Input(shape=(target_size,num_channels))
+    inputs = tf.keras.Input(shape=(*target_size,num_channels))
     cam_model(inputs)
 
     gap_weights = model.layers[-1].get_weights()[0]
