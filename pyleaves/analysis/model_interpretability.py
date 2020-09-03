@@ -84,6 +84,7 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
         max_samples = use_max_samples
 
     class_names = encoder.classes
+    import pdb;pdb.set_trace()
 
     features, results = cam_model.predict(pred_data.apply(lambda xy: xy[0]),
                                           steps=max_samples,
