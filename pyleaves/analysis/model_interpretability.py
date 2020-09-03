@@ -77,17 +77,18 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
     # x_true = np.vstack(x_true)
     # y_true = np.vstack(y_true)
 
+
+    if use_max_samples=='all':
+        max_samples = pred_dataset.num_samples # features.shape[0]
+    else:
+        max_samples = use_max_samples
+
     class_names = encoder.classes
 
     features, results = cam_model.predict(pred_data.apply(lambda x,y: x),
                                           steps=max_samples,
                                           callbacks=[TqdmCallback(data_size=max_samples, verbose=1)])
     # features, results = cam_model.predict(x_true)
-
-    if use_max_samples=='all':
-        max_samples = pred_dataset.num_samples # features.shape[0]
-    else:
-        max_samples = use_max_samples
 
     for idx in range(max_samples):
 
