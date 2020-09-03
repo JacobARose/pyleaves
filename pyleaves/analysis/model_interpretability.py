@@ -129,7 +129,8 @@ def initialize_dirs(cfg: DictConfig, experiment_start_time=None):
     cfg.update(log_dir = str(Path(cfg.experiment.experiment_dir, 'log_dir__'+cfg.experiment.experiment_start_time)))
     cfg.update(results_dir = str(Path(cfg.log_dir,'results')))
     cfg.update(tfrecord_dir = str(Path(cfg.log_dir,'tfrecord_dir')))
-    cfg.saved_model_path = str(Path(cfg.model_dir) / Path('saved_model'))
+    if cfg.saved_model_path is None:
+        cfg.saved_model_path = str(Path(cfg.model_dir) / Path('saved_model'))
     cfg.checkpoints_path = str(Path(cfg.model_dir) / Path('checkpoints'))
 
 def restore_experiment_dirs(cfg, prefix='log_dir__', verbose=0):
