@@ -423,7 +423,6 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
     callbacks = get_callbacks(cfg, model_config, model, fold, test_data)
 
     log_config(cfg=cfg, neptune=neptune)
-    log_config(cfg=cfg.model, neptune=neptune)
     model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     for k,v in model_config.items():
         neptune.set_property(k, v)
