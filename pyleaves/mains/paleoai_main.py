@@ -184,7 +184,7 @@ def get_callbacks(cfg, model_config, model, fold, test_data):
     # plt.plot(rng, y)
     # print("Learning rate schedule: {:.3g} to {:.3g} to {:.3g}".format(y[0], max(y), y[-1]))
 
-    # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+    
     # tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=str(Path(cfg.tensorboard_log_dir,f'tb_results-fold_{fold.fold_id}')))
     backup_callback = BackupAndRestore(str(Path(cfg['checkpoints_path'],f'fold-{fold.fold_id}')))
     backup_callback.set_model(model)
@@ -243,6 +243,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
 
     model_config = get_model_config(cfg=cfg)
     model = build_model(model_config)
+    model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
 
     callbacks = get_callbacks(cfg, model_config, model, fold, test_data)
 
