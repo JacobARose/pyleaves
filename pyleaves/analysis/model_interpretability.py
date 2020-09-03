@@ -66,27 +66,32 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
                                                                  color_mode=cfg.dataset.color_mode,
                                                                  seed=cfg.misc.seed)
 
-    x_true, y_true = [], []
-    print(pred_dataset.num_samples)
-    data_iter = iter(pred_data)
-    for i in trange(pred_dataset.num_samples):
-        x, y = next(data_iter)
-        x_true.append(x.numpy())
-        y_true.append(y.numpy())
-
-    x_true = np.vstack(x_true)
-    y_true = np.vstack(y_true)
+    # x_true, y_true = [], []
+    # print(pred_dataset.num_samples)
+    # data_iter = iter(pred_data)
+    # for i in trange(pred_dataset.num_samples):
+    #     x, y = next(data_iter)
+    #     x_true.append(x.numpy())
+    #     y_true.append(y.numpy())
+    from tqdm.keras import TqdmCallback
+    # x_true = np.vstack(x_true)
+    # y_true = np.vstack(y_true)
 
     class_names = encoder.classes
 
-    features, results = cam_model.predict(x_true)
+    features, results = cam_model.predict(pred_data.apply(lambda x,y: x),
+                                          steps=max_samples,
+                                          callbacks=[TqdmCallback(data_size=max_samples, verbose=1)])
+    # features, results = cam_model.predict(x_true)
 
     if use_max_samples=='all':
-        max_samples = features.shape[0]
+        max_samples = pred_dataset.num_samples # features.shape[0]
     else:
         max_samples = use_max_samples
 
     for idx in range(max_samples):
+
+        
         # get the feature map of the test image
         img_features = features[idx, :, :, :]
 
