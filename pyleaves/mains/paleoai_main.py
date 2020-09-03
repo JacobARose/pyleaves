@@ -65,6 +65,10 @@ def initialize_experiment(cfg, experiment_start_time=None):
     
     cfg.checkpoints_path = str(Path(cfg.model_dir) / Path('checkpoints'))
     cfg['stage_0']['checkpoints_path'] = cfg.checkpoints_path
+    cfg['stage_0']['dataset']['fold_dir'] = str(Path('/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data',
+                                                     cfg_0.dataset.dataset_name,
+                                                     'ksplit_10'))
+
     for k,v in cfg.items():
         if '_dir' in k:
             ensure_dir_exists(v)
