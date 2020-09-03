@@ -40,7 +40,7 @@ pipeline:
     - stage_1
 
 log_dir: ???
-model_dir: ???
+model_dir: null
 tfrecord_dir: ???
 results_dir: ???
 saved_model_path: ???

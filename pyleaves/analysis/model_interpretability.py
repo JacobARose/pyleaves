@@ -13,7 +13,7 @@ Current interpretability tools include:
     - CAM (Class Activation Map)
 
 
-python '/home/jacob/projects/pyleaves/pyleaves/analysis/model_interpretability.py' num_gpus=1 dataset.dataset_name='Leaves-PNAS' experiment.experiment_name='hparam_studies_Leaves-PNAS_resnet_50_v2_res512' dataset.target_size=[768,768] stage_0.model.head_layers=[512,256]
+python '/home/jacob/projects/pyleaves/pyleaves/analysis/model_interpretability.py' num_gpus=1 dataset.dataset_name='Leaves-PNAS' experiment.experiment_name='hparam_studies_Leaves-PNAS_resnet_50_v2_res512' dataset.target_size=[768,768] stage_0.model.head_layers=[512,256] saved_model_path="/media/data/jacob/sandbox_logs/PNAS_resnet_50_v2/log_dir__2020-09-03_00-47-32/model_dir/saved_model/fold-6"
 
 
 '''
@@ -52,7 +52,7 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
                       outputs=(CAM_output_layer.output, model_output_layer.output)) 
 
     cam_model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-    
+
     pred_data, pred_dataset, encoder = create_prediction_dataset(data_fold = fold,
                                                                  predict_on_full_dataset=False,
                                                                  batch_size=1,
