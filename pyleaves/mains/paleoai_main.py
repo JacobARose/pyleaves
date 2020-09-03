@@ -418,13 +418,16 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
     model = build_model(model_config)
     callbacks = get_callbacks(cfg, model_config, model, fold, test_data)
 
-    log_config(cfg=cfg, verbose=verbose, neptune=neptune)
-    log_config(cfg=cfg.model, verbose=verbose, neptune=neptune)
+    log_config(cfg=cfg, neptune=neptune)
+    log_config(cfg=cfg.model, neptune=neptune)
     model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     for k,v in model_config.items():
         neptune.set_property(k, v)
+    fold_model_path = str(Path(cfg['saved_model_path'],f'fold-{fold.fold_id}'))
 
-    model.save(str(Path(cfg['saved_model_path'],f'fold-{fold.fold_id}')))
+    model.save(fold_model_path)
+    print('Saved model located at:', fold_model_path)
+    neptune.set_property('model_path',fold_model_path)
     print(f'Initiating model.fit for fold-{fold.fold_id}')
     history = model.fit(train_data,
                         epochs=cfg.training['num_epochs'],
@@ -436,6 +439,7 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
                         validation_steps=cfg['validation_steps'],
                         verbose=1)
 
+    print('Saved trained model located at:', fold_model_path)
     model.save(str(Path(cfg['saved_model_path'],f'fold-{fold.fold_id}')))
     ## Latest Note: Actually, nevermind. This correctly only tests on the test set.
     ## Note: Testing on full dataset is incorrect here, since we just fit model on the train set part of it.
