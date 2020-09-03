@@ -18,21 +18,26 @@ python '/home/jacob/projects/pyleaves/pyleaves/analysis/model_interpretability.p
 
 '''
 
+import copy
+from datetime import datetime
 import hydra
 import numpy as np
 import scipy
 import matplotlib.pyplot as plt
 from omegaconf import DictConfig, OmegaConf
+import os
 from pathlib import Path
 from typing import Union, List, Tuple
 from tqdm import trange
 from paleoai_data.utils.kfold_cross_validation import DataFold
 from pyleaves.train.paleoai_train import create_prediction_dataset
+from pyleaves.utils.neptune_utils import neptune
+from pyleaves.utils import ensure_dir_exists
 import pyleaves
 CONFIG_DIR = str(Path(pyleaves.RESOURCES_DIR,'..','..','configs','hydra'))
 date_format = '%Y-%m-%d_%H-%M-%S'
 
-def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[int,str]='all'):
+def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[int,str]='all', neptune=None):
     import tensorflow as tf
 
 
@@ -106,9 +111,59 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
         plt.imshow(x_true[idx,...], alpha=0.5)
         plt.imshow(cam_output, cmap='jet', alpha=0.5)
 
-        fig.savefig(str(Path(cfg.results_dir, sample_name+'.png')))
+        if neptune is None:
+            fig.savefig(str(Path(cfg.results_dir, sample_name+'.png')))
+        else:
+            neptune.log_image(sample_name, fig)
         del fig
         
+
+
+def initialize_dirs(cfg: DictConfig, experiment_start_time=None):
+    
+    cfg.experiment.experiment_name = '_'.join([cfg.dataset.dataset_name, cfg.model.model_name])
+    cfg.experiment.experiment_dir = str(Path(cfg.experiment.neptune_experiment_dir, cfg.experiment.experiment_name))
+    if 'db' in cfg:
+        ensure_dir_exists(Path("/" + cfg.db.storage.strip('sqlite:/')).parent)
+    cfg.experiment.experiment_start_time = experiment_start_time or datetime.now().strftime(date_format)
+    cfg.update(log_dir = str(Path(cfg.experiment.experiment_dir, 'log_dir__'+cfg.experiment.experiment_start_time)))
+    cfg.update(results_dir = str(Path(cfg.log_dir,'results')))
+    cfg.update(tfrecord_dir = str(Path(cfg.log_dir,'tfrecord_dir')))
+    cfg.saved_model_path = str(Path(cfg.model_dir) / Path('saved_model'))
+    cfg.checkpoints_path = str(Path(cfg.model_dir) / Path('checkpoints'))
+
+def restore_experiment_dirs(cfg, prefix='log_dir__', verbose=0):
+#     date_format = '%Y-%m-%d_%H-%M-%S'
+    cfg = copy.deepcopy(cfg)
+    cfg.experiment.experiment_name = '_'.join([cfg.dataset.dataset_name, cfg.model.model_name])
+    cfg.experiment.experiment_dir = os.path.join(cfg.experiment.neptune_experiment_dir, cfg.experiment.experiment_name)
+    ensure_dir_exists(cfg.experiment.experiment_dir)
+
+    experiment_files = [(exp_name.split(prefix)[-1], exp_name) for exp_name in os.listdir(cfg.experiment.experiment_dir)]
+    keep_files = []
+    for i in range(len(experiment_files)):
+        exp = experiment_files[i]
+        try:
+            keep_files.append((datetime.strptime(exp[0], date_format), exp[1]))
+            if verbose >= 1: print(f'Found previous experiment {exp[1]}')
+        except ValueError:
+            if verbose >=2: print(f'skipping invalid file {exp[1]}')
+            pass
+
+    experiment_files = sorted(keep_files, key= lambda exp: exp[0])
+    if type(experiment_files)==list and len(experiment_files)>0:
+        experiment_file = experiment_files[-1]
+        cfg.experiment.experiment_start_time = experiment_file[0].strftime(date_format)
+        initialize_dirs(cfg, experiment_start_time=cfg.experiment.experiment_start_time)
+        if verbose >= 1: print(f'Continuing experiment with start time =', cfg.experiment.experiment_start_time)
+        return cfg
+
+    print('No previous experiment in',cfg.experiment.experiment_dir, 'with prefix',prefix)
+    cfg.experiment.experiment_start_time = datetime.now().strftime(date_format)
+    initialize_dirs(cfg, experiment_start_time=cfg.experiment.experiment_start_time)
+    if verbose >= 1: print('Initializing new experiment at time:', cfg.experiment.experiment_start_time )
+    return cfg
+
 
 
 @hydra.main(config_path=Path(CONFIG_DIR,'interpret_model_config.yaml'))
@@ -117,9 +172,10 @@ def main(cfg : DictConfig) -> None:
     from pyleaves.utils import set_tf_config
     set_tf_config(num_gpus=cfg.num_gpus, seed=cfg.misc.seed, wait=0)
     import tensorflow as tf
-    OmegaConf.set_struct(cfg, False)
     from paleoai_data.utils.kfold_cross_validation import KFoldLoader
 
+    OmegaConf.set_struct(cfg, False)
+    restore_experiment_dirs(cfg, verbose=cfg.verbose)
 
     kfold_loader = KFoldLoader(root_dir=cfg.dataset.fold_dir)
     fold_id = cfg.fold_id or 1
@@ -127,12 +183,10 @@ def main(cfg : DictConfig) -> None:
 
     model = tf.keras.models.load_model(str(Path(cfg['saved_model_path'],f'fold-{fold.fold_id}')))
 
-    # neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
-    # params=OmegaConf.to_container(cfg)
-    # # with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name)+'-'+str(cfg.fold_id), params=params):
-    #     # train_pyleaves_dataset(cfg)
-    # with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name), params=params):
-    generateCAM(model=model, fold=fold, cfg=cfg, use_max_samples=cfg.misc.use_max_samples)
+    neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
+    params=OmegaConf.to_container(cfg)
+    with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.dataset.dataset_name), params=params):
+        generateCAM(model=model, fold=fold, cfg=cfg, use_max_samples=cfg.misc.use_max_samples, neptune=neptune)
 
 if __name__=="__main__":
 

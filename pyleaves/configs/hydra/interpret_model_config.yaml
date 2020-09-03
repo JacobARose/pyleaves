@@ -11,7 +11,19 @@ misc:
     use_tfrecords: false
     samples_per_shard: 300
     use_max_samples: 'all'
+
+
+experiment:
+    neptune_project_name: "jacobarose/sandbox"
+    neptune_experiment_dir: "/media/data/jacob/sandbox_logs"
+    experiment_name: ???
+    experiment_dir: ???
+    experiment_start_time: ???
+    restore_last: True
     
+
+log_dir: ???
+model_dir: ???
 tfrecord_dir: ???
 results_dir: ???
 saved_model_path: ???
@@ -20,3 +32,4 @@ n_jobs: 1
 num_gpus: 1
 
 debug: false
+verbose: 0
