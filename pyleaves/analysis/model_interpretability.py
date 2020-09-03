@@ -39,12 +39,10 @@ CONFIG_DIR = str(Path(pyleaves.RESOURCES_DIR,'..','..','configs','hydra'))
 date_format = '%Y-%m-%d_%H-%M-%S'
 
 
-def make_gradcam_heatmap(
-    img_array, model, last_conv_layer_name, classifier_layer_names
-):
+def make_gradcam_heatmap(img_array, model, last_conv_layer_idx, classifier_layer_names):
     # First, we create a model that maps the input image to the activations
     # of the last conv layer
-    last_conv_layer = model.layers[0].get_layer(last_conv_layer_name)
+    last_conv_layer = model.layers[0].layers[last_conv_layer_idx]
     last_conv_layer_model = tf.keras.Model(model.inputs, last_conv_layer.output)
 
     # Second, we create a model that maps the activations of the last conv
@@ -157,7 +155,7 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
         # Generate class activation heatmap
         img_features = make_gradcam_heatmap(x_true[idx,...],
                                        model, 
-                                       'conv5_block3_out',
+                                       -1,
                                        'softmax')
         
         # get the feature map of the test image
