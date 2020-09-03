@@ -85,7 +85,7 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
 
     class_names = encoder.classes
 
-    features, results = cam_model.predict(pred_data.apply(lambda x,y: x),
+    features, results = cam_model.predict(pred_data.apply(lambda xy: xy[0]),
                                           steps=max_samples,
                                           callbacks=[TqdmCallback(data_size=max_samples, verbose=1)])
     # features, results = cam_model.predict(x_true)
