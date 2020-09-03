@@ -44,7 +44,7 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
         if 'global_average_pooling' in l.name:
             CAM_output_layer = model.layers[-i]
     model_output_layer = model.layers[-1]
-    cam_model = Model(inputs=model.input, 
+    cam_model = tf.keras.models.Model(inputs=model.input,
                       outputs=(CAM_output_layer.output, model_output_layer.output)) 
 
 
