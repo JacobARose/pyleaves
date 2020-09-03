@@ -109,7 +109,12 @@ def log_config(cfg: DictConfig, neptune=None, verbose: bool=False):
     ensure_dir_exists(cfg['log_dir'])
     ensure_dir_exists(cfg['model_dir'])
     if neptune is not None:
-        cfg_0 = cfg.stage_0
+        if 'stage_0' in cfg:
+            cfg_0 = cfg.stage_0
+        elif 'model' in cfg:
+            cfg_0 = cfg
+        else:
+            raise Exception(f'Invalid config passed to log_config function in {__file__}')
         neptune.append_tag(cfg_0.dataset.dataset_name)
         neptune.append_tag(cfg_0.model.model_name)
         neptune.append_tag(str(cfg_0.dataset.target_size))
@@ -412,8 +417,8 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
 
     callbacks = get_callbacks(cfg, model_config, model, fold, test_data)
 
-    # log_config(cfg=cfg, verbose=verbose, neptune=neptune)
-    # log_config(cfg=cfg.model, verbose=verbose, neptune=neptune)
+    log_config(cfg=cfg, verbose=verbose, neptune=neptune)
+    log_config(cfg=cfg.model, verbose=verbose, neptune=neptune)
     for k,v in model_config.items():
         neptune.set_property(k, v)
 
