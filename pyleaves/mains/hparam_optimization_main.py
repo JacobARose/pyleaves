@@ -92,7 +92,10 @@ class Objective:
             import pdb;pdb.set_trace()
         config['stage_0'].update(model= get_model_config(trial, config.stage_0))
 
-        fold_id = trial.number % self.num_splits
+        if cfg.stage_0.fold_id is None:
+            fold_id = trial.number % self.num_splits
+        else:
+            fold_id = cfg.stage_0.fold_id
         fold = self.kfold_loader.folds[fold_id]
         worker_id = psutil.Process(os.getpid())
 
