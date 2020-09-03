@@ -676,7 +676,9 @@ def build_model(cfg):
 
     METRICS = []
     if 'f1' in cfg['METRICS']:
-        METRICS.append('f1')
+        METRICS.append(tfa.metrics.F1Score(num_classes=cfg['num_classes'],
+                                           average='weighted',
+                                           name='weighted_f1'))
     if 'accuracy' in cfg['METRICS']:
         METRICS.append('accuracy')
     if 'precision' in cfg['METRICS']:
