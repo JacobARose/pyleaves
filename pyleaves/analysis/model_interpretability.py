@@ -131,6 +131,8 @@ def initialize_dirs(cfg: DictConfig, experiment_start_time=None):
     cfg.update(tfrecord_dir = str(Path(cfg.log_dir,'tfrecord_dir')))
     if cfg.saved_model_path is None:
         cfg.saved_model_path = str(Path(cfg.model_dir) / Path('saved_model'))
+    else:
+        cfg.model_dir = str(Path(cfg.saved_model_path).parent)
     cfg.checkpoints_path = str(Path(cfg.model_dir) / Path('checkpoints'))
 
 def restore_experiment_dirs(cfg, prefix='log_dir__', verbose=0):
