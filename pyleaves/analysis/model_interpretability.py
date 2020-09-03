@@ -37,26 +37,79 @@ import pyleaves
 CONFIG_DIR = str(Path(pyleaves.RESOURCES_DIR,'..','..','configs','hydra'))
 date_format = '%Y-%m-%d_%H-%M-%S'
 
+
+def make_gradcam_heatmap(
+    img_array, model, last_conv_layer_name, classifier_layer_names
+):
+    # First, we create a model that maps the input image to the activations
+    # of the last conv layer
+    last_conv_layer = model.get_layer(last_conv_layer_name)
+    last_conv_layer_model = tf.keras.Model(model.inputs, last_conv_layer.output)
+
+    # Second, we create a model that maps the activations of the last conv
+    # layer to the final class predictions
+    classifier_input = tf.keras.Input(shape=last_conv_layer.output.shape[1:])
+    x = classifier_input
+    for layer_name in classifier_layer_names:
+        x = model.get_layer(layer_name)(x)
+    classifier_model = tf.keras.Model(classifier_input, x)
+
+    # Then, we compute the gradient of the top predicted class for our input image
+    # with respect to the activations of the last conv layer
+    with tf.GradientTape() as tape:
+        # Compute activations of the last conv layer and make the tape watch it
+        last_conv_layer_output = last_conv_layer_model(img_array)
+        tape.watch(last_conv_layer_output)
+        # Compute class predictions
+        preds = classifier_model(last_conv_layer_output)
+        top_pred_index = tf.argmax(preds[0])
+        top_class_channel = preds[:, top_pred_index]
+
+    # This is the gradient of the top predicted class with regard to
+    # the output feature map of the last conv layer
+    grads = tape.gradient(top_class_channel, last_conv_layer_output)
+
+    # This is a vector where each entry is the mean intensity of the gradient
+    # over a specific feature map channel
+    pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
+
+    # We multiply each channel in the feature map array
+    # by "how important this channel is" with regard to the top predicted class
+    last_conv_layer_output = last_conv_layer_output.numpy()[0]
+    pooled_grads = pooled_grads.numpy()
+    for i in range(pooled_grads.shape[-1]):
+        last_conv_layer_output[:, :, i] *= pooled_grads[i]
+
+    # The channel-wise mean of the resulting feature map
+    # is our heatmap of class activation
+    heatmap = np.mean(last_conv_layer_output, axis=-1)
+
+    # For visualization purpose, we will also normalize the heatmap between 0 & 1
+    heatmap = np.maximum(heatmap, 0) / np.max(heatmap)
+    return heatmap
+
+
+
 def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[int,str]='all', neptune=None):
     import tensorflow as tf
 
     target_size=cfg.dataset.target_size
     num_channels = cfg.dataset.num_channels
 
-    inputs = tf.keras.Input(shape=(*target_size,num_channels))
-    model(inputs)
+    # inputs = tf.keras.Input(shape=(*target_size,num_channels))
+    # model(inputs)
 
-    gap_weights = model.layers[-1].get_weights()[0]
-    # for i, l in enumerate(model.layers[::-1]):
-    #     if 'global_average_pooling' in l.name:
-    #         CAM_output_layer = model.layers[-i-2]
+    # gap_weights = model.layers[-1].get_weights()[0]
+    # # for i, l in enumerate(model.layers[::-1]):
+    # #     if 'global_average_pooling' in l.name:
+    # #         CAM_output_layer = model.layers[-i-2]
 
-    CAM_output_layer = model.layers[0].layers[-1]
-    model_output_layer = model.layers[-1]
-    cam_model = tf.keras.models.Model(inputs=model.input,
-                      outputs=(CAM_output_layer.output, model_output_layer.output)) 
+    # CAM_output_layer = model.layers[0].layers[-1]
+    # model_output_layer = model.layers[-1]
+    # cam_model = tf.keras.models.Model(inputs=model.input,
+    #                   outputs=(CAM_output_layer.output, model_output_layer.output)) 
 
-    cam_model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+    # cam_model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
 
     pred_data, pred_dataset, encoder = create_prediction_dataset(data_fold = fold,
                                                                  predict_on_full_dataset=False,
@@ -68,16 +121,21 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
                                                                  color_mode=cfg.dataset.color_mode,
                                                                  seed=cfg.misc.seed)
 
-    # x_true, y_true = [], []
-    # print(pred_dataset.num_samples)
-    # data_iter = iter(pred_data)
-    # for i in trange(pred_dataset.num_samples):
-    #     x, y = next(data_iter)
-    #     x_true.append(x.numpy())
-    #     y_true.append(y.numpy())
+    # preds = model.predict(img_array)
+    # print("Predicted:", decode_predictions(preds, top=1)[0])
+
     from tqdm.keras import TqdmCallback
-    # x_true = np.vstack(x_true)
-    # y_true = np.vstack(y_true)
+
+
+    x_true, y_true = [], []
+    print(pred_dataset.num_samples)
+    data_iter = iter(pred_data)
+    for i in trange(pred_dataset.num_samples):
+        x, y = next(data_iter)
+        x_true.append(x.numpy())
+        y_true.append(y.numpy())
+    x_true = np.vstack(x_true)
+    y_true = np.vstack(y_true)
 
 
     if use_max_samples=='all':
@@ -85,19 +143,24 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
     else:
         max_samples = use_max_samples
 
-    class_names = encoder.classes
-    
+    class_names = encoder.classes    
 
-    features, results = cam_model.predict(pred_data.map(lambda x,y: x),
-                                          steps=max_samples,
-                                          callbacks=[TqdmCallback(data_size=max_samples, verbose=1)])
+    # features, results = cam_model.predict(pred_data.map(lambda x,y: x),
+    #                                       steps=max_samples,
+    #                                       callbacks=[TqdmCallback(data_size=max_samples, verbose=1)])
     # features, results = cam_model.predict(x_true)
     import pdb;pdb.set_trace()
-    for idx in range(max_samples):
+    for idx in trange(max_samples):
 
+
+        # Generate class activation heatmap
+        img_features = make_gradcam_heatmap(x_true[idx,...],
+                                       model, 
+                                       'conv5_block3_out',
+                                       'softmax')
         
         # get the feature map of the test image
-        img_features = features[idx, :, :, :]
+        # img_features = features[idx, :, :, :]
 
         # map the feature map to the original size
         height_roomout = target_size[0] / img_features.shape[0]
