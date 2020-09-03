@@ -51,6 +51,7 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
     cam_model = tf.keras.models.Model(inputs=model.input,
                       outputs=(CAM_output_layer.output, model_output_layer.output)) 
 
+    cam_model(model.input)
     cam_model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
 
     pred_data, pred_dataset, encoder = create_prediction_dataset(data_fold = fold,
