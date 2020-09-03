@@ -402,6 +402,7 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
     if verbose:
         print('='*20)
         print(f'RUNNING: fold {fold.fold_id} in process {worker_id or "None"}')
+        print(fold)
         print(cfg.tfrecord_dir)
         print('='*20)
 #     with tf.Graph().as_default():
@@ -409,7 +410,6 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
         
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
                                                                                  cfg=cfg)
-    print(f'Starting fold {fold.fold_id}')
     log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
 
     cfg['model']['num_classes'] = cfg['dataset']['num_classes']
