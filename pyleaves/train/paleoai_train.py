@@ -656,7 +656,7 @@ def build_model(cfg):
         build_base = model_builder.build_base
 
     base = build_base()
-    model = build_head(base, num_classes=cfg['num_classes'])
+    model = build_head(base, num_classes=cfg['num_classes'], cfg=cfg)
     
     model = base_model.Model.add_regularization(model, **cfg.regularization)
 

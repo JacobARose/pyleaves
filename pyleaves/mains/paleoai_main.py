@@ -61,6 +61,8 @@ def initialize_experiment(cfg, experiment_start_time=None):
         cfg.stage_0.update(tfrecord_dir = os.path.join(cfg.log_dir,'tfrecord_dir'))
     cfg.update(tfrecord_dir = cfg.stage_0.tfrecord_dir)
     cfg.saved_model_path = str(Path(cfg.model_dir) / Path('saved_model'))
+    cfg['stage_0']['saved_model_path'] = cfg.saved_model_path
+    
     cfg.checkpoints_path = str(Path(cfg.model_dir) / Path('checkpoints'))
     cfg['stage_0']['checkpoints_path'] = cfg.checkpoints_path
     for k,v in cfg.items():
@@ -433,6 +435,7 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
                         validation_steps=cfg['validation_steps'],
                         verbose=1)
 
+    model.save(str(Path(cfg['saved_model_path'],f'fold-{fold.fold_id}')))
     ## Latest Note: Actually, nevermind. This correctly only tests on the test set.
     ## Note: Testing on full dataset is incorrect here, since we just fit model on the train set part of it.
     ## This may be better put to use in a separate fine-tune() function, when placed before model.fit

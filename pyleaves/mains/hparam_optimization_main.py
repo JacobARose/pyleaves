@@ -83,6 +83,7 @@ class Objective:
         self.num_gpus = cfg.num_gpus
         from pyleaves.utils import setGPU
         self.gpus = setGPU(only_return=True, num_gpus=self.num_gpus, wait=0)
+        self.verbose = True
 
     def __call__(self, trial):
         config = copy.deepcopy(self.config)
@@ -101,7 +102,7 @@ class Objective:
         # neptune.init(project_qualified_name=config.experiment.neptune_project_name)
         # params=OmegaConf.to_container(config)
         # with neptune.create_experiment(name=config.experiment.experiment_name+'-'+str(config.stage_0.dataset.dataset_name), params=params):
-        log_config(cfg=cfg, verbose=verbose, neptune=neptune)
+        log_config(cfg=config, verbose=self.verbose, neptune=neptune)
         history = paleoai_main.optuna_train_single_fold(fold, config.stage_0, worker_id, gpu_num)
 
         best_accuracy = np.max(history.history['val_accuracy'])

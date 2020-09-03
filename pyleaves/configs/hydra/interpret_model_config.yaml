@@ -1,0 +1,22 @@
+defaults:
+    - db@db : sqlite
+
+    - model@model: resnet_50_v2
+    - dataset@dataset: Leaves-PNAS
+    
+fold_id: 1
+    
+misc:
+    seed: 45
+    use_tfrecords: false
+    samples_per_shard: 300
+    use_max_samples: 'all'
+    
+tfrecord_dir: ???
+results_dir: ???
+saved_model_path: ???
+checkpoints_path: ???
+n_jobs: 1
+num_gpus: 1
+
+debug: false
