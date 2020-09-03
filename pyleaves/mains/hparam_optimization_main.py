@@ -94,10 +94,10 @@ class Objective:
         gpu_num = self.gpus[trial.number % self.num_gpus]
         print('GPU NUMBER ',gpu_num)
 
-        neptune.init(project_qualified_name=config.experiment.neptune_project_name)
-        params=OmegaConf.to_container(config)
-        with neptune.create_experiment(name=config.experiment.experiment_name+'-'+str(config.stage_0.dataset.dataset_name), params=params):
-            history = paleoai_main.optuna_train_single_fold(fold, config.stage_0, worker_id, gpu_num)
+        # neptune.init(project_qualified_name=config.experiment.neptune_project_name)
+        # params=OmegaConf.to_container(config)
+        # with neptune.create_experiment(name=config.experiment.experiment_name+'-'+str(config.stage_0.dataset.dataset_name), params=params):
+        history = paleoai_main.optuna_train_single_fold(fold, config.stage_0, worker_id, gpu_num)
 
         best_accuracy = np.max(history.history['val_accuracy'])
 
@@ -114,8 +114,16 @@ def optimize_hyperparameters(cfg : DictConfig, fold_ids: List[int]=[0], n_trials
     sampler = TPESampler(seed=cfg.stage_0.misc.seed)
     study = optuna.create_study(study_name=cfg.study_name, sampler=sampler, direction="maximize", storage=cfg.db.storage, load_if_exists=True)
 
-    objective = Objective(cfg)
-    study.optimize(objective, n_trials=n_trials, n_jobs=n_jobs, gc_after_trial=gc_after_trial, callbacks=[neptune_callback])
+    neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
+    params=OmegaConf.to_container(cfg)
+    with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name), params=params):
+
+        objective = Objective(cfg)
+        study.optimize(objective, n_trials=n_trials, n_jobs=n_jobs, gc_after_trial=gc_after_trial, callbacks=[neptune_callback])
+
+        log_config(cfg=cfg, verbose=verbose, neptune=neptune)
+        log_config(cfg=cfg.stage_0.model, verbose=verbose, neptune=neptune)
+        log_config(cfg=cfg.stage_0.dataset, verbose=verbose, neptune=neptune)
 
     print("Number of finished trials: ", len(study.trials))
     trial = study.best_trial
@@ -125,9 +133,6 @@ def optimize_hyperparameters(cfg : DictConfig, fold_ids: List[int]=[0], n_trials
     for key, value in trial.params.items():
         print("    {}: {}".format(key, value))
 
-    log_config(cfg=cfg, verbose=verbose, neptune=neptune)
-    log_config(cfg=cfg.stage_0.model, verbose=verbose, neptune=neptune)
-    log_config(cfg=cfg.stage_0.dataset, verbose=verbose, neptune=neptune)
 
     return trial
 
