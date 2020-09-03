@@ -8,6 +8,6 @@ lr_decay: 1.0
 lr_decay_epochs: 10
 regularization:
     l1: null
-METRICS: ['accuracy','precision','recall']
+METRICS: ['f1','accuracy']
 
 head_layers: [1024,256]
