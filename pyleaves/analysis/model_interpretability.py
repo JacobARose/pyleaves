@@ -34,6 +34,7 @@ from pyleaves.train.paleoai_train import create_prediction_dataset
 from pyleaves.utils.neptune_utils import neptune
 from pyleaves.utils import ensure_dir_exists
 import pyleaves
+import tensorflow as tf
 CONFIG_DIR = str(Path(pyleaves.RESOURCES_DIR,'..','..','configs','hydra'))
 date_format = '%Y-%m-%d_%H-%M-%S'
 
@@ -43,7 +44,7 @@ def make_gradcam_heatmap(
 ):
     # First, we create a model that maps the input image to the activations
     # of the last conv layer
-    last_conv_layer = model.get_layer(last_conv_layer_name)
+    last_conv_layer = model.layers[0].get_layer(last_conv_layer_name)
     last_conv_layer_model = tf.keras.Model(model.inputs, last_conv_layer.output)
 
     # Second, we create a model that maps the activations of the last conv
@@ -168,10 +169,10 @@ def generateCAM(model, fold: DataFold, cfg: DictConfig, use_max_samples: Union[i
         cam_features = scipy.ndimage.zoom(img_features, (height_roomout, width_roomout, 1), order=2)
             
         # get the predicted label with the maximum probability
-        pred = np.argmax(results[idx])
+        # pred = np.argmax(results[idx])
         
-        cam_weights = gap_weights[:, pred]
-        cam_output = np.dot(cam_features, cam_weights)
+        # cam_weights = gap_weights[:, pred]
+        # cam_output = np.dot(cam_features, cam_weights)
 
         fig, ax = plt.subplots(1,1)        
         # draw the class activation map
