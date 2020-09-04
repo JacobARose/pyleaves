@@ -38,11 +38,19 @@ import optuna
 from optuna.samplers import TPESampler
 
 
-def get_optimizer_config(trial):
-    # We optimize the choice of optimizers as well as their parameters.
+def get_optimizer_config(trial, trial_cfg: DictConfig, hparam_study_cfg: DictConfig=None):
+    
     kwargs = Box()
+    if hparam_study_cfg is None:
+        kwargs['optimizer'] = trial_cfg.model.optimizer or 'Adam'
+        kwargs["lr"] = trial.training.lr or 1e-4
+        return kwargs
+
+
     optimizer_options = ["RMSprop", "Adam", "SGD"]
     optimizer_selected = trial.suggest_categorical("optimizer", optimizer_options)
+    kwargs['optimizer'] = optimizer_selected
+
     if optimizer_selected == "RMSprop":
         kwargs["lr"] = trial.suggest_float("rmsprop_learning_rate", 1e-5, 1e-1, log=True)
         kwargs["decay"] = trial.suggest_float("rmsprop_decay", 0.85, 0.99)
@@ -54,21 +62,19 @@ def get_optimizer_config(trial):
             "sgd_opt_learning_rate", 1e-5, 1e-2, log=True
         )
         kwargs["momentum"] = trial.suggest_float("sgd_opt_momentum", 1e-5, 1e-1, log=True)
-
-    kwargs['optimizer'] = optimizer_selected
     
     return kwargs
 
 
-def get_model_config(trial, cfg: DictConfig):
-    cfg['model']['input_shape'] = (*cfg.dataset['target_size'],cfg.dataset['num_channels'])
-    cfg['model']['model_dir'] = cfg['model_dir']
+def get_model_config(trial, trial_cfg: DictConfig, hparam_study_cfg: DictConfig=None):
+    trial_cfg['model']['input_shape'] = (*trial_cfg.dataset['target_size'],trial_cfg.dataset['num_channels'])
+    trial_cfg['model']['model_dir'] = trial_cfg['model_dir']
 
-    optimizer_params = get_optimizer_config(trial)
-    model_config = OmegaConf.merge(cfg.model, cfg.training)
+    optimizer_params = get_optimizer_config(trial, trial_cfg,hparam_study_cfg)
+    model_config = OmegaConf.merge(trial_cfg.model, trial_cfg.training)
     model_config.update(**optimizer_params)
     # model_config['n_layers'] = trial.suggest_int("n_layers", 1, 3)
-    model_config['regularization'] = {'l2':trial.suggest_float("l2", 1e-10, 1e-3, log=True)}
+    model_config['regularization'] = {'l2':trial.suggest_float("l2", 1e-6, 1e-1, log=True)}
 
     return model_config
 
@@ -117,8 +123,6 @@ def optimize_hyperparameters(cfg : DictConfig, fold_ids: List[int]=[0], n_trials
 
     print(f'Beginning training of models with fold_ids: {fold_ids}')
     print('optuna studies stored in database:', cfg.db.storage)
-    # import pdb; pdb.set_trace()
-    neptune_callback = opt_utils.NeptuneCallback(log_study=True, log_charts=True)
 
     sampler = TPESampler(seed=cfg.stage_0.misc.seed)
     study = optuna.create_study(study_name=cfg.study_name, sampler=sampler, direction="maximize", storage=cfg.db.storage, load_if_exists=True)
@@ -126,7 +130,7 @@ def optimize_hyperparameters(cfg : DictConfig, fold_ids: List[int]=[0], n_trials
     neptune.init(project_qualified_name=cfg.experiment.neptune_project_name)
     params=OmegaConf.to_container(cfg)
     with neptune.create_experiment(name=cfg.experiment.experiment_name+'-'+str(cfg.stage_0.dataset.dataset_name), params=params):
-
+        neptune_callback = opt_utils.NeptuneCallback(log_study=True, log_charts=True)
         objective = Objective(cfg)
         study.optimize(objective, n_trials=n_trials, n_jobs=n_jobs, gc_after_trial=gc_after_trial, callbacks=[neptune_callback])
 

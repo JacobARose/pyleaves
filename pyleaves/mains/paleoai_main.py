@@ -13,6 +13,7 @@ python '/home/jacob/projects/pyleaves/pyleaves/mains/paleoai_main.py'
 '''
 import copy
 from datetime import datetime
+from functools import singledispatch
 import json
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
@@ -34,6 +35,18 @@ from sklearn.metrics import roc_auc_score, accuracy_score
 date_format = '%Y-%m-%d_%H-%M-%S'
 # tf.debugging.set_log_device_placement(True)
 # gpus = tf.config.experimental.list_logical_devices('GPU')
+
+
+@singledispatch
+def to_serializable(val):
+    """Used by default."""
+    return str(val)
+
+@to_serializable.register(np.float32)
+def ts_float32(val):
+    """Used if *val* is an instance of numpy.float32."""
+    return np.float64(val)
+
 
 
 def initialize_experiment(cfg, experiment_start_time=None):
@@ -463,7 +476,7 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
     try:
         history_path = str(Path(cfg.results_dir,f'training-history_fold-{fold.fold_id}.json'))
         with open(history_path,'w') as f:
-            json.dump(history.history, f)
+            json.dump(history.history, f, default=to_serializable)
         if os.path.isfile(history_path):
             print(f'Saved history results for fold-{fold.fold_id} to {history_path}')
             cfg.training['history_results_path'] = history_path
@@ -477,3 +490,9 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
     
    
     return history
+
+
+
+
+
+
