@@ -407,11 +407,11 @@ def load_data_from_tensor_slices(split_data, shuffle_train=True, seed=None):
 
     test_x = tf.data.Dataset.from_tensor_slices(split_data['test'][0])
     test_y = tf.data.Dataset.from_tensor_slices(split_data['test'][1])
-    validation_data = tf.data.Dataset.zip((test_x, test_y))
-    validation_data = validation_data.cache()
-    validation_data = validation_data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
+    test_data = tf.data.Dataset.zip((test_x, test_y))
+    test_data = test_data.cache()
+    test_data = test_data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
 
-    return train_data, validation_data
+    return train_data, test_data
 
 
 def load_data(data_fold: DataFold,
@@ -419,6 +419,7 @@ def load_data(data_fold: DataFold,
               include_classes=[],
               use_tfrecords=False,
               tfrecord_dir=None,
+              val_split=0.1,
               samples_per_shard=800,
               shuffle_train=True,
               seed=None):
@@ -438,7 +439,16 @@ def load_data(data_fold: DataFold,
     else:
         train_data, test_data = load_data_from_tensor_slices(split_data, shuffle_train=shuffle_train, seed=seed)
 
-    return {'train':train_data,
+    if val_split > 0.0:
+        val_size = int(train_dataset.num_samples * val_split)
+        train_split_data = train_data.skip(val_size)
+        val_split_data = train_data.take(val_size)
+    else:
+        train_split_data = train_data
+        val_split_data = None
+
+    return {'train':train_split_data,
+            'val':val_split_data,
             'test':test_data}, train_dataset, test_dataset,  encoder
 
 
@@ -457,6 +467,7 @@ def create_dataset(data_fold: DataFold,
     seed=cfg.misc.seed
     use_tfrecords=cfg.misc.use_tfrecords
     tfrecord_dir=cfg.tfrecord_dir
+    val_split=cfg.dataset.val_split
     samples_per_shard=cfg.misc.samples_per_shard
 
     dataset, train_dataset, test_dataset, encoder = load_data(data_fold=data_fold,
@@ -464,6 +475,7 @@ def create_dataset(data_fold: DataFold,
                                                               include_classes=include_classes,
                                                               use_tfrecords=use_tfrecords,
                                                               tfrecord_dir=tfrecord_dir,
+                                                              val_split=val_split,
                                                               samples_per_shard=samples_per_shard,
                                                               seed=seed)
     num_classes = train_dataset.num_classes
@@ -479,8 +491,17 @@ def create_dataset(data_fold: DataFold,
                               augmentations=augmentations,
                               training=True,
                               seed=seed)
-
-    
+    if 'val' in dataset:
+        val_data = prep_dataset(dataset['val'],
+                                batch_size=batch_size,
+                                target_size=target_size,
+                                num_channels=num_channels,
+                                color_mode=color_mode,
+                                num_classes=num_classes,
+                                training=False,
+                                seed=seed)
+    else:
+        val_data=None
 
     test_data = prep_dataset(dataset['test'],
                             batch_size=batch_size,
@@ -491,7 +512,9 @@ def create_dataset(data_fold: DataFold,
                             training=False,
                             seed=seed)
 
-    return train_data, test_data, train_dataset, test_dataset, encoder
+    return {'train':train_data,
+            'val':val_data,
+            'test':test_data}, train_dataset, test_dataset, encoder
 
 ##########################################################################
 ##########################################################################

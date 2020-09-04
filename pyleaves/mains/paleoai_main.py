@@ -141,13 +141,13 @@ def log_config(cfg: DictConfig, neptune=None, verbose: bool=False):
         neptune.append_tag(cfg_0.dataset.color_mode)
 
 
-def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, test_dataset: BaseDataset, neptune):
+def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, val_dataset: BaseDataset, neptune):
     # print('inside log dataset')
     cfg['dataset']['num_classes'] = train_dataset.num_classes
     cfg['dataset']['splits_size'] = {'train':{},
                           'test':{}}
     cfg['dataset']['splits_size']['train'] = int(train_dataset.num_samples)
-    cfg['dataset']['splits_size']['test'] = int(test_dataset.num_samples)
+    cfg['dataset']['splits_size']['val'] = int(val_dataset.num_samples)
 
     cfg['steps_per_epoch'] = cfg['dataset']['splits_size']['train']//cfg['training']['batch_size']
     cfg['validation_steps'] = cfg['dataset']['splits_size']['test']//cfg['training']['batch_size']
@@ -425,9 +425,15 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
 #     with tf.Graph().as_default():
 #         preprocess_input(tf.zeros([4, 224, 224, 3]))
         
-    train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
-                                                                                 cfg=cfg)
-    log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
+    data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
+                                                                cfg=cfg)
+
+    train_data, val_data, test_data = data['train'], data['val'], data['test']
+
+    if val_data is None:
+        log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
+    else:
+        log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=val_dataset, neptune=neptune)
 
     cfg['model']['num_classes'] = cfg['dataset']['num_classes']
     model_config = cfg.model
@@ -450,7 +456,7 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
         history = model.fit(train_data,
                             epochs=cfg.training['num_epochs'],
                             callbacks=callbacks,
-                            validation_data=test_data,
+                            validation_data=val_data,
                             validation_freq=1,
                             shuffle=True,
                             steps_per_epoch=cfg['steps_per_epoch'],

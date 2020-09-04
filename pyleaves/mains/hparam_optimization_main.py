@@ -5,7 +5,7 @@ hparam_optimization_main.py
 This is meant to be a basic script for initiating or resuming an Optuna hyperparameter-optimization study.
 
 
-python '/home/jacob/projects/pyleaves/pyleaves/mains/hparam_optimization_main.py' stage_0.misc.use_tfrecords=True num_gpus=1 n_jobs=1 n_trials=20 study_name='hparam_study_Leaves-PNAS' stage_0.dataset.dataset_name='Leaves-PNAS' experiment.experiment_name='hparam_studies_Leaves-PNAS_resnet_50_v2_res512' debug=False stage_0.dataset.target_size=[768,768] stage_0.training.batch_size=8 study_name='Leaves-PNAS_initial_study' stage_0.model.head_layers=[512,256]
+python '/home/jacob/projects/pyleaves/pyleaves/mains/hparam_optimization_main.py' stage_0.misc.use_tfrecords=True num_gpus=1 n_jobs=1 n_trials=20 study_name='hparam_study_Leaves-PNAS' stage_0.dataset.dataset_name='Leaves-PNAS' experiment.experiment_name='hparam_studies_Leaves-PNAS_resnet_50_v2_res512' debug=False stage_0.dataset.target_size=[512,512] stage_0.training.batch_size=8 study_name='Leaves-PNAS_initial_study' stage_0.model.head_layers=[256,128]  #[512,256]
 
 
 python '/home/jacob/projects/pyleaves/pyleaves/mains/hparam_optimization_main.py' stage_0.misc.use_tfrecords=True num_gpus=1 n_jobs=1 n_trials=20 study_name='hparam_study_Leaves-PNAS' stage_0.dataset.dataset_name='Leaves-PNAS' experiment.experiment_name='hparam_studies_Leaves-PNAS_resnet_50_v2_res768' debug=False stage_0.dataset.target_size=[768,768] stage_0.training.batch_size=8 study_name='Leaves-PNAS_initial_study' experiment.restore_last=False stage_0.model.head_layers=[256,128]
