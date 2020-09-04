@@ -491,7 +491,7 @@ def create_dataset(data_fold: DataFold,
                               augmentations=augmentations,
                               training=True,
                               seed=seed)
-    if 'val' in dataset:
+    if dataset['val'] is not None:
         val_data = prep_dataset(dataset['val'],
                                 batch_size=batch_size,
                                 target_size=target_size,
