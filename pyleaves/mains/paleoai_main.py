@@ -141,16 +141,19 @@ def log_config(cfg: DictConfig, neptune=None, verbose: bool=False):
         neptune.append_tag(cfg_0.dataset.color_mode)
 
 
-def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, val_dataset: BaseDataset, neptune):
+def log_dataset(cfg: DictConfig, train_dataset: BaseDataset, val_split=0.0): #: BaseDataset, neptune):
     # print('inside log dataset')
     cfg['dataset']['num_classes'] = train_dataset.num_classes
     cfg['dataset']['splits_size'] = {'train':{},
                           'test':{}}
     cfg['dataset']['splits_size']['train'] = int(train_dataset.num_samples)
-    cfg['dataset']['splits_size']['val'] = int(val_dataset.num_samples)
+    if val_split>0.0:
+        cfg['dataset']['splits_size']['val'] = int(val_split * train_dataset.num_samples)
+    else:
+        cfg['dataset']['splits_size']['val'] = 0.0
 
     cfg['steps_per_epoch'] = cfg['dataset']['splits_size']['train']//cfg['training']['batch_size']
-    cfg['validation_steps'] = cfg['dataset']['splits_size']['test']//cfg['training']['batch_size']
+    cfg['validation_steps'] = cfg['dataset']['splits_size']['val']//cfg['training']['batch_size']
     # print('updated cfg')
     
     # neptune.set_property('num_classes',cfg['num_classes'])
@@ -263,7 +266,7 @@ def train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, neptune=
     train_data, test_data, train_dataset, test_dataset, encoder = create_dataset(data_fold=fold,
                                                                                  cfg=cfg)
     print(f'Starting fold {fold.fold_id}')
-    log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
+    log_dataset(cfg=cfg, train_dataset=train_dataset)#, test_dataset=test_dataset, neptune=neptune)
 
     model_config = get_model_config(cfg=cfg)
     model = build_model(model_config)
@@ -431,9 +434,9 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
     train_data, val_data, test_data = data['train'], data['val'], data['test']
 
     if val_data is None:
-        log_dataset(cfg=cfg, train_dataset=train_dataset, val_dataset=test_dataset, neptune=neptune)
+        log_dataset(cfg=cfg, train_dataset=train_dataset) #, neptune=neptune)
     else:
-        log_dataset(cfg=cfg, train_dataset=train_dataset, val_dataset=val_data, neptune=neptune)
+        log_dataset(cfg=cfg, train_dataset=train_dataset, val_split=cfg.dataset.val_split) #, neptune=neptune)
 
     cfg['model']['num_classes'] = cfg['dataset']['num_classes']
     model_config = cfg.model
