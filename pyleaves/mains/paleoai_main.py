@@ -431,9 +431,9 @@ def optuna_train_single_fold(fold: DataFold, cfg : DictConfig, worker_id=None, g
     train_data, val_data, test_data = data['train'], data['val'], data['test']
 
     if val_data is None:
-        log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=test_dataset, neptune=neptune)
+        log_dataset(cfg=cfg, train_dataset=train_dataset, val_dataset=test_dataset, neptune=neptune)
     else:
-        log_dataset(cfg=cfg, train_dataset=train_dataset, test_dataset=val_data, neptune=neptune)
+        log_dataset(cfg=cfg, train_dataset=train_dataset, val_dataset=val_data, neptune=neptune)
 
     cfg['model']['num_classes'] = cfg['dataset']['num_classes']
     model_config = cfg.model
