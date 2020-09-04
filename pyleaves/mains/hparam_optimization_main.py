@@ -43,7 +43,7 @@ def get_optimizer_config(trial, trial_cfg: DictConfig, hparam_study_cfg: DictCon
     kwargs = Box()
     if hparam_study_cfg is None:
         kwargs['optimizer'] = trial_cfg.model.optimizer or 'Adam'
-        kwargs["lr"] = trial.training.lr or 1e-4
+        kwargs["lr"] = trial_cfg.training.lr or 1e-4
         return kwargs
 
 
