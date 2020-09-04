@@ -419,7 +419,7 @@ def load_data(data_fold: DataFold,
               include_classes=[],
               use_tfrecords=False,
               tfrecord_dir=None,
-              val_split=0.1,
+              val_split=0.0,
               samples_per_shard=800,
               shuffle_train=True,
               seed=None):

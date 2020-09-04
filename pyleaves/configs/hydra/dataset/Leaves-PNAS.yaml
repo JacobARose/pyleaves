@@ -7,8 +7,6 @@ threshold: 10
 color_mode: 'grayscale'
 num_channels: 3
 target_size: [512,512]
-splits:
-    train: 0.5
-    validation: 0.5
+val_split: 0.0
 include_classes: []
 exclude_classes: ['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified']
