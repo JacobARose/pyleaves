@@ -277,7 +277,7 @@ def prep_dataset(dataset,
                  training=False,
                  seed=None):
 
-    import pdb;pdb.set_trace()
+
     
     resize = partial(resize_image, shape=(*target_size, num_channels), training=training, seed=seed)
     dataset = dataset.map(lambda x,y: (resize(x), y),
@@ -418,7 +418,7 @@ def load_data_from_tensor_slices(split_data, shuffle_train=True, seed=None):
         loaded_split_data[k] = loaded_split_data[k].cache()
         loaded_split_data[k] = loaded_split_data[k].map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
 
-    return split_data
+    return loaded_split_data
 
 
 
