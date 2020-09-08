@@ -396,6 +396,6 @@ def train_pipeline(fold: DataFold,
     return history
 
 
-@hydra.main(config_path=Path(CONFIG_DIR,'config.yaml'))
-def main():
+# @hydra.main(config_path=Path(CONFIG_DIR,'config.yaml'))
+# def main():
     
