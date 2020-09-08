@@ -277,7 +277,7 @@ def prep_dataset(dataset,
                  training=False,
                  seed=None):
 
-    import pdb;pdb.set_trace()
+    # import pdb;pdb.set_trace()
     
     resize = partial(resize_image, shape=(*target_size, num_channels), training=training, seed=seed)
     dataset = dataset.map(lambda x,y: (resize(x), y),
