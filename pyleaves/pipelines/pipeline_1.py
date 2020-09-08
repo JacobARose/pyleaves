@@ -55,7 +55,8 @@ from omegaconf import DictConfig, OmegaConf
 from pyleaves.utils import ensure_dir_exists
 
 
-def create_dataset_config(batch_size: int=1,
+def create_dataset_config(dataset_name: str='Leaves-PNAS',
+                          batch_size: int=1,
                           buffer_size: int=200,
                           exclude_classes: List[str]=['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified'],
                           include_classes: List[str]=[],
