@@ -12,7 +12,7 @@ This is meant to be a modularization of common model training scripts, allowing 
 
 
 from prefect import Flow, task
-
+from paleoai_data.utils.kfold_cross_validation import DataFold
 
 # @task
 # def extract():
