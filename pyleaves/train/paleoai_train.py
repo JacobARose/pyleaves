@@ -494,7 +494,9 @@ def load_data(data_fold: DataFold,
 
     split_data, split_datasets, encoder = initialize_data_from_paleoai(fold=data_fold,
                                                                        exclude_classes=exclude_classes,
-                                                                       include_classes=include_classes)
+                                                                       include_classes=include_classes,
+                                                                       val_split=val_split,
+                                                                       seed=seed)
                                                                        # subset_keys=['train','test'],
     subset_keys = [k for k in split_data if split_data[k] is not None]
     if use_tfrecords:
