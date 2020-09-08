@@ -107,16 +107,20 @@ class BaseModel:
     '''
     Base Class that implements basic model load/save methods for subclasses. Model building to be delegated to each individual subclass.
     '''
-    def __init__(self, model_params, name=''):
+    def __init__(self, model_config, name=''):
 
         self.name = name
-        self.config = model_params
+        self.config = model_config
 
-        self.num_classes = model_params.num_classes
-        self.frozen_layers = model_params.frozen_layers
-        self.input_shape = model_params.input_shape
-        self.base_learning_rate = model_params.base_learning_rate
-        self.regularization = model_params.regularization
+        self.num_classes = model_config.num_classes
+        self.frozen_layers = model_config.frozen_layers
+        self.input_shape = model_config.input_shape
+        if 'lr' in model_config:
+            self.lr = model_config.lr
+        else:
+            self.lr = model_config.base_learning_rate
+
+        self.regularization = model_config.regularization
 
         self.init_dirs()
 
@@ -152,7 +156,7 @@ class BaseModel:
 
         if regularization:
             model = self.add_regularization(model)
-        model.compile(optimizer=tf.keras.optimizers.Adam(lr=self.base_learning_rate),
+        model.compile(optimizer=tf.keras.optimizers.Adam(lr=self.lr),
                       loss='categorical_crossentropy',
                       metrics=METRICS)
         self.model = model
