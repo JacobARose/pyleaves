@@ -392,7 +392,7 @@ def load_data_from_tfrecords(tfrecord_dir,
 
 
 def load_data_from_tensor_slices(split_data, shuffle_train=True, seed=None):
-    split_data = {}
+    loaded_split_data = {}
 
     train_x = tf.data.Dataset.from_tensor_slices(split_data['train'][0])
     train_y = tf.data.Dataset.from_tensor_slices(split_data['train'][1])
@@ -400,22 +400,22 @@ def load_data_from_tensor_slices(split_data, shuffle_train=True, seed=None):
     train_data = tf.data.Dataset.zip((train_x, train_y))
     if shuffle_train:
         train_data = train_data.shuffle(int(num_train_samples),seed=seed, reshuffle_each_iteration=True)
-    split_data['train'] = train_data
+    loaded_split_data['train'] = train_data
 
     if 'val' in split_data:
         val_x = tf.data.Dataset.from_tensor_slices(split_data['val'][0])
         val_y = tf.data.Dataset.from_tensor_slices(split_data['val'][1])
         val_data = tf.data.Dataset.zip((val_x, val_y))
-        split_data['val'] = val_data
+        loaded_split_data['val'] = val_data
 
     test_x = tf.data.Dataset.from_tensor_slices(split_data['test'][0])
     test_y = tf.data.Dataset.from_tensor_slices(split_data['test'][1])
     test_data = tf.data.Dataset.zip((test_x, test_y))
-    split_data['test'] = test_data
+    loaded_split_data['test'] = test_data
 
-    for k in split_data.keys():
-        split_data[k] = split_data[k].cache()
-        split_data[k] = split_data[k].map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
+    for k in loaded_split_data.keys():
+        loaded_split_data[k] = loaded_split_data[k].cache()
+        loaded_split_data[k] = loaded_split_data[k].map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
 
     return split_data
 
