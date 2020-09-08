@@ -52,6 +52,8 @@ from paleoai_data.dataset_drivers.base_dataset import BaseDataset
 
 from typing import List, Tuple, Dict
 from omegaconf import DictConfig, OmegaConf
+from pyleaves.utils import ensure_dir_exists
+
 
 def create_dataset_config(batch_size: int=1,
                           buffer_size: int=200,
@@ -63,6 +65,7 @@ def create_dataset_config(batch_size: int=1,
                           val_split: float=0.0,
                           augmentations: Dict[str,float]={'flip':0.0},
                           seed: int=None,
+                          fold_dir= '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Leaves-PNAS/ksplit_10',
                           use_tfrecords: bool=True,
                           tfrecord_dir: str=None,
                           samples_per_shard: int=300):
@@ -104,13 +107,13 @@ def create_dataset(data_fold: DataFold,
     from pyleaves.train.paleoai_train import load_data, prep_dataset
 
     split_data, split_datasets, encoder = load_data(data_fold=data_fold,
-                                                              exclude_classes=cfg.exclude_classes,
-                                                              include_classes=cfg.include_classes,
-                                                              use_tfrecords=cfg.use_tfrecords,
-                                                              tfrecord_dir=cfg.tfrecord_dir,
-                                                              val_split=cfg.val_split,
-                                                              samples_per_shard=cfg.samples_per_shard,
-                                                              seed=cfg.seed)
+                                                    exclude_classes=cfg.exclude_classes,
+                                                    include_classes=cfg.include_classes,
+                                                    use_tfrecords=cfg.use_tfrecords,
+                                                    tfrecord_dir=cfg.tfrecord_dir,
+                                                    val_split=cfg.val_split,
+                                                    samples_per_shard=cfg.samples_per_shard,
+                                                    seed=cfg.seed)
     cfg.num_classes = split_datasets['train'].num_classes
 
     train_data = prep_dataset(split_data['train'],
