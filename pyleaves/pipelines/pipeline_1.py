@@ -260,21 +260,16 @@ def create_dataset(data_fold: DataFold,
     return split_data, split_datasets, encoder
 
 
-def get_callbacks(cfg, model_config, model, fold, val_data=None):
+def get_callbacks(cfg, model_config, model, fold, train_data=None, val_data=None, encoder=None):
     from neptunecontrib.monitoring.keras import NeptuneMonitor
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, tf_data2np
     from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback, ReduceLROnPlateau
+    from pyleaves.utils.neptune_utils import ImageLoggerCallback
 
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
                                   patience=10, min_lr=model_config.lr*0.1)
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
-
-    if val_data is None:
-        neptune_visualization_callback = None
-    else:
-        validation_data_np = tf_data2np(data=val_data, num_batches=2)
-        neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=model_config.num_classes)
 
     print('building callbacks')
     callbacks = [backup_callback,
@@ -283,7 +278,13 @@ def get_callbacks(cfg, model_config, model, fold, val_data=None):
                  CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),
                  EarlyStopping(monitor='val_loss', patience=20, verbose=1, restore_best_weights=True)]
 
-    if neptune_visualization_callback is not None:
+    if train_data is not None:
+        callbacks.append(ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune))
+
+    if val_data is not None:
+        validation_data_np = tf_data2np(data=val_data, num_batches=2)
+        neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=model_config.num_classes)
+        callbacks.append(ImageLoggerCallback(data=val_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune))
         callbacks.append(neptune_visualization_callback)
     return callbacks
 
@@ -346,7 +347,7 @@ class Trainer:
         from pyleaves.train.paleoai_train import build_model
         self.model_config = create_model_config(**OmegaConf.merge(self.config,self.data_config))#**self.config,**self.data_config)
         self.model = build_model(self.model_config)
-        self.callbacks = get_callbacks(self.config, self.model_config, self.model, self.fold, self.val_data)
+        self.callbacks = get_callbacks(self.config, self.model_config, self.model, self.fold, train_data=self.train_data, val_data=self.val_data, encoder=self.encoder)
 
         self.model.save(self.model_config['saved_model_path'])
 
