@@ -10,14 +10,16 @@ This is meant to be a modularization of common model training scripts, allowing 
 """
 
 from functools import partial
+import hydra
 import json
 import os
 from pathlib import Path
 from prefect import Flow, task
-from paleoai_data.utils.kfold_cross_validation import DataFold
+from paleoai_data.utils.kfold_cross_validation import DataFold, KFoldLoader
 from paleoai_data.dataset_drivers.base_dataset import BaseDataset
 from pyleaves.models import resnet, vgg16
 from pyleaves.base import base_model
+from pyleaves.utils.neptune_utils import neptune
 # @task
 # def extract():
 #     return [1, 2, 3]
@@ -93,7 +95,7 @@ def create_model_config(model_name: str='resnet_50_v2',
                         lr_decay_epochs: int=10,
                         regularization: Dict[str,float]={'l1': None},
                         METRICS: List[str]=['f1','accuracy'],
-                        head_layers: List[int]=[1024,256],
+                        head_layers: List[int]=[512,256],
                         batch_size: int=16,
                         buffer_size: int=200,
                         num_epochs: int=150,
@@ -128,6 +130,57 @@ model_dir,
 
 
 """
+
+
+
+def initialize_experiment(config, restore_last=True, restore_tfrecords=True):
+    date_format = '%Y-%m-%d_%H-%M-%S'
+
+    config.experiment_start_time = datetime.now().strftime(date_format)
+    config.experiment_name = '_'.join([config.dataset.dataset_name, config.model.model_name,str(config.dataset.target_size)])
+    config.experiment_dir = os.path.join(config.neptune_experiment_dir,config.experiment_name)
+    config.model_dir = os.path.join(config.experiment_dir,'model')
+    config.saved_model_path = os.path.join(config.model_dir,'saved_model')
+    config.checkpoints_path = os.path.join(config.model_dir,'checkpoints')
+
+    config.results_dir = os.path.join(config.experiment_dir,'results', config.experiment_start_time)
+    config.tfrecord_dir = f'/media/data/jacob/experimental_data/tfrecords/{config.dataset.dataset_name}'
+
+    if not restore_last:
+        clean_experiment_tree(config)
+        
+    if not restore_tfrecords:
+        cleanup_tfrecords(config)
+
+    for k,v in config.items():
+        if '_dir' in k:
+            ensure_dir_exists(v)
+
+    print('='*40)
+    print('Initializing experiment with the following configuration:')
+    for k,v in config.items():
+        if '_dir' in k or '_path' in k:
+            print(f'{k}: {v}')
+            print('-'*10)
+    print('='*40)
+    
+    return config
+    
+    
+def clean_experiment_tree(config):
+    if not os.path.isdir(config.experiment_dir):
+        print(f'Attempted to clean nonexistent experiment directory at {config.experiment_dir}. Continuing without action.')
+    print('Cleaning experiment file tree from root:\n',config.experiment_dir)
+    shutil.rmtree(config.experiment_dir)
+    assert not os.path.isdir(config.experiment_dir)
+    
+def cleanup_tfrecords(config):
+    if not os.path.isdir(config.tfrecord_dir):
+        print(f'Attempted to clean nonexistent tfrecord directory at {config.tfrecord_dir}. Continuing without action.')
+    print('Cleaning up tfrecord files located at:\n',config.tfrecord_dir)
+    shutil.rmtree(config.tfrecord_dir)
+    assert not os.path.isdir(config.tfrecord_dir)
+            
 
 
 
@@ -412,6 +465,34 @@ class Trainer:
         
     
         return history
+
+
+
+@hydra.main(config_path='configs', config_name='config')
+def main(cfg : DictConfig):
+
+    cfg = initialize_experiment(cfg, restore_last=cfg.restore_last, restore_tfrecords=True)
+
+    kfold_loader = KFoldLoader(root_dir=cfg.dataset.fold_dir)
+    if cfg.fold_id is None:
+        cfg.fold_id = 0
+    fold = kfold_loader.folds[cfg.fold_id]
+
+
+    Trainer(fold,
+            cfg,
+            worker_id=0,
+            gpu_num=None,
+            neptune=neptune,
+            verbose=True)
+
+
+
+
+
+
+
+
 
 # y_true, y_pred = predict_single_fold(model=model,
 #                                             fold=fold,
