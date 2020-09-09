@@ -33,3 +33,4 @@ saved_model_path: null
 checkpoints_path: null
 n_jobs: 1
 num_gpus: 1
+gpu_num: null

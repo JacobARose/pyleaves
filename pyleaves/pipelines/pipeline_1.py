@@ -389,7 +389,7 @@ def main(cfg : DictConfig):
 
 
     from pyleaves.utils import set_tf_config
-    gpu_num = set_tf_config(gpu_num=gpu_num, num_gpus=1)
+    gpu_num = set_tf_config(gpu_num=cfg.gpu_num, num_gpus=1)
 
     import tensorflow as tf
     from tensorflow.keras import backend as K
