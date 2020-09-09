@@ -200,7 +200,7 @@ def flatten_dict(x: dict):
         else:
             out[k] = v
 
-    return out
+    return DictConfig(out)
 
 
 
