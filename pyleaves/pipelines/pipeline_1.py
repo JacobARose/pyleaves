@@ -412,17 +412,21 @@ def main(cfg : DictConfig):
     fold = kfold_loader.folds[cfg.fold_id]
 
 
-    trainer = Trainer(fold,
-                      cfg,
-                      neptune=neptune,
-                      verbose=True)
+    neptune.init(project_qualified_name=cfg.neptune_project_name)
+    params=OmegaConf.to_container(cfg)
+    with neptune.create_experiment(name=cfg.experiment_name+'-'+str(cfg.dataset.dataset_name), params=params):
 
-    date_format = '%Y-%m-%d_%H-%M-%S'
-    train_start_time = datetime.now().strftime(date_format)
+        trainer = Trainer(fold,
+                        cfg,
+                        neptune=neptune,
+                        verbose=True)
 
-    print(f'Trainer constructed. Beginning training at {train_start_time}')
+        date_format = '%Y-%m-%d_%H-%M-%S'
+        train_start_time = datetime.now().strftime(date_format)
 
-    trainer.train()
+        print(f'Trainer constructed. Beginning training at {train_start_time}')
+
+        trainer.train()
 
 
 
