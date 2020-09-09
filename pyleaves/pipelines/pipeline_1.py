@@ -410,12 +410,18 @@ def main(cfg : DictConfig):
     fold = kfold_loader.folds[cfg.fold_id]
 
 
-    Trainer(fold,
-            cfg,
-            worker_id=0,
-            gpu_num=None,
-            neptune=neptune,
-            verbose=True)
+    trainer = Trainer(fold,
+                      cfg,
+                      neptune=neptune,
+                      verbose=True)
+
+    date_format = '%Y-%m-%d_%H-%M-%S'
+    train_start_time = datetime.now().strftime(date_format)
+
+    print(f'Trainer constructed. Beginning training at {train_start_time}')
+
+    trainer.train()
+
 
 
 if __name__=='__main__':
