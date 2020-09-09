@@ -280,111 +280,6 @@ def get_callbacks(cfg, model_config, model, fold, val_data):
     return callbacks
 
 
-# def build_base_vgg16_RGB(cfg):
-
-#     base = tf.keras.applications.vgg16.VGG16(weights=cfg['weights'],
-#                                              include_top=False,
-#                                              input_tensor=Input(shape=(*cfg['target_size'],3)))
-
-#     return base
-
-
-# def build_classifier_head(base, num_classes=10, cfg: DictConfig=None):
-#     if cfg is None:
-#         global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
-#         dense1 = tf.keras.layers.Dense(2048,activation='relu',name='dense1')
-#         dense2 = tf.keras.layers.Dense(512,activation='relu',name='dense2')
-#         prediction_layer = tf.keras.layers.Dense(num_classes, activation='softmax')
-#         model = tf.keras.Sequential([
-#             base,
-#             global_average_layer,dense1,dense2,
-#             prediction_layer
-#             ])
-
-#     else:
-#         layers = [base]
-#         layers.append(tf.keras.layers.GlobalAveragePooling2D())
-#         for layer_num, layer_units in enumerate(cfg.head_layers):
-#             layers.append(tf.keras.layers.Dense(layer_units,activation='relu',name=f'dense{layer_num}'))
-        
-#         layers.append(tf.keras.layers.Dense(num_classes, activation='softmax'))
-#         model = tf.keras.Sequential(layers)
-
-#     return model
-
-
-# def build_model(cfg: DictConfig):
-#     '''
-#         model_config(model_name: str='resnet_50_v2',
-#                      optimizer: str='Adam',
-#                      loss: str='categorical_crossentropy',
-#                      weights: str='imagenet',
-#                      lr: float=4.0e-5,
-#                      lr_decay: float=None,
-#                      lr_momentum: float=None,
-#                      lr_decay_epochs: int=10,
-#                      regularization: Dict[str,float]={'l1': None},
-#                      METRICS: List[str]=['f1','accuracy'],
-#                      head_layers: List[int]=[1024,256],
-#                      batch_size: int=16,
-#                      buffer_size: int=200,
-#                      num_epochs: int=150,
-#                      frozen_layers: List[int]=None,
-#                      augmentations: List[Dict[str,float]]=[{'flip': 1.0}],
-#                      num_classes: int=None,
-#                      target_size: Tuple[int,int]=(512,512),
-#                      num_channels: int=3)
-#     '''
-
-#     if cfg['model_name']=='vgg16':
-#         if cfg['num_channels']==1:
-#             model_builder = vgg16.VGG16GrayScale(cfg)
-#             build_base = model_builder.build_base
-#         else:
-#             build_base = partial(build_base_vgg16_RGB, cfg=cfg)
-
-#     elif cfg['model_name'].startswith('resnet'):
-#         model_builder = resnet.ResNet(cfg)
-#         build_base = model_builder.build_base
-
-#     base = build_base()
-#     model = build_classifier_head(base, num_classes=cfg['num_classes'], cfg=cfg)
-    
-#     model = base_model.Model.add_regularization(model, **cfg.regularization)
-
-#     # initial_learning_rate = cfg['lr']
-#     # lr_schedule = cfg['lr'] #tf.keras.optimizers.schedules.ExponentialDecay(
-#                             # initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True
-
-#     if cfg['optimizer'] == "RMSprop":
-#         optimizer = tf.keras.optimizers.SGD(learning_rate=cfg['lr'], momentum=cfg['momentum'], decay=cfg['decay'])
-#     elif cfg['optimizer'] == "SGD":
-#         optimizer = tf.keras.optimizers.SGD(learning_rate=cfg['lr'], momentum=cfg['momentum'])
-#     elif cfg['optimizer'] == "Adam":
-#         optimizer = tf.keras.optimizers.Adam(learning_rate=cfg['lr'])
-
-#     if cfg['loss']=='categorical_crossentropy':
-#         loss = 'categorical_crossentropy'
-
-#     METRICS = []
-#     if 'f1' in cfg['METRICS']:
-#         METRICS.append(tfa.metrics.F1Score(num_classes=cfg['num_classes'],
-#                                            average='weighted',
-#                                            name='weighted_f1'))
-#     if 'accuracy' in cfg['METRICS']:
-#         METRICS.append('accuracy')
-#     if 'precision' in cfg['METRICS']:
-#         METRICS.append(tf.keras.metrics.Precision())
-#     if 'recall' in cfg['METRICS']:
-#         METRICS.append(tf.keras.metrics.Recall())
-
-#     model.compile(optimizer=optimizer,
-#                   loss=loss,
-#                   metrics=METRICS)
-
-#     model.save(cfg['saved_model_path'])
-#     return model
-
 
 # @task
 def fit_model(model, callbacks, train_data, val_data, cfg):
@@ -448,11 +343,6 @@ class Trainer:
         self.model.save(self.model_config['saved_model_path'])
 
     def train(self):
-        import tensorflow as tf
-        from tensorflow.keras import backend as K
-        from pyleaves.train.paleoai_train import preprocess_input, build_model
-        K.clear_session()
-        preprocess_input(tf.zeros([4, 224, 224, 3]))
 
         try:
             history = self.model.fit(self.train_data,
@@ -512,6 +402,12 @@ def main(cfg : DictConfig):
 
 
 if __name__=='__main__':
+
+    import tensorflow as tf
+    from tensorflow.keras import backend as K
+    from pyleaves.train.paleoai_train import preprocess_input, build_model
+    K.clear_session()
+    preprocess_input(tf.zeros([4, 224, 224, 3]))
 
     main()
 
@@ -628,3 +524,108 @@ if __name__=='__main__':
 # @hydra.main(config_path=Path(CONFIG_DIR,'config.yaml'))
 # def main():
     
+
+# def build_base_vgg16_RGB(cfg):
+
+#     base = tf.keras.applications.vgg16.VGG16(weights=cfg['weights'],
+#                                              include_top=False,
+#                                              input_tensor=Input(shape=(*cfg['target_size'],3)))
+
+#     return base
+
+
+# def build_classifier_head(base, num_classes=10, cfg: DictConfig=None):
+#     if cfg is None:
+#         global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
+#         dense1 = tf.keras.layers.Dense(2048,activation='relu',name='dense1')
+#         dense2 = tf.keras.layers.Dense(512,activation='relu',name='dense2')
+#         prediction_layer = tf.keras.layers.Dense(num_classes, activation='softmax')
+#         model = tf.keras.Sequential([
+#             base,
+#             global_average_layer,dense1,dense2,
+#             prediction_layer
+#             ])
+
+#     else:
+#         layers = [base]
+#         layers.append(tf.keras.layers.GlobalAveragePooling2D())
+#         for layer_num, layer_units in enumerate(cfg.head_layers):
+#             layers.append(tf.keras.layers.Dense(layer_units,activation='relu',name=f'dense{layer_num}'))
+        
+#         layers.append(tf.keras.layers.Dense(num_classes, activation='softmax'))
+#         model = tf.keras.Sequential(layers)
+
+#     return model
+
+
+# def build_model(cfg: DictConfig):
+#     '''
+#         model_config(model_name: str='resnet_50_v2',
+#                      optimizer: str='Adam',
+#                      loss: str='categorical_crossentropy',
+#                      weights: str='imagenet',
+#                      lr: float=4.0e-5,
+#                      lr_decay: float=None,
+#                      lr_momentum: float=None,
+#                      lr_decay_epochs: int=10,
+#                      regularization: Dict[str,float]={'l1': None},
+#                      METRICS: List[str]=['f1','accuracy'],
+#                      head_layers: List[int]=[1024,256],
+#                      batch_size: int=16,
+#                      buffer_size: int=200,
+#                      num_epochs: int=150,
+#                      frozen_layers: List[int]=None,
+#                      augmentations: List[Dict[str,float]]=[{'flip': 1.0}],
+#                      num_classes: int=None,
+#                      target_size: Tuple[int,int]=(512,512),
+#                      num_channels: int=3)
+#     '''
+
+#     if cfg['model_name']=='vgg16':
+#         if cfg['num_channels']==1:
+#             model_builder = vgg16.VGG16GrayScale(cfg)
+#             build_base = model_builder.build_base
+#         else:
+#             build_base = partial(build_base_vgg16_RGB, cfg=cfg)
+
+#     elif cfg['model_name'].startswith('resnet'):
+#         model_builder = resnet.ResNet(cfg)
+#         build_base = model_builder.build_base
+
+#     base = build_base()
+#     model = build_classifier_head(base, num_classes=cfg['num_classes'], cfg=cfg)
+    
+#     model = base_model.Model.add_regularization(model, **cfg.regularization)
+
+#     # initial_learning_rate = cfg['lr']
+#     # lr_schedule = cfg['lr'] #tf.keras.optimizers.schedules.ExponentialDecay(
+#                             # initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True
+
+#     if cfg['optimizer'] == "RMSprop":
+#         optimizer = tf.keras.optimizers.SGD(learning_rate=cfg['lr'], momentum=cfg['momentum'], decay=cfg['decay'])
+#     elif cfg['optimizer'] == "SGD":
+#         optimizer = tf.keras.optimizers.SGD(learning_rate=cfg['lr'], momentum=cfg['momentum'])
+#     elif cfg['optimizer'] == "Adam":
+#         optimizer = tf.keras.optimizers.Adam(learning_rate=cfg['lr'])
+
+#     if cfg['loss']=='categorical_crossentropy':
+#         loss = 'categorical_crossentropy'
+
+#     METRICS = []
+#     if 'f1' in cfg['METRICS']:
+#         METRICS.append(tfa.metrics.F1Score(num_classes=cfg['num_classes'],
+#                                            average='weighted',
+#                                            name='weighted_f1'))
+#     if 'accuracy' in cfg['METRICS']:
+#         METRICS.append('accuracy')
+#     if 'precision' in cfg['METRICS']:
+#         METRICS.append(tf.keras.metrics.Precision())
+#     if 'recall' in cfg['METRICS']:
+#         METRICS.append(tf.keras.metrics.Recall())
+
+#     model.compile(optimizer=optimizer,
+#                   loss=loss,
+#                   metrics=METRICS)
+
+#     model.save(cfg['saved_model_path'])
+#     return model
