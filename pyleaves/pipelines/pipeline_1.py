@@ -8,7 +8,7 @@ This is meant to be a modularization of common model training scripts, allowing 
 
 
 
-python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_1.py dataset.dataset_name='PNAS'
+python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_1.py dataset@dataset='PNAS'
 
 """
 
@@ -231,17 +231,17 @@ def create_dataset(data_fold: DataFold,
                               augmentations=cfg.augmentations,
                               training=True,
                               seed=cfg.seed)
-    if split_data['val'] is not None:
-        val_data = prep_dataset(split_data['val'],
-                                batch_size=cfg.batch_size,
-                                target_size=cfg.target_size,
-                                num_channels=cfg.num_channels,
-                                color_mode=cfg.color_mode,
-                                num_classes=cfg.num_classes,
-                                training=False,
-                                seed=cfg.seed)
-    else:
-        val_data=None
+    val_data=None
+    if 'val' in split_data:
+        if split_data['val'] is not None:
+            val_data = prep_dataset(split_data['val'],
+                                    batch_size=cfg.batch_size,
+                                    target_size=cfg.target_size,
+                                    num_channels=cfg.num_channels,
+                                    color_mode=cfg.color_mode,
+                                    num_classes=cfg.num_classes,
+                                    training=False,
+                                    seed=cfg.seed)
 
     test_data = prep_dataset(split_data['test'],
                             batch_size=cfg.batch_size,
@@ -253,7 +253,7 @@ def create_dataset(data_fold: DataFold,
                             seed=cfg.seed)
 
     split_data = {'train':train_data,'val':val_data,'test':test_data}
-    import pdb;pdb.set_trace()
+    split_data = {k:v for k,v in split_data.items() if v is not None}
     return split_data, split_datasets, encoder
 
 
