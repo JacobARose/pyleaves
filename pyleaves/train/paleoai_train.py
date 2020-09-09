@@ -357,6 +357,9 @@ def initialize_data_from_paleoai(fold: DataFold,
 
     split_data = {'train':train_data, 'val':val_data, 'test':test_data}
     split_datasets = {'train':train_dataset, 'val':val_dataset, 'test':test_dataset}
+
+    if split_data['val'] is None: split_data.pop('val')
+    if split_datasets['val'] is None: split_datasets.pop('val')
     return split_data, split_datasets, encoder
     # return split_data, train_dataset, test_dataset, encoder
 
