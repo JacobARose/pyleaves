@@ -362,8 +362,8 @@ class Trainer:
                                 validation_steps=self.model_config.validation_steps,
                                 verbose=1)
         except Exception as e:
-            # model.save(str(Path(cfg['saved_model_path'],f'fold-{fold.fold_id}')))
-            # print('[Caught Exception, saving model first.\nSaved trained model located at:', fold_model_path)
+            self.model.save(self.model_config['saved_model_path'])
+            print('[Caught Exception, saving model first.\nSaved trained model located at:', self.model_config['saved_model_path'])
             raise e    
         # print('Saved trained model located at:', fold_model_path)
         self.model.save(self.model_config['saved_model_path'])
