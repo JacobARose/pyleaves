@@ -260,7 +260,7 @@ def create_dataset(data_fold: DataFold,
     return split_data, split_datasets, encoder
 
 
-def get_callbacks(cfg, model_config, model, fold, val_data):
+def get_callbacks(cfg, model_config, model, fold, val_data=None):
     from neptunecontrib.monitoring.keras import NeptuneMonitor
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, tf_data2np
     from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback, ReduceLROnPlateau
@@ -270,8 +270,11 @@ def get_callbacks(cfg, model_config, model, fold, val_data):
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
 
-    validation_data_np = tf_data2np(data=val_data, num_batches=2)
-    neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=model_config.num_classes)
+    if val_data is None:
+        neptune_visualization_callback = None
+    else:
+        validation_data_np = tf_data2np(data=val_data, num_batches=2)
+        neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=model_config.num_classes)
 
     print('building callbacks')
     callbacks = [backup_callback,
