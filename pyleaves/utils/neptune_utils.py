@@ -62,7 +62,7 @@ class ImageLoggerCallback(Callback):
         self.neptune_logger.log_image(log_name= name or self.name,
                           x=counter,
                           y=fig)
-        fig.close()                          
+        plt.close(fig)
         return scaled_img
 
     # def on_train_batch_begin(self, batch, logs=None):
