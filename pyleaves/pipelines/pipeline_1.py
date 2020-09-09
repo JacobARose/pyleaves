@@ -496,6 +496,7 @@ def main(cfg : DictConfig):
 
     cfg = initialize_experiment(cfg, restore_last=cfg.restore_last, restore_tfrecords=True)
 
+    print('Dataset config: \n',cfg.dataset.pretty())
     kfold_loader = KFoldLoader(root_dir=cfg.dataset.fold_dir)
     if cfg.fold_id is None:
         cfg.fold_id = 0
