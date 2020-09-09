@@ -46,7 +46,7 @@ class ImageLoggerCallback(Callback):
         self._count += batch_data[0].shape[0]
         return batch_data
 
-    def add_log(self, img, counter=None, name=None, plot_title=''):
+    def add_log(self, img, counter=None, name=None, plot_title='', canvas_color='w'):
         '''
         Intention is to generalize this to an abstract class for logging to any experiment management platform (e.g. neptune, mlflow, etc)
 
@@ -58,6 +58,7 @@ class ImageLoggerCallback(Callback):
         fig = plt.figure()
         plt.imshow(scaled_img)
         plt.title(plot_title)
+        fig.set_facecolor(canvas_color)
 
         self.neptune_logger.log_image(log_name= name or self.name,
                           x=counter,
@@ -82,22 +83,29 @@ class ImageLoggerCallback(Callback):
             y = y[:self.max_images,...]
 
         x = x.numpy()
-        plot_title = ''
+        plot_title = ''            
+
+        y = np.argmax(y.numpy(),axis=1)
+        if self.encoder:
+            y = self.encoder.decode(y)
+
         if self.include_predictions:
             y_pred = self.model.predict(x)
             y_pred = np.argmax(y_pred, axis=1)
             if self.encoder:
                 y_pred = self.encoder.decode(y_pred.tolist())
-            
 
-        y = np.argmax(y.numpy(),axis=1)
-        if self.encoder:
-            y = self.encoder.decode(y)
+
         for i in range(x.shape[0]):
             # self.add_log(x[i,...], counter=i, name = f'{self.name}-{y[i]}-batch_{str(self._batch).zfill(3)}')
             if len(y_pred)>0:
                 plot_title = f'predicted_label={y_pred[i]}'
-            self.add_log(x[i,...], counter=self._count+i, name = f'{y[i]}-{self.name}', plot_title=plot_title)
+                if y_pred[i] == y[i]:
+                    canvas_color = 'b'
+                else:
+                    canvas_color = 'r'
+
+            self.add_log(x[i,...], counter=self._count+i, name = f'{y[i]}-{self.name}', plot_title=plot_title, canvas_color=canvas_color)
         print(f'Batch {self._batch}: Logged {np.max([x.shape[0],self.max_images])} {self.name} images to neptune')
 
     def on_epoch_end(self, epoch, logs={}):
