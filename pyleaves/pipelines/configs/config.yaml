@@ -1,6 +1,6 @@
 defaults:
-    - dataset: Leaves-PNAS
-    - model: resnet_50_v2
+    - dataset@dataset: Leaves-PNAS
+    - model@model: resnet_50_v2
     
     - db@db : sqlite
     
