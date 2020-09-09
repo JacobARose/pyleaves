@@ -15,6 +15,7 @@ python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_1.py dataset@da
 from functools import partial
 import hydra
 import json
+# from omegaconf import OmegaConf
 import os
 from pathlib import Path
 from prefect import Flow, task
@@ -339,7 +340,7 @@ class Trainer:
 
     def initialize_model(self):
         from pyleaves.train.paleoai_train import build_model
-        self.model_config = create_model_config(**self.config,**self.data_config)
+        self.model_config = create_model_config(OmegaConf.merge(self.config,self.data_config))#**self.config,**self.data_config)
         self.model = build_model(self.model_config)
         self.callbacks = get_callbacks(self.config, self.model_config, self.model, self.fold, self.val_data)
 
