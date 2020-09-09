@@ -429,6 +429,7 @@ class Trainer:
         self.initialize_model()
         
     def initialize_dataset(self):
+        import pdb;pdb.set_trace()
         self.data_config = create_dataset_config(**self.config)
         self.data, self.split_datasets, self.encoder = create_dataset(data_fold=self.fold,
                                                                       cfg=self.data_config)
