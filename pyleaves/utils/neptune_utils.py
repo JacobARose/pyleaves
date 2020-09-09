@@ -65,7 +65,8 @@ class ImageLoggerCallback(Callback):
         fig.close()                          
         return scaled_img
 
-    def on_train_batch_begin(self, batch, logs=None):
+    # def on_train_batch_begin(self, batch, logs=None):
+    def on_train_batch_end(self, batch, logs=None):
         if batch % self.freq or self.finished:
             return
         while batch >= self._batch:
@@ -85,7 +86,7 @@ class ImageLoggerCallback(Callback):
         if self.include_predictions:
             y_pred = self.model.predict(x)
             if self.encoder:
-                y_pred = self.encoder.decode(y_pred)
+                y_pred = self.encoder.decode(y_pred.tolist())
             plot_title = f'predicted_label={y_pred}'
 
         y = np.argmax(y.numpy(),axis=1)
