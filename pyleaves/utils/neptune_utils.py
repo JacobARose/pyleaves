@@ -85,6 +85,7 @@ class ImageLoggerCallback(Callback):
         plot_title = ''
         if self.include_predictions:
             y_pred = self.model.predict(x)
+            y_pred = np.argmax(y_pred, axis=1)
             if self.encoder:
                 y_pred = self.encoder.decode(y_pred.tolist())
             plot_title = f'predicted_label={y_pred}'
