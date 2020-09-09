@@ -364,6 +364,7 @@ class Trainer:
         self.train_data, self.val_data, self.test_data = self.data['train'], self.data['val'], self.data['test']
 
     def initialize_model(self):
+        from pyleaves.train.paleoai_train import build_model
         self.model_config = create_model_config(**self.config,**self.data_config)
         self.model = build_model(self.model_config)
         self.callbacks = get_callbacks(self.config, self.model_config, self.model, self.fold, self.val_data)
