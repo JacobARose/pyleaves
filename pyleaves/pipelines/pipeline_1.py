@@ -279,12 +279,12 @@ def get_callbacks(cfg, model_config, model, fold, train_data=None, val_data=None
                  EarlyStopping(monitor='val_loss', patience=20, verbose=1, restore_best_weights=True)]
 
     if train_data is not None:
-        callbacks.append(ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune))
+        callbacks.append(ImageLoggerCallback(data=train_data, freq=1000, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune,include_predictions=True))
 
     if val_data is not None:
         validation_data_np = tf_data2np(data=val_data, num_batches=2)
         neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=model_config.num_classes)
-        callbacks.append(ImageLoggerCallback(data=val_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune))
+        callbacks.append(ImageLoggerCallback(data=val_data, freq=1000, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune, include_predictions=True))
         callbacks.append(neptune_visualization_callback)
     return callbacks
 
