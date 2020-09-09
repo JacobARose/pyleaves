@@ -380,7 +380,7 @@ def load_data_from_tfrecords(tfrecord_dir,
                                            samples_per_shard=samples_per_shard,
                                            num_classes=num_classes)
 
-            coders[subset].execute_covert()
+            coders[subset].execute_convert()
             files[subset] = [os.path.join(tfrecord_dir,f) for f in os.listdir(tfrecord_dir) if subset in f]
 
     split_data = {}
