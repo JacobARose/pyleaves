@@ -88,13 +88,15 @@ class ImageLoggerCallback(Callback):
             y_pred = np.argmax(y_pred, axis=1)
             if self.encoder:
                 y_pred = self.encoder.decode(y_pred.tolist())
-            plot_title = f'predicted_label={y_pred}'
+            
 
         y = np.argmax(y.numpy(),axis=1)
         if self.encoder:
             y = self.encoder.decode(y)
         for i in range(x.shape[0]):
             # self.add_log(x[i,...], counter=i, name = f'{self.name}-{y[i]}-batch_{str(self._batch).zfill(3)}')
+            if len(y_pred)>0:
+                plot_title = f'predicted_label={y_pred[i]}'
             self.add_log(x[i,...], counter=self._count+i, name = f'{y[i]}-{self.name}', plot_title=plot_title)
         print(f'Batch {self._batch}: Logged {np.max([x.shape[0],self.max_images])} {self.name} images to neptune')
 
