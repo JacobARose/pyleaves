@@ -5,10 +5,10 @@ optimizer: 'Adam'
 loss: 'categorical_crossentropy'
 lr: 4.0e-5
 lr_decay: 1.0
-lr_decay_interval: 10
+lr_decay_epochs: 10
 lr_momentum: null
 regularization:
-    l1: null
+    l2: 1e-4
 METRICS: ['f1','accuracy']
 
-head_layers: [512,256]
+head_layers: [256,128]
