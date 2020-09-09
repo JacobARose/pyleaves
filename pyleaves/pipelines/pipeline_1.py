@@ -7,6 +7,9 @@
 This is meant to be a modularization of common model training scripts, allowing for further customization of the order and content of each piepline node/step/stage.
 
 
+
+python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_1.py dataset.dataset_name='PNAS'
+
 """
 
 from functools import partial
@@ -487,7 +490,9 @@ def main(cfg : DictConfig):
             verbose=True)
 
 
+if __name__=='__main__':
 
+    main()
 
 
 
