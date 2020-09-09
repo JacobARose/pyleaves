@@ -191,6 +191,17 @@ def cleanup_tfrecords(config):
     assert not os.path.isdir(config.tfrecord_dir)
             
 
+def flatten_dict(x: dict):
+    out = {}
+    
+    for k,v in x.items():
+        if isinstance(v,(DictConfig,dict)):
+            out.update(**flatten_dict(v))
+        else:
+            out[k] = v
+
+    return out
+
 
 
 
@@ -401,22 +412,24 @@ class Trainer:
                  verbose: bool=True):
 
         self.fold = fold
-        self.config = cfg
-
-        self.data_config = create_dataset_config(**cfg)
+        self.config = flatten_dict(cfg)
 
         self.worker_id = worker_id
 
         from pyleaves.utils import set_tf_config
-        gpu_num = set_tf_config(gpu_num=gpu_num, num_gpus=1, seed=cfg.misc.seed, wait=fold.fold_id)
+        gpu_num = set_tf_config(gpu_num=gpu_num, num_gpus=1, seed=cfg.seed, wait=fold.fold_id)
         self.gpu_num = gpu_num
 
         if neptune is None:
             import neptune
         self.neptune = neptune
         self.verbose = verbose
+
+        self.initialize_dataset()
+        self.initialize_model()
         
     def initialize_dataset(self):
+        self.data_config = create_dataset_config(**self.config)
         self.data, self.split_datasets, self.encoder = create_dataset(data_fold=self.fold,
                                                                       cfg=self.data_config)
 
