@@ -280,9 +280,11 @@ def get_callbacks(cfg, model_config, model, fold, val_data=None):
     callbacks = [backup_callback,
                  reduce_lr,
                  NeptuneMonitor(),
-                 neptune_visualization_callback,
                  CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),
                  EarlyStopping(monitor='val_loss', patience=20, verbose=1, restore_best_weights=True)]
+
+    if neptune_visualization_callback is not None:
+        callbacks.append(neptune_visualization_callback)
     return callbacks
 
 
