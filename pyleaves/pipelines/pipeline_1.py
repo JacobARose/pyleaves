@@ -327,7 +327,6 @@ class Trainer:
         self.initialize_model()
         
     def initialize_dataset(self):
-        import pdb;pdb.set_trace()
         self.data_config = create_dataset_config(**self.config)
         self.data, self.split_datasets, self.encoder = create_dataset(data_fold=self.fold,
                                                                       cfg=self.data_config)
@@ -340,7 +339,7 @@ class Trainer:
 
     def initialize_model(self):
         from pyleaves.train.paleoai_train import build_model
-        self.model_config = create_model_config(OmegaConf.merge(self.config,self.data_config))#**self.config,**self.data_config)
+        self.model_config = create_model_config(**OmegaConf.merge(self.config,self.data_config))#**self.config,**self.data_config)
         self.model = build_model(self.model_config)
         self.callbacks = get_callbacks(self.config, self.model_config, self.model, self.fold, self.val_data)
 
