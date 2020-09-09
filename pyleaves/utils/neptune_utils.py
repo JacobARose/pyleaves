@@ -95,8 +95,7 @@ class ImageLoggerCallback(Callback):
             if self.encoder:
                 y_pred = self.encoder.decode(y_pred.tolist())
 
-
-        for i in range(x.shape[0]):
+        for i in range(self.max_images):#x.shape[0]):
             # self.add_log(x[i,...], counter=i, name = f'{self.name}-{y[i]}-batch_{str(self._batch).zfill(3)}')
             if len(y_pred)>0:
                 plot_title = f'predicted_label={y_pred[i]}'
