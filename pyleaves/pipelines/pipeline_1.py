@@ -255,7 +255,7 @@ def create_dataset(data_fold: DataFold,
                             seed=cfg.seed)
 
     split_data = {'train':train_data,'val':val_data,'test':test_data}
-    split_data = {k:v for k,v in split_data.items() if v is not None}
+    # split_data = {k:v for k,v in split_data.items() if v is not None}
     return split_data, split_datasets, encoder
 
 

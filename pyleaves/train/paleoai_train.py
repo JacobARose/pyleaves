@@ -358,8 +358,8 @@ def initialize_data_from_paleoai(fold: DataFold,
     split_data = {'train':train_data, 'val':val_data, 'test':test_data}
     split_datasets = {'train':train_dataset, 'val':val_dataset, 'test':test_dataset}
 
-    if split_data['val'] is None: split_data.pop('val')
-    if split_datasets['val'] is None: split_datasets.pop('val')
+    # if split_data['val'] is None: split_data.pop('val')
+    # if split_datasets['val'] is None: split_datasets.pop('val')
     return split_data, split_datasets, encoder
     # return split_data, train_dataset, test_dataset, encoder
 
@@ -407,11 +407,13 @@ def load_data_from_tensor_slices(split_data, shuffle_train=True, seed=None):
         train_data = train_data.shuffle(int(num_train_samples),seed=seed, reshuffle_each_iteration=True)
     loaded_split_data['train'] = train_data
 
+    loaded_split_data['val'] = None
     if 'val' in split_data:
-        val_x = tf.data.Dataset.from_tensor_slices(split_data['val'][0])
-        val_y = tf.data.Dataset.from_tensor_slices(split_data['val'][1])
-        val_data = tf.data.Dataset.zip((val_x, val_y))
-        loaded_split_data['val'] = val_data
+        if split_data['val'] is not None:
+            val_x = tf.data.Dataset.from_tensor_slices(split_data['val'][0])
+            val_y = tf.data.Dataset.from_tensor_slices(split_data['val'][1])
+            val_data = tf.data.Dataset.zip((val_x, val_y))
+            loaded_split_data['val'] = val_data
 
     test_x = tf.data.Dataset.from_tensor_slices(split_data['test'][0])
     test_y = tf.data.Dataset.from_tensor_slices(split_data['test'][1])
@@ -419,8 +421,9 @@ def load_data_from_tensor_slices(split_data, shuffle_train=True, seed=None):
     loaded_split_data['test'] = test_data
 
     for k in loaded_split_data.keys():
-        loaded_split_data[k] = loaded_split_data[k].cache()
-        loaded_split_data[k] = loaded_split_data[k].map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
+        if loaded_split_data[k] is not None:
+            loaded_split_data[k] = loaded_split_data[k].cache()
+            loaded_split_data[k] = loaded_split_data[k].map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
 
     return loaded_split_data
 
