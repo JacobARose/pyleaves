@@ -1,0 +1,9 @@
+# @Author: Jacob A Rose
+# @Date:   Sun September 8th 2020, 11:11 pm
+# @Email:  jacobrose@brown.edu
+# @Filename: README
+
+
+This config directory is meant to store Hydra-formatted configuration yaml files for use in the pipeline scripts stored in pyleaves/pipelines.
+
+The main pyleaves/configs directory contains some similar files, but those were created for other purposes.

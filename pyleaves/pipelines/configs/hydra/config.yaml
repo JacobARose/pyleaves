@@ -1,0 +1,34 @@
+defaults:
+    - db@db : sqlite
+
+    - model: resnet_50_v2
+    - dataset: Leaves-PNAS
+    
+fold_id: null
+
+batch_size: 16
+buffer_size: 200
+num_epochs: 150
+frozen_layers: null
+augmentations:
+    - flip: 1.0
+
+seed: 45
+use_tfrecords: true
+samples_per_shard: 300
+    
+
+neptune_project_name: "jacobarose/sandbox"
+neptune_experiment_dir: "/media/data/jacob/sandbox_logs"
+experiment_name: ???
+experiment_dir: ???
+experiment_start_time: ???
+restore_last: True
+    
+model_dir: null
+tfrecord_dir: ???
+results_dir: ???
+saved_model_path: ???
+checkpoints_path: ???
+n_jobs: 1
+num_gpus: 1
