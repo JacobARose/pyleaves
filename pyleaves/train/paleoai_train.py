@@ -369,7 +369,8 @@ def load_data_from_tfrecords(tfrecord_dir,
 
     if data:
         for k,v in data.items():
-            data[k] = pd.DataFrame({'source_path':v[0],'label':v[1]})
+            if v is not None and k in subset_keys:
+                data[k] = pd.DataFrame({'source_path':v[0],'label':v[1]})
         coders = {}; files = {}
         for subset in subset_keys:
             coders[subset] = TFRecordCoder(data = data[subset],
