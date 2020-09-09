@@ -1,8 +1,8 @@
-# @package _group_.name
+# @package _group_
 
 fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Leaves-PNAS/ksplit_10'
 dataset_name: 'Leaves-PNAS'
-num_classes: ???
+num_classes: null
 threshold: 10
 color_mode: 'grayscale'
 num_channels: 3

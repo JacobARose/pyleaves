@@ -1,8 +1,8 @@
 defaults:
-    - db@db : sqlite
-
-    - model: resnet_50_v2
     - dataset: Leaves-PNAS
+    - model: resnet_50_v2
+    
+    - db@db : sqlite
     
 fold_id: null
 
@@ -20,15 +20,16 @@ samples_per_shard: 300
 
 neptune_project_name: "jacobarose/sandbox"
 neptune_experiment_dir: "/media/data/jacob/sandbox_logs"
+
 experiment_name: ???
 experiment_dir: ???
-experiment_start_time: ???
+experiment_start_time: null
 restore_last: True
     
 model_dir: null
-tfrecord_dir: ???
-results_dir: ???
-saved_model_path: ???
-checkpoints_path: ???
+tfrecord_dir: null
+results_dir: null
+saved_model_path: null
+checkpoints_path: null
 n_jobs: 1
 num_gpus: 1

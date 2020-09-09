@@ -1,4 +1,4 @@
-# @package _group_.name
+# @package _group_
 
 model_name: 'vgg16'
 optimizer: 'Adam'
@@ -6,8 +6,9 @@ loss: 'categorical_crossentropy'
 lr: 4.0e-5
 lr_decay: 1.0
 lr_decay_interval: 10
+lr_momentum: null
 regularization:
-    l1: 3e-4
-METRICS: ['accuracy','precision','recall']
+    l1: null
+METRICS: ['f1','accuracy']
 
-head_layers: [1024,256]
+head_layers: [512,256]
