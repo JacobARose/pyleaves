@@ -57,12 +57,12 @@ def set_tf_config(gpu_num: List[int]=None, num_gpus: int=None, set_cuda_devices_
     # gpu_num = list(range(len(gpu_num)))
     import tensorflow as tf
     assert using_tensorflow2()
+    keep=[]
     gpus = tf.config.experimental.list_physical_devices('GPU')
     try:
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
         if gpus:
-            keep=[]
             for gpu in gpus:
                 for n in gpu_num:
                     if str(n) in gpu.name:

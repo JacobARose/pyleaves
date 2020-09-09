@@ -23,6 +23,8 @@ from paleoai_data.dataset_drivers.base_dataset import BaseDataset
 from pyleaves.models import resnet, vgg16
 from pyleaves.base import base_model
 from pyleaves.utils.neptune_utils import neptune
+from pyleaves.train.paleoai_train import preprocess_input
+
 
 from datetime import datetime
 from pyleaves.utils import ensure_dir_exists
@@ -311,8 +313,8 @@ class Trainer:
 
         self.worker_id = worker_id
 
-        from pyleaves.utils import set_tf_config
-        gpu_num = set_tf_config(gpu_num=gpu_num, num_gpus=1, seed=cfg.seed, wait=fold.fold_id)
+        # from pyleaves.utils import set_tf_config
+        # gpu_num = set_tf_config(gpu_num=gpu_num, num_gpus=1, seed=cfg.seed, wait=fold.fold_id)
         self.gpu_num = gpu_num
 
         if neptune is None:
@@ -343,6 +345,7 @@ class Trainer:
         self.model.save(self.model_config['saved_model_path'])
 
     def train(self):
+        from tensorflow.keras import backend as K
 
         try:
             history = self.model.fit(self.train_data,
@@ -384,6 +387,16 @@ class Trainer:
 @hydra.main(config_path='configs', config_name='config')
 def main(cfg : DictConfig):
 
+
+    from pyleaves.utils import set_tf_config
+    gpu_num = set_tf_config(gpu_num=gpu_num, num_gpus=1)
+
+    import tensorflow as tf
+    from tensorflow.keras import backend as K
+    K.clear_session()
+    preprocess_input(tf.zeros([4, 224, 224, 3]))
+
+
     cfg = initialize_experiment(cfg, restore_last=cfg.restore_last, restore_tfrecords=True)
 
     print('Dataset config: \n',cfg.dataset.pretty())
@@ -403,11 +416,7 @@ def main(cfg : DictConfig):
 
 if __name__=='__main__':
 
-    import tensorflow as tf
-    from tensorflow.keras import backend as K
-    from pyleaves.train.paleoai_train import preprocess_input, build_model
-    K.clear_session()
-    preprocess_input(tf.zeros([4, 224, 224, 3]))
+
 
     main()
 
