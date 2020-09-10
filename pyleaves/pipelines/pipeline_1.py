@@ -208,11 +208,11 @@ def cleanup_tfrecords(config):
     assert not os.path.isdir(config.tfrecord_dir)
             
 
-def flatten_dict(x: dict):
+def flatten_dict(x: dict, exceptions: List[str]=None):
+    exceptions = exceptions or []
     out = {}
-    
     for k,v in x.items():
-        if isinstance(v,(DictConfig,dict)):
+        if isinstance(v,(DictConfig,dict)) and (k not in exceptions):
             out.update(**flatten_dict(v))
         else:
             out[k] = v
@@ -364,7 +364,7 @@ class Trainer:
                  verbose: bool=True):
 
         self.fold = fold
-        self.config = flatten_dict(cfg)
+        self.config = flatten_dict(cfg, exceptions=['debugging'])
 
         self.worker_id = worker_id
 
