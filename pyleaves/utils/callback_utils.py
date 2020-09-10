@@ -210,75 +210,91 @@ class BaseCallback(Callback):
 
 
 class NeptuneVisualizationCallback(Callback):
-    """Callback for logging to Neptune.
+	"""Callback for logging to Neptune.
 
-    1. on_batch_end: Logs all performance metrics to neptune
-    2. on_epoch_end: Logs all performance metrics + confusion matrix + roc plot to neptune
+	1. on_batch_end: Logs all performance metrics to neptune
+	2. on_epoch_end: Logs all performance metrics + confusion matrix + roc plot to neptune
 
-    Parameters
-    ----------
-    model : type
-        Description of parameter `model`.
-    validation_data : list
-        len==2 list containing [images, labels]
-    image_dir : type
-        Description of parameter `image_dir`.
+	Parameters
+	----------
+	model : type
+		Description of parameter `model`.
+	validation_data : list
+		len==2 list containing [images, labels]
+	image_dir : type
+		Description of parameter `image_dir`.
 
-    Examples
-    -------
-    Examples should be written in doctest format, and
-    should illustrate how to use the function/class.
-    >>>
+	Examples
+	-------
+	Examples should be written in doctest format, and
+	should illustrate how to use the function/class.
+	>>>
 
-    Attributes
-    ----------
-    model
-    validation_data
+	Attributes
+	----------
+	model
+	validation_data
 
-    """
-    def __init__(self, validation_data, num_classes: int=None, labels: List[int]=None, text_labels: List[str]=None):
-        super().__init__()
-        
-        x_true, y_true = validation_data
-        if y_true.ndim > 1:
-            y_true = np.argmax(y_true, axis=1)
-        
-        self.x_true = x_true
-        self.y_true = y_true
-            
-        self.num_classes = num_classes or set(y_true)
-        self.labels = labels
-        self.text_labels = text_labels
-        
-        self.validation_data = (x_true, y_true)
+	"""
+	def __init__(self, validation_data, num_classes: int=None, labels: List[int]=None, text_labels: List[str]=None, steps: int=None):
+		super().__init__()
 
-    def on_batch_end(self, batch, logs={}):
-        for log_name, log_value in logs.items():
-            neptune.log_metric(f'batch_{log_name}', log_value)
+		if type(validation_data)==tf.data.Dataset:
+			if steps:
+				x_true,y_true=[],[]
+				for x,y in validation_data:
+					x_true.append(x.numpy())
+					y_true.append(y.numpy())
+				x_true = np.vstack(x_true)
+				y_true = np.vstack(y_true)
+			else:
+				x_true, y_true = next(iter(validation_data))
+				x_true = x_true.numpy()
+				y_true = y_true.numpy()
+		elif type(validation_data)==tuple:
+			x_true, y_true = validation_data
+		else:
+			print('Invalid data type for input parameter validation_data in NeptuneVisualizationCallback constructor')
+			raise Exception
+		if y_true.ndim > 1:
+			y_true = np.argmax(y_true, axis=1)
 
-    def on_epoch_end(self, epoch, logs={}):
-        for log_name, log_value in logs.items():
-            neptune.log_metric(f'epoch_{log_name}', log_value)
+		self.x_true = x_true
+		self.y_true = y_true
+			
+		self.num_classes = num_classes or list(set(y_true))
+		self.labels = labels
+		self.text_labels = text_labels
 
-        x_true, y_true = self.validation_data
-        y_prob = np.asarray(self.model.predict(x_true))
-        y_pred = np.argmax(y_prob, axis=1)
-        
-        if self.text_labels:
-            y_true = [self.text_labels[y] for y in y_true]
-            y_pred = [self.text_labels[y] for y in y_pred]
-            labels = self.text_labels
-        else:
-            labels = self.labels
+		self.validation_data = (x_true, y_true)
 
-        fig, ax = plt.subplots(figsize=(16, 12))
-        plot_confusion_matrix(y_true, y_pred, labels=labels, ax=ax)
-        neptune.log_image('confusion_matrix', fig)
+	def on_batch_end(self, batch, logs={}):
+		for log_name, log_value in logs.items():
+			neptune.log_metric(f'batch_{log_name}', log_value)
 
-        if self.num_classes == 2:
-            fig, ax = plt.subplots(figsize=(16, 12))
-            plot_roc(y_true, y_prob, ax=ax)
-            neptune.log_image('roc_curve', fig)
+	def on_epoch_end(self, epoch, logs={}):
+		for log_name, log_value in logs.items():
+			neptune.log_metric(f'epoch_{log_name}', log_value)
+
+		x_true, y_true = self.validation_data
+		y_prob = np.asarray(self.model.predict(x_true))
+		y_pred = np.argmax(y_prob, axis=1)
+		
+		if self.text_labels:
+			y_true = [self.text_labels[y] for y in y_true]
+			y_pred = [self.text_labels[y] for y in y_pred]
+			labels = self.text_labels
+		else:
+			labels = self.labels
+
+		fig, ax = plt.subplots(figsize=(16, 12))
+		plot_confusion_matrix(y_true, y_pred, labels=labels, ax=ax)
+		neptune.log_image('confusion_matrix', fig)
+
+		if self.num_classes == 2:
+			fig, ax = plt.subplots(figsize=(16, 12))
+			plot_roc(y_true, y_prob, ax=ax)
+			neptune.log_image('roc_curve', fig)
 
 
 # class NeptuneVisualizationCallback(Callback):

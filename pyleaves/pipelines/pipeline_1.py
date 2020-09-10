@@ -16,6 +16,7 @@ from functools import partial
 import hydra
 import json
 # from omegaconf import OmegaConf
+import numpy as np
 import os
 from pathlib import Path
 from prefect import Flow, task
@@ -260,10 +261,10 @@ def create_dataset(data_fold: DataFold,
     return split_data, split_datasets, encoder
 
 
-def get_callbacks(cfg, model_config, model, fold, train_data=None, val_data=None, encoder=None):
+def get_callbacks(cfg, model_config, model, fold_id: int=-1, train_data=None, val_data=None, encoder=None):
     from neptunecontrib.monitoring.keras import NeptuneMonitor
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, tf_data2np
-    from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback, ReduceLROnPlateau
+    from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback,ReduceLROnPlateau
     from pyleaves.utils.neptune_utils import ImageLoggerCallback
 
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
@@ -275,7 +276,7 @@ def get_callbacks(cfg, model_config, model, fold, train_data=None, val_data=None
     callbacks = [backup_callback,
                  reduce_lr,
                  NeptuneMonitor(),
-                 CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold.fold_id}.csv')), separator=',', append=True),
+                 CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold_id}.csv')), separator=',', append=True),
                  EarlyStopping(monitor='val_loss', patience=20, verbose=1, restore_best_weights=True)]
 
     if train_data is not None:
@@ -329,27 +330,30 @@ class Trainer:
         self.neptune = neptune
         self.verbose = verbose
 
-        self.initialize_dataset()
-        self.initialize_model()
-        
-    def initialize_dataset(self):
         self.data_config = create_dataset_config(**self.config)
-        self.data, self.split_datasets, self.encoder = create_dataset(data_fold=self.fold,
-                                                                      cfg=self.data_config)
+        self.initialize_dataset(self.data_config)
 
-        self.config['steps_per_epoch'] = self.split_datasets['train'].num_samples//self.data_config['batch_size']
+        self.model_config = create_model_config(**OmegaConf.merge(self.config,self.data_config))
+        self.initialize_model(self.model_config)
+        
+    def initialize_dataset(self, data_config: DictConfig):
+        # self.data_config = create_dataset_config(**self.config)
+        self.data, self.split_datasets, self.encoder = create_dataset(data_fold=self.fold,
+                                                                      cfg=data_config)
+
+        self.config['steps_per_epoch'] = self.split_datasets['train'].num_samples//data_config['batch_size']
         if self.split_datasets['val'] is not None:
-            self.config['validation_steps'] = self.split_datasets['val'].num_samples//self.data_config['batch_size']
+            self.config['validation_steps'] = self.split_datasets['val'].num_samples//data_config['batch_size']
 
         self.train_data, self.val_data, self.test_data = self.data['train'], self.data['val'], self.data['test']
 
-    def initialize_model(self):
+    def initialize_model(self, model_config: DictConfig):
         from pyleaves.train.paleoai_train import build_model
-        self.model_config = create_model_config(**OmegaConf.merge(self.config,self.data_config))#**self.config,**self.data_config)
-        self.model = build_model(self.model_config)
-        self.callbacks = get_callbacks(self.config, self.model_config, self.model, self.fold, train_data=self.train_data, val_data=self.val_data, encoder=self.encoder)
+        # self.model_config = create_model_config(**OmegaConf.merge(self.config,self.data_config))#**self.config,**self.data_config)
+        self.model = build_model(model_config)
+        self.callbacks = get_callbacks(self.config, model_config, self.model, self.fold.fold_id, train_data=self.train_data, val_data=self.val_data, encoder=self.encoder)
 
-        self.model.save(self.model_config['saved_model_path'])
+        self.model.save(model_config['saved_model_path'])
 
     def train(self):
         from tensorflow.keras import backend as K
@@ -367,10 +371,9 @@ class Trainer:
         except Exception as e:
             self.model.save(self.model_config['saved_model_path'])
             print('[Caught Exception, saving model first.\nSaved trained model located at:', self.model_config['saved_model_path'])
-            raise e    
-        # print('Saved trained model located at:', fold_model_path)
-        self.model.save(self.model_config['saved_model_path'])
+            raise e
 
+        self.model.save(self.model_config['saved_model_path'])
         try:
             history_path = str(Path(self.model_config.results_dir,f'training-history_fold-{self.fold.fold_id}.json'))
             with open(history_path,'w') as f:
@@ -386,8 +389,46 @@ class Trainer:
             
         K.clear_session()
         
-    
         return history
+
+    def predict(self, test_data=None):
+        '''Currently runs in an infinite loop. do not use'''
+        test_data = test_data or self.test_data
+
+        test_data = test_data.map(lambda x,y: (self.model.predict(x), y))
+
+        all_y_true, all_y_pred = [],[]
+        for y_pred, y_true in test_data:
+            all_y_true.append(y_true)
+            all_y_pred.append(y_pred)
+
+        return np.stack(all_y_true), np.stack(all_y_pred)
+
+
+    def evaluate(self, test_data=None, steps: int=None, num_classes: int=None, confusion_matrix=True):
+
+        test_data = test_data or self.test_data
+        num_classes = num_classes or self.model_config.num_classes
+
+        text_labels = self.encoder.classes
+        steps = steps or self.split_datasets['test'].num_samples//self.data_config['batch_size']
+
+        callbacks=[]
+        if confusion_matrix:
+            from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
+            callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=text_labels, steps=steps))
+
+        test_results = self.model.evaluate(test_data, callbacks=callbacks, steps=steps)
+
+        print('Model evaluation complete.')
+        print('Results:')
+        for m, result in zip(self.model.metrics_names, test_results):
+            print(f'{m}: {result}')
+
+            neptune.log_metric(f'test_{m}', result)
+
+        return {m:result for m,result in zip(self.model.metrics_names, test_results)}
+
 
 
 
@@ -418,16 +459,19 @@ def main(cfg : DictConfig):
     with neptune.create_experiment(name=cfg.experiment_name+'-'+str(cfg.dataset.dataset_name), params=params):
 
         trainer = Trainer(fold,
-                        cfg,
-                        neptune=neptune,
-                        verbose=True)
+                          cfg,
+                          neptune=neptune,
+                          verbose=True)
 
         date_format = '%Y-%m-%d_%H-%M-%S'
         train_start_time = datetime.now().strftime(date_format)
 
         print(f'Trainer constructed. Beginning training at {train_start_time}')
 
-        trainer.train()
+        history = trainer.train()
+
+        test_results = trainer.evaluate()
+
 
 
 
