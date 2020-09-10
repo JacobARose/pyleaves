@@ -407,6 +407,8 @@ class Trainer:
 
     def evaluate(self, test_data=None, steps: int=None, num_classes: int=None, confusion_matrix=True):
 
+        print('Preparing for model evaluation')
+
         test_data = test_data or self.test_data
         num_classes = num_classes or self.model_config.num_classes
 

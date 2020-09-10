@@ -242,6 +242,7 @@ class NeptuneVisualizationCallback(Callback):
 		if type(validation_data)==tf.data.Dataset:
 			if steps:
 				x_true,y_true=[],[]
+				print(f'Instantiating {steps} batches into memory for use in NeptuneVisualizationcallback')
 				for x,y in validation_data:
 					x_true.append(x.numpy())
 					y_true.append(y.numpy())
@@ -267,6 +268,7 @@ class NeptuneVisualizationCallback(Callback):
 		self.text_labels = text_labels
 
 		self.validation_data = (x_true, y_true)
+		print('Finished initializing NeptuneVisualizationCallback')
 
 	def on_batch_end(self, batch, logs={}):
 		for log_name, log_value in logs.items():
