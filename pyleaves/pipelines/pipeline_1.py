@@ -478,7 +478,7 @@ def main(cfg : DictConfig):
 
         history = trainer.train()
 
-        test_results = trainer.evaluate(steps=20)#, confusion_matrix=False)
+        test_results = trainer.evaluate(steps=20, confusion_matrix=cfg.eval_confusion_matrix)
 
 
 
