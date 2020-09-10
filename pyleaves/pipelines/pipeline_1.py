@@ -267,6 +267,7 @@ def create_dataset(data_fold: DataFold,
     # split_data = {k:v for k,v in split_data.items() if v is not None}
 
     if cfg.debug:
+        import pdb;pdb.set_trace()
         print('debug==True, plotting 1 batch from each data subset to neptune.')
         for k,v in split_data.items():
             print(f'Uploading first batch from {k}, {cfg.dataset_name}, {cfg.fold_dir}')
