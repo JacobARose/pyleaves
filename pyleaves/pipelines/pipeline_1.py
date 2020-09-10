@@ -94,10 +94,14 @@ def create_dataset_config(dataset_name: str='Leaves-PNAS',
                           tfrecord_dir: str=None,
                           samples_per_shard: int=300,
                           debug=False,
-                          debugging={'overfit_one_batch':False},
+                          debugging: Dict[str,bool]=None,
                           **kwargs):
     if tfrecord_dir:
         ensure_dir_exists(tfrecord_dir)
+
+    if debugging is None:
+        debugging = {'overfit_one_batch':False}
+
 
     params = locals()
     params.pop('kwargs') #ignore any extra parameters in kwargs
