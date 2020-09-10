@@ -472,7 +472,7 @@ def main(cfg : DictConfig):
 
         history = trainer.train()
 
-        test_results = trainer.evaluate()
+        test_results = trainer.evaluate(steps=40)
 
 
 
