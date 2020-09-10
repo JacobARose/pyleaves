@@ -274,14 +274,7 @@ class NeptuneVisualizationCallback(Callback):
 		self.validation_data = (x_true, y_true)
 		print('Finished initializing NeptuneVisualizationCallback')
 
-	def on_batch_end(self, batch, logs={}):
-		for log_name, log_value in logs.items():
-			neptune.log_metric(f'batch_{log_name}', log_value)
-
-	def on_epoch_end(self, epoch, logs={}):
-		for log_name, log_value in logs.items():
-			neptune.log_metric(f'epoch_{log_name}', log_value)
-
+	def get_predictions(self, epoch, logs={}):
 		x_true, y_true = self.validation_data
 		y_prob = np.asarray(self.model.predict(x_true))
 		y_pred = np.argmax(y_prob, axis=1)
@@ -292,6 +285,33 @@ class NeptuneVisualizationCallback(Callback):
 			labels = self.text_labels
 		else:
 			labels = self.labels
+		return x_true, y_true, y_prob, y_pred, labels
+
+	def on_batch_end(self, batch, logs={}):
+		for log_name, log_value in logs.items():
+			neptune.log_metric(f'batch_{log_name}', log_value)
+
+	def on_epoch_end(self, epoch, logs={}):
+		for log_name, log_value in logs.items():
+			neptune.log_metric(f'epoch_{log_name}', log_value)
+
+		_, y_true, y_prob, y_pred, labels = self.get_predictions(epoch, logs={})
+
+		fig, ax = plt.subplots(figsize=(16, 12))
+		plot_confusion_matrix(y_true, y_pred, labels=labels, ax=ax)
+		neptune.log_image('confusion_matrix', fig)
+
+		if self.num_classes == 2:
+			fig, ax = plt.subplots(figsize=(16, 12))
+			plot_roc(y_true, y_prob, ax=ax)
+			neptune.log_image('roc_curve', fig)
+
+
+	def on_test_end(self, epoch, logs={}):
+		for log_name, log_value in logs.items():
+			neptune.log_metric(f'epoch_{log_name}', log_value)
+
+		_, y_true, y_prob, y_pred, labels = self.get_predictions(epoch, logs={})
 
 		fig, ax = plt.subplots(figsize=(16, 12))
 		plot_confusion_matrix(y_true, y_pred, labels=labels, ax=ax)
