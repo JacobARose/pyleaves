@@ -16,7 +16,7 @@ import neptune
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.callbacks import Callback
-
+from typing import List
 
 class ImageLoggerCallback(Callback):
     '''Tensorflow 2.0 version
