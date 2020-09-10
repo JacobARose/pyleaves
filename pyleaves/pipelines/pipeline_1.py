@@ -187,6 +187,7 @@ def initialize_experiment(config, restore_last=True, restore_tfrecords=True):
 def clean_experiment_tree(config):
     if not os.path.isdir(config.experiment_dir):
         print(f'Attempted to clean nonexistent experiment directory at {config.experiment_dir}. Continuing without action.')
+        return
     print('Cleaning experiment file tree from root:\n',config.experiment_dir)
     shutil.rmtree(config.experiment_dir)
     assert not os.path.isdir(config.experiment_dir)
@@ -194,6 +195,7 @@ def clean_experiment_tree(config):
 def cleanup_tfrecords(config):
     if not os.path.isdir(config.tfrecord_dir):
         print(f'Attempted to clean nonexistent tfrecord directory at {config.tfrecord_dir}. Continuing without action.')
+        return
     print('Cleaning up tfrecord files located at:\n',config.tfrecord_dir)
     shutil.rmtree(config.tfrecord_dir)
     assert not os.path.isdir(config.tfrecord_dir)
