@@ -94,7 +94,7 @@ def create_dataset_config(dataset_name: str='Leaves-PNAS',
                           tfrecord_dir: str=None,
                           samples_per_shard: int=300,
                           debug=False,
-                          debugging: Dict[str,bool]={'overfit_one_batch':False},
+                          debugging={'overfit_one_batch':False},
                           **kwargs):
     if tfrecord_dir:
         ensure_dir_exists(tfrecord_dir)
@@ -268,7 +268,7 @@ def create_dataset(data_fold: DataFold,
     # split_data = {k:v for k,v in split_data.items() if v is not None}
 
     if cfg.debug:
-        import pdb;pdb.set_trace()
+        
         print('debug==True, plotting 1 batch from each data subset to neptune.')
         for k,v in split_data.items():
             print(f'Uploading first batch from {k}, {cfg.dataset_name}, {cfg.fold_dir}')
@@ -276,7 +276,7 @@ def create_dataset(data_fold: DataFold,
             x, y = batch[0].numpy(), batch[1].numpy()
             for i in range(y.shape[0]):
                 neptune.log_image(log_name=f'debug-{k}-images', x=i, y=x[i,...])
-
+        import pdb;pdb.set_trace()
         if cfg.debugging.overfit_one_batch:
             print('[DEBUGGING] Attempting to overfit to 1 batch. All Data subsets are limited to first batch.')
             split_data = get_one_batch_dataloaders(split_data)
