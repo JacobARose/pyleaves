@@ -238,7 +238,7 @@ class NeptuneVisualizationCallback(Callback):
 	"""
 	def __init__(self, validation_data, num_classes: int=None, labels: List[int]=None, text_labels: List[str]=None, steps: int=None):
 		super().__init__()
-		print(f'Passed validation data of type {type(validation_data}')
+		print(f'Passed validation data of type {type(validation_data)}')
 
 		if type(validation_data)==tf.data.Dataset:
 			if steps:
