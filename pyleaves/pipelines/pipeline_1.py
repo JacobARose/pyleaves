@@ -341,8 +341,10 @@ class Trainer:
         self.data, self.split_datasets, self.encoder = create_dataset(data_fold=self.fold,
                                                                       cfg=data_config)
 
+        if self.config['steps_per_epoch'] is None:
         self.config['steps_per_epoch'] = self.split_datasets['train'].num_samples//data_config['batch_size']
-        if self.split_datasets['val'] is not None:
+
+        if (self.config['validation_steps'] is None) and (self.split_datasets['val'] is not None):
             self.config['validation_steps'] = self.split_datasets['val'].num_samples//data_config['batch_size']
 
         self.train_data, self.val_data, self.test_data = self.data['train'], self.data['val'], self.data['test']

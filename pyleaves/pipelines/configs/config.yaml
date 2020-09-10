@@ -12,6 +12,9 @@ num_epochs: 150
 frozen_layers: null
 augmentations:
     - flip: 1.0
+steps_per_epoch: null
+validation_steps: null
+
 
 seed: 45
 use_tfrecords: true
