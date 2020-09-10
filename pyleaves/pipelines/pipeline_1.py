@@ -400,9 +400,12 @@ class Trainer:
         test_data = test_data.map(lambda x,y: (self.model.predict(x), y))
 
         all_y_true, all_y_pred = [],[]
+        i=0
         for y_pred, y_true in test_data:
             all_y_true.append(y_true)
             all_y_pred.append(y_pred)
+            print('Finished batch',i)
+            i+=1
 
         return np.stack(all_y_true), np.stack(all_y_pred)
 
@@ -474,7 +477,7 @@ def main(cfg : DictConfig):
 
         history = trainer.train()
 
-        test_results = trainer.evaluate(steps=40, confusion_matrix=False)
+        test_results = trainer.evaluate(steps=20)#, confusion_matrix=False)
 
 
 
