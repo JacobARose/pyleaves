@@ -420,7 +420,7 @@ class Trainer:
             from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
             callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=text_labels, steps=steps))
 
-        test_results = self.model.evaluate(test_data, callbacks=callbacks, steps=steps)
+        test_results = self.model.evaluate(test_data, callbacks=callbacks, steps=steps, verbose=1)
 
         print('Model evaluation complete.')
         print('Results:')
@@ -472,7 +472,7 @@ def main(cfg : DictConfig):
 
         history = trainer.train()
 
-        test_results = trainer.evaluate(steps=40)
+        test_results = trainer.evaluate(steps=40, confusion_matrix=False)
 
 
 

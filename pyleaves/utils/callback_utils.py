@@ -264,7 +264,7 @@ class NeptuneVisualizationCallback(Callback):
 		self.x_true = x_true
 		self.y_true = y_true
 			
-		self.num_classes = num_classes or list(set(y_true))
+		self.num_classes = num_classes or len(set(y_true))
 		self.labels = labels
 		self.text_labels = text_labels
 
