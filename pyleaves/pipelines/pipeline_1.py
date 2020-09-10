@@ -10,6 +10,10 @@ This is meant to be a modularization of common model training scripts, allowing 
 
 python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_1.py dataset@dataset='PNAS'
 
+python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_1.py dataset@dataset=PNAS restore_last=False dataset.val_split=0.1 run_description="''" model.regularization.l2=4e-10 model.lr=1e-4 model.head_layers=[256,128] buffer_size=512
+
+
+python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_1.py dataset@dataset=PNAS restore_last=False dataset.val_split=0.1 run_description="'increased model head size, shuffle buffer siz: 1024->512'" model.regularization.l2=4e-10 model.lr=1e-4 model.head_layers=[256,128] buffer_size=512
 """
 
 from functools import partial
@@ -151,12 +155,12 @@ def initialize_experiment(config, restore_last=True, restore_tfrecords=True):
 
     config.experiment_start_time = datetime.now().strftime(date_format)
     config.experiment_name = '_'.join([config.dataset.dataset_name, config.model.model_name,str(config.dataset.target_size)])
-    config.experiment_dir = os.path.join(config.neptune_experiment_dir,config.experiment_name)
+    config.experiment_dir = os.path.join(config.neptune_experiment_dir,config.experiment_name, config.experiment_start_time)
     config.model_dir = os.path.join(config.experiment_dir,'model')
     config.saved_model_path = os.path.join(config.model_dir,'saved_model')
     config.checkpoints_path = os.path.join(config.model_dir,'checkpoints')
 
-    config.results_dir = os.path.join(config.experiment_dir,'results', config.experiment_start_time)
+    config.results_dir = os.path.join(config.experiment_dir,'results') #, config.experiment_start_time)
     config.tfrecord_dir = f'/media/data/jacob/experimental_data/tfrecords/{config.dataset.dataset_name}'
 
     if not restore_last:
@@ -295,19 +299,19 @@ def get_callbacks(cfg, model_config, model, fold_id: int=-1, train_data=None, va
 
 
 # @task
-def fit_model(model, callbacks, train_data, val_data, cfg):
+# def fit_model(model, callbacks, train_data, val_data, cfg):
 
-    history = model.fit(train_data,
-                        epochs=cfg.training['num_epochs'],
-                        callbacks=callbacks,
-                        validation_data=val_data,
-                        validation_freq=1,
-                        shuffle=True,
-                        steps_per_epoch=cfg['steps_per_epoch'],
-                        validation_steps=cfg['validation_steps'],
-                        verbose=1)
+#     history = model.fit(train_data,
+#                         epochs=cfg.training['num_epochs'],
+#                         callbacks=callbacks,
+#                         validation_data=val_data,
+#                         validation_freq=1,
+#                         shuffle=True,
+#                         steps_per_epoch=cfg['steps_per_epoch'],
+#                         validation_steps=cfg['validation_steps'],
+#                         verbose=1)
 
-    return history
+#     return history
 
 class Trainer:
 
