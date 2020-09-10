@@ -42,3 +42,4 @@ num_gpus: 1
 gpu_num: null
 
 run_description: ""
+debug: False

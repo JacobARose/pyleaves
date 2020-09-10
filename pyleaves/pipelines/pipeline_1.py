@@ -93,6 +93,7 @@ def create_dataset_config(dataset_name: str='Leaves-PNAS',
                           use_tfrecords: bool=True,
                           tfrecord_dir: str=None,
                           samples_per_shard: int=300,
+                          debug=False,
                           **kwargs):
     if tfrecord_dir:
         ensure_dir_exists(tfrecord_dir)
