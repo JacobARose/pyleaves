@@ -15,6 +15,7 @@ augmentations:
 steps_per_epoch: null
 validation_steps: null
 log_images: False
+train_confusion_matrix: True
 eval_confusion_matrix: True
 
 seed: 45

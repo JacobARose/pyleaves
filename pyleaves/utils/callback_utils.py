@@ -311,7 +311,7 @@ class NeptuneVisualizationCallback(Callback):
 		for log_name, log_value in logs.items():
 			neptune.log_metric(f'epoch_{log_name}', log_value)
 
-		_, y_true, y_prob, y_pred, labels = self.get_predictions(epoch, logs={})
+		_, y_true, y_prob, y_pred, labels = self.get_predictions(epoch, logs=logs)
 
 		fig, ax = plt.subplots(figsize=(16, 12))
 		plot_confusion_matrix(y_true, y_pred, labels=labels, ax=ax)

@@ -282,9 +282,11 @@ def get_callbacks(cfg, model_config, model, fold_id: int=-1, train_data=None, va
     if cfg.log_images and (train_data is not None):
         callbacks.append(ImageLoggerCallback(data=train_data, freq=10, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune,include_predictions=True))
 
-    if cfg.log_images and (val_data is not None):
+    if cfg.train_confusion_matrix and (val_data is not None):
         validation_data_np = tf_data2np(data=val_data, num_batches=6)
         neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=model_config.num_classes)
+
+    if cfg.log_images and (val_data is not None):
         callbacks.append(neptune_visualization_callback)
         callbacks.append(ImageLoggerCallback(data=val_data, freq=10, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune, include_predictions=True))
         
