@@ -239,8 +239,8 @@ class NeptuneVisualizationCallback(Callback):
 	def __init__(self, validation_data, num_classes: int=None, labels: List[int]=None, text_labels: List[str]=None, steps: int=None):
 		super().__init__()
 		print(f'Passed validation data of type {type(validation_data)}')
-
-		if type(validation_data)==tf.data.Dataset:
+		print('issubclass(validation_data, tf.data.Dataset):', issubclass(validation_data, tf.data.Dataset))
+		if issubclass(validation_data, tf.data.Dataset): #type(validation_data)==tf.data.Dataset:
 			if steps:
 				x_true,y_true=[],[]
 				print(f'Instantiating {steps} batches into memory for use in NeptuneVisualizationcallback')
