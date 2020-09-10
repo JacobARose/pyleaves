@@ -103,6 +103,9 @@ def create_dataset_config(dataset_name: str='Leaves-PNAS',
     if debugging is None:
         debugging = {'overfit_one_batch':False}
 
+    if type(debugging)==DictConfig:
+        debugging = OmegaConf.to_container(debugging)
+
 
     params = locals()
     params.pop('kwargs') #ignore any extra parameters in kwargs
