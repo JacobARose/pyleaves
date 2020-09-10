@@ -300,6 +300,7 @@ class NeptuneVisualizationCallback(Callback):
 		fig, ax = plt.subplots(figsize=(16, 12))
 		plot_confusion_matrix(y_true, y_pred, labels=labels, ax=ax)
 		neptune.log_image('confusion_matrix', fig)
+		plt.close(fig)
 
 		if self.num_classes == 2:
 			fig, ax = plt.subplots(figsize=(16, 12))
