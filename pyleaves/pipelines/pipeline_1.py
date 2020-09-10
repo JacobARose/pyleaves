@@ -280,7 +280,7 @@ def get_callbacks(cfg, model_config, model, fold_id: int=-1, train_data=None, va
                  EarlyStopping(monitor='val_loss', patience=20, verbose=1, restore_best_weights=True)]
 
     if cfg.log_images and (train_data is not None):
-        callbacks.append(ImageLoggerCallback(data=train_data, freq=10, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune,include_predictions=True))
+        callbacks.append(ImageLoggerCallback(data=train_data, freq=10, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune,include_predictions=True, log_epochs=cfg.log_epochs))
 
     if cfg.train_confusion_matrix and (val_data is not None):
         validation_data_np = tf_data2np(data=val_data, num_batches=6)
@@ -288,7 +288,7 @@ def get_callbacks(cfg, model_config, model, fold_id: int=-1, train_data=None, va
         callbacks.append(neptune_visualization_callback)
 
     if cfg.log_images and (val_data is not None):
-        callbacks.append(ImageLoggerCallback(data=val_data, freq=10, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune, include_predictions=True))
+        callbacks.append(ImageLoggerCallback(data=val_data, freq=10, max_images=-1, name='val', encoder=encoder, neptune_logger=neptune, include_predictions=True, log_epochs=cfg.log_epochs))
         
     return callbacks
 

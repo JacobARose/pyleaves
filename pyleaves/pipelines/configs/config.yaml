@@ -15,6 +15,7 @@ augmentations:
 steps_per_epoch: null
 validation_steps: null
 log_images: False
+log_epochs: [5,10]
 train_confusion_matrix: True
 eval_confusion_matrix: True
 
