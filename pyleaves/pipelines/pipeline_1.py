@@ -107,9 +107,33 @@ def create_dataset_config(dataset_name: str='Leaves-PNAS',
         debugging = OmegaConf.to_container(debugging)
 
 
-    params = locals()
-    params.pop('kwargs') #ignore any extra parameters in kwargs
-    return OmegaConf.create(params)
+    params = OmegaConf.create(
+                dict(dataset_name=dataset_name,
+                     exclude_classes=exclude_classes,
+                     include_classes=include_classes,
+                     target_size=target_size,
+                     num_channels=num_channels,
+                     color_mode=color_mode,
+                     val_split=val_split,
+                     fold_dir=fold_dir,
+                     batch_size=batch_size,
+                     buffer_size=buffer_size,
+                     augmentations=augmentations,
+                     seed=seed,
+                     use_tfrecords=use_tfrecords,
+                     tfrecord_dir=tfrecord_dir,
+                     samples_per_shard=samples_per_shard,
+                     debug=debug,
+                     debugging=debugging)
+            )
+    return params
+
+
+
+
+    # params = locals()
+    # params.pop('kwargs') #ignore any extra parameters in kwargs
+    # return OmegaConf.create(params)
 
 
 def create_model_config(model_name: str='resnet_50_v2',
