@@ -270,8 +270,10 @@ def create_dataset(data_fold: DataFold,
         print('debug==True, plotting 1 batch from each data subset to neptune.')
         for k,v in split_data.items():
             print(f'Uploading first batch from {k}, {cfg.dataset_name}, {cfg.fold_dir}')
-            batch = next(iter(v)).numpy()
-            neptune.log_image(log_name=f'debug-{k}-images', x=0, y=batch)
+            batch = next(iter(v))
+            x, y = batch[0].numpy(), batch[1].numpy()
+            for i in range(y.shape[0]):
+                neptune.log_image(log_name=f'debug-{k}-images', x=i, y=x[i,...])
 
 
     return split_data, split_datasets, encoder
