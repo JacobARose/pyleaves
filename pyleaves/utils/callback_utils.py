@@ -244,9 +244,10 @@ class NeptuneVisualizationCallback(Callback):
 			if steps:
 				x_true,y_true=[],[]
 				print(f'Instantiating {steps} batches into memory for use in NeptuneVisualizationcallback')
-				for x,y in validation_data:
+				for i, (x,y) in enumerate(validation_data):
 					x_true.append(x.numpy())
 					y_true.append(y.numpy())
+					print('Finished batch',i)
 				x_true = np.vstack(x_true)
 				y_true = np.vstack(y_true)
 			else:
