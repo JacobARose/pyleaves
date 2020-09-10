@@ -394,7 +394,7 @@ class Trainer:
         
         return history
 
-    def predict(self, test_data=None):
+    def predict(self, test_data=None, steps=None):
         '''Currently runs in an infinite loop. do not use'''
         test_data = test_data or self.test_data
 
@@ -407,6 +407,8 @@ class Trainer:
             all_y_pred.append(y_pred)
             print('Finished batch',i)
             i+=1
+            if i >= steps:
+                break
 
         return np.stack(all_y_true), np.stack(all_y_pred)
 

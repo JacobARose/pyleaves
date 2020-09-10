@@ -248,6 +248,8 @@ class NeptuneVisualizationCallback(Callback):
 					x_true.append(x.numpy())
 					y_true.append(y.numpy())
 					print('Finished batch',i)
+					if i >= steps:
+						break
 				x_true = np.vstack(x_true)
 				y_true = np.vstack(y_true)
 			else:
