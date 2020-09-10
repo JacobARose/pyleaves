@@ -313,6 +313,9 @@ def create_dataset(data_fold: DataFold,
             print('[DEBUGGING] Attempting to overfit to 1 batch. All Data subsets are limited to first batch.')
             split_data = get_one_batch_dataloaders(split_data)
 
+        if cfg.debugging.log_model_input_stats:
+            log_model_input_stats(split_data=split_data)
+
 
     return split_data, split_datasets, encoder
 
@@ -330,6 +333,23 @@ def get_one_batch_dataloaders(split_data: dict):
     for k,v in split_data.items():
         output[k] = v.take(1).repeat()
     return output
+
+def log_model_input_stats(split_data: dict):
+    from neptunecontrib.api import log_table
+
+    for k,v in split_data.items():
+        stats = {}
+        batch = next(iter(v))
+        x, y = batch[0].numpy(), batch[1].numpy()
+        stats[f'{k}-x_mean'] = np.mean(x)
+        for dim in range(x.ndim):
+            stats[f'{k}-x_mean_across_dim-{dim}'] = np.mean(x,axis=dim)
+
+    stats = pd.DataFrame(stats)
+    log_table('model_input_stats', stats)
+    
+
+
 
 
 def get_callbacks(cfg, model_config, model, fold_id: int=-1, train_data=None, val_data=None, encoder=None):

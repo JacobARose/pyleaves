@@ -46,3 +46,4 @@ debug: False
 
 debugging:
     overfit_one_batch: False # set this to True to limit the training pipeline to just repeat a single batch
+    log_model_input_stats: False # Set this to True to log statistical means of the input images from the first batch for each subset
