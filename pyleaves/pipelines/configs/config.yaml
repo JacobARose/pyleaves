@@ -43,3 +43,6 @@ gpu_num: null
 
 run_description: ""
 debug: False
+
+debugging:
+    overfit_one_batch: False # set this to True to limit the training pipeline to just repeat a single batch

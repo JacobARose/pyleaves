@@ -276,8 +276,27 @@ def create_dataset(data_fold: DataFold,
             for i in range(y.shape[0]):
                 neptune.log_image(log_name=f'debug-{k}-images', x=i, y=x[i,...])
 
+        if cfg.debugging.overfit_one_batch:
+            print('[DEBUGGING] Attempting to overfit to 1 batch. All Data subsets are limited to first batch.')
+            split_data = get_one_batch_dataloaders(split_data)
+
 
     return split_data, split_datasets, encoder
+
+def get_one_batch_dataloaders(split_data: dict):
+    """Testing utility function for converting all data subset Dataset loaders into Datasets containing 1 batch repeated forever.
+
+    Use case: Overfit to one batch
+
+    split_data: dict mapping subset name:tf.data.Dataset from prep_dataset
+
+    Returns:
+        Dict[str,tf.data.Dataset]: Identical dict to input, but with tf.data.Datasets truncated to 1 batch
+    """        
+    output = {}
+    for k,v in split_data.items():
+        output[k] = v.take(1).repeat()
+    return output
 
 
 def get_callbacks(cfg, model_config, model, fold_id: int=-1, train_data=None, val_data=None, encoder=None):
