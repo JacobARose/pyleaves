@@ -371,7 +371,7 @@ def get_callbacks(cfg, model_config, model, fold_id: int=-1, train_data=None, va
                  reduce_lr,
                  NeptuneMonitor(),
                  CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold_id}.csv')), separator=',', append=True),
-                 EarlyStopping(monitor='val_loss', patience=20, verbose=1, restore_best_weights=True)]
+                 EarlyStopping(monitor='val_loss', patience=cfg.callbacks.early_stopping_patience, verbose=1, restore_best_weights=True)]
 
     if cfg.log_images and (train_data is not None):
         callbacks.append(ImageLoggerCallback(data=train_data, freq=10, max_images=-1, name='train', encoder=encoder, neptune_logger=neptune,include_predictions=True, log_epochs=cfg.log_epochs))
