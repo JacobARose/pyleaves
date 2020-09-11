@@ -338,15 +338,17 @@ def log_model_input_stats(split_data: dict):
     from neptunecontrib.api import log_table
     import pandas as pd
 
+    stats = []; idx=[]
     for k,v in split_data.items():
-        stats = {}
+        stat_record={}
         batch = next(iter(v))
         x, y = batch[0].numpy(), batch[1].numpy()
-        stats[f'{k}-x_mean'] = np.mean(x)
+        stat_record[f'x_mean'] = np.mean(x)
         for dim in range(x.ndim):
-            stats[f'{k}-x_mean_across_dim-{dim}'] = np.mean(x,axis=dim)
-
-    stats = pd.DataFrame(stats)
+            stat_record[f'x_mean_across_dim-{dim}'] = np.mean(x,axis=dim)
+        stats.append(stat_record)
+        idx.append(k)
+    stats = pd.DataFrame.from_records(stats, index=idx)
     log_table('model_input_stats', stats)
     
 
