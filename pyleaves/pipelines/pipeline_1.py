@@ -336,6 +336,7 @@ def get_one_batch_dataloaders(split_data: dict):
 
 def log_model_input_stats(split_data: dict):
     from neptunecontrib.api import log_table
+    import pandas as pd
 
     for k,v in split_data.items():
         stats = {}
