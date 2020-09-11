@@ -190,6 +190,7 @@ def initialize_experiment(config, restore_last=True, restore_tfrecords=True):
     config.experiment_start_time = datetime.now().strftime(date_format)
     config.experiment_name = '_'.join([config.dataset.dataset_name, config.model.model_name,str(config.dataset.target_size)])
     config.experiment_dir = os.path.join(config.neptune_experiment_dir,config.experiment_name, config.experiment_start_time)
+    config.log_dir = os.path.join(config.experiment_dir,'log_dir')
     config.model_dir = os.path.join(config.experiment_dir,'model')
     config.saved_model_path = os.path.join(config.model_dir,'saved_model')
     config.checkpoints_path = os.path.join(config.model_dir,'checkpoints')
@@ -358,7 +359,7 @@ def log_model_input_stats(split_data: dict):
 def get_callbacks(cfg, model_config, model, fold_id: int=-1, train_data=None, val_data=None, encoder=None):
     from neptunecontrib.monitoring.keras import NeptuneMonitor
     from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, tf_data2np
-    from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback,ReduceLROnPlateau
+    from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback,ReduceLROnPlateau,TensorBoard
     from pyleaves.utils.neptune_utils import ImageLoggerCallback
 
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
@@ -366,8 +367,12 @@ def get_callbacks(cfg, model_config, model, fold_id: int=-1, train_data=None, va
     backup_callback = BackupAndRestore(cfg['checkpoints_path'])
     backup_callback.set_model(model)
 
+    # log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = TensorBoard(log_dir=cfg.log_dir, histogram_freq=1)
+
     print('building callbacks')
     callbacks = [backup_callback,
+                 tensorboard_callback,
                  reduce_lr,
                  NeptuneMonitor(),
                  CSVLogger(str(Path(cfg.results_dir,f'results-fold_{fold_id}.csv')), separator=',', append=True),

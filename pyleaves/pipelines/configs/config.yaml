@@ -31,7 +31,8 @@ experiment_name: ???
 experiment_dir: ???
 experiment_start_time: null
 restore_last: True
-    
+
+log_dir: null    
 model_dir: null
 tfrecord_dir: null
 results_dir: null
