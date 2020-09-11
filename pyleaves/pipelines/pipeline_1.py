@@ -344,8 +344,8 @@ def log_model_input_stats(split_data: dict):
         batch = next(iter(v))
         x, y = batch[0].numpy(), batch[1].numpy()
         stat_record[f'x_mean'] = np.mean(x)
-        for dim in range(x.ndim):
-            stat_record[f'x_mean_across_dim-{dim}'] = np.mean(x,axis=dim)
+        # for dim in range(x.ndim):
+        #     stat_record[f'x_mean_across_dim-{dim}'] = np.mean(x,axis=dim)
         stats.append(stat_record)
         idx.append(k)
     stats = pd.DataFrame.from_records(stats, index=idx)
