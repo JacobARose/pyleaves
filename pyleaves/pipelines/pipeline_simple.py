@@ -78,3 +78,8 @@ def main(config : DictConfig):
                             steps_per_epoch=model_config.steps_per_epoch,
                             validation_steps=model_config.validation_steps,
                             verbose=1)
+
+
+
+if __name__=='__main__':
+    main()
