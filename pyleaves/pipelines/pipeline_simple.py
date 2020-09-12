@@ -1,3 +1,12 @@
+'''
+
+
+python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_simple.py dataset@dataset=PNAS_100 restore_last=False dataset.val_split=0.1 run_description="'increased l2 reg from 4e-10 -> 4e-6 to reduce overfitting'" model.regularization.l2=4e-6 model.lr=1e-4 model.head_layers=[256,128] buffer_size=512 tags=['reference','PNAS_100']
+
+
+'''
+
+
 # from hydra.experimental import compose, initialize
 from omegaconf import OmegaConf, DictConfig
 
@@ -5,12 +14,13 @@ from omegaconf import OmegaConf, DictConfig
 #     config = compose(config_name="config", overrides=['dataset@dataset=PNAS','use_tfrecords=False'])
 #     print(config.pretty())
 import hydra
+from pyleaves.pipelines.pipeline_1 import *
+
 
 @hydra.main(config_path='configs', config_name='config')
 def main(config : DictConfig):
 
     from pyleaves.train.paleoai_train import build_model
-    from pyleaves.pipelines.pipeline_1 import *
     from pyleaves.utils import set_tf_config
     gpu_num = set_tf_config(gpu_num=config.gpu_num, num_gpus=1)
     import tensorflow as tf

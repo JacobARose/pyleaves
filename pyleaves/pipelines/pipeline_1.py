@@ -10,7 +10,7 @@ This is meant to be a modularization of common model training scripts, allowing 
 
 python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_1.py dataset@dataset='PNAS'
 
-python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_1.py dataset@dataset=PNAS restore_last=False dataset.val_split=0.1 run_description="''" model.regularization.l2=4e-10 model.lr=1e-4 model.head_layers=[256,128] buffer_size=512
+python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_1.py dataset@dataset=PNAS restore_last=False dataset.val_split=0.1 run_description="'increased l2 reg from 4e-10 -> 4e-6 to reduce overfitting'" model.regularization.l2=4e-6 model.lr=1e-4 model.head_layers=[256,128] buffer_size=512
 
 
 python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_1.py dataset@dataset=PNAS restore_last=False dataset.val_split=0.1 run_description="'increased model head size, shuffle buffer siz: 1024->512'" model.regularization.l2=4e-10 model.lr=1e-4 model.head_layers=[256,128] buffer_size=512
