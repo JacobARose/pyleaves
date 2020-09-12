@@ -1,7 +1,7 @@
 '''
 
 
-python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_simple.py dataset@dataset=PNAS_100 restore_last=False dataset.val_split=0.1 run_description="'increased l2 reg from 4e-10 -> 4e-6 to reduce overfitting'" model.regularization.l2=4e-6 model.lr=1e-4 model.head_layers=[256,128] buffer_size=512 tags=['reference','PNAS_100']
+python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_simple.py dataset@dataset=PNAS_100 restore_last=False dataset.val_split=0.1 run_description="'increased l2 reg from 4e-10 -> 4e-6 to reduce overfitting'" model.regularization.l2=4e-6 model.lr=1e-4 model.head_layers=[256,128] buffer_size=512 +tags=['reference','PNAS_100'] use_tfrecords=False
 
 
 '''
@@ -62,6 +62,8 @@ def main(config : DictConfig):
     model.summary()
     callbacks = get_callbacks(config, model_config, model, fold.fold_id, train_data=train_data, val_data=val_data, encoder=encoder)
 
+    print('[BEGINNING TRAINING]')
+
     neptune.init(project_qualified_name=config.neptune_project_name)
     config.dataset = data_config
     config.model = model_config
@@ -79,7 +81,7 @@ def main(config : DictConfig):
                             validation_steps=model_config.validation_steps,
                             verbose=1)
 
-
+print(['[FINISHED TRAINING]'])
 
 if __name__=='__main__':
     main()
