@@ -37,6 +37,11 @@ from pyleaves.utils import ensure_dir_exists
 import os
 import shutil
 
+from typing import List, Tuple, Dict
+from omegaconf import DictConfig, OmegaConf
+from pyleaves.utils import ensure_dir_exists
+from pyleaves.mains.paleoai_main import to_serializable
+
 # @task
 # def extract():
 #     return [1, 2, 3]
@@ -73,10 +78,6 @@ import shutil
 
 # 5. model.evaluate
 
-from typing import List, Tuple, Dict
-from omegaconf import DictConfig, OmegaConf
-from pyleaves.utils import ensure_dir_exists
-from pyleaves.mains.paleoai_main import to_serializable
 
 def create_dataset_config(dataset_name: str='Leaves-PNAS',
                           exclude_classes: List[str]=['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified'],
