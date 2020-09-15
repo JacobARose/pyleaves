@@ -11,9 +11,6 @@ dependencies:
   - click
   - cloudpickle
   - colorama
-  - configargparse
-  - configobj
-  - configparser
   - contextlib2
   - cudatoolkit=10.1.243
   - cudnn=7.6.5=cuda10.1_0
@@ -22,13 +19,11 @@ dependencies:
   - dask-core
   - docker-py
   - dvc
-  - fftw
   - funcy
   - graphviz
   - h5py
   - heapdict
   - imageio
-  - imagemagick
   - imgaug
   - ipykernel
   - ipython
@@ -43,11 +38,6 @@ dependencies:
   - jupyterlab_server
   - keras-applications
   - keras-preprocessing
-  - libgcc=7.2.0
-  - libgcc-ng=9.1.0
-  - libopenblas=0.3.6
-  - libpng=1.6.37
-  - libtiff=4.1.0
   - markdown
   - matplotlib
   - nbconvert
@@ -56,8 +46,6 @@ dependencies:
   - nomkl
   - notebook
   - numpy
-  - numpy-base
-  - oauthlib
   - opencv
   - openjpeg
   - openpyxl
@@ -85,8 +73,6 @@ dependencies:
   - qt
   - qtconsole
   - qtpy
-  - requests
-  - rsa=4.0
   - scikit-image
   - scikit-learn
   - scipy
@@ -106,8 +92,6 @@ dependencies:
   - widgetsnbextension
   - yaml
   - zeromq
-  - zict
-  - zlib
   - pip:
     - aif360
     - attrdict
@@ -117,8 +101,7 @@ dependencies:
     - cachew
     - colorlog
     - datafreeze
-    - dataset==1.3.1
-    - dill==0.3.2
+    - dataset
     - docker
     - environments-utils
     - gpustat
@@ -139,8 +122,6 @@ dependencies:
     - optuna
     - pandas-summary
     - plotly
-    - pluggy
-    - promise
     - py
     - py3nvml
     - pydantic
@@ -149,7 +130,6 @@ dependencies:
     - pytest-cov
     - python-box
     - python-editor
-    - python-graphviz
     - retrying
     - sacred
     - scikeras
