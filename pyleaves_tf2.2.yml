@@ -65,39 +65,37 @@ dependencies:
   - openpyxl
   - openssl
   - opt_einsum
-  - pandas=1.0.4
+  - pandas
   - paramiko
   - pendulum
   - pexpect
   - pillow
-  - pip=20.1.1=py37_1
-  - prefect=0.12.5
+  - pip=20.1.1
+  - prefect
   - prettytable
   - prompt_toolkit
   - psutil
   - py-opencv
   - pygraphviz
-  - pyqt=5.9.2
+  - pyqt
   - pysftp
   - python=3.7.7
   - python-dateutil
   - python-slugify
-  - pyyaml=5.3.1
+  - pyyaml
   - pyzmq
-  - qt=5.9.7
-  - qtconsole=4.7.4
-  - qtpy=1.9.0
-  - requests=2.23.0
+  - qt
+  - qtconsole
+  - qtpy
+  - requests
   - rsa=4.0
   - scikit-image
   - scikit-learn
   - scipy
   - seaborn
   - setuptools
-  - shortuuid=1.0.1
   - sortedcontainers
   - sqlite
-  - tabulate
   - tensorboard
   - tensorflow=2.2.0
   - tensorflow-base=2.2.0
@@ -108,57 +106,40 @@ dependencies:
   - treelib
   - typing_extensions
   - widgetsnbextension
-  - yaml=0.1.7
+  - yaml
   - zeromq
-  - zict=2.0.0
+  - zict
   - zlib
   - pip:
     - aif360
-    - alembic
-    - attrdict==2.0.1
-    - auto-tqdm==1.0.3
-    - ax-platform==0.1.14
-    - boltons==20.1.0
-    - cachew==0.7.0
-    - colorlog==4.2.1
-    - datafreeze==0.1.0
+    - attrdict
+    - auto-tqdm
+    - ax-platform
+    - boltons
+    - cachew
+    - colorlog
+    - datafreeze
     - dataset==1.3.1
     - dill==0.3.2
     - docker
     - environments-utils
-    - gorilla==0.3.0
     - gpustat
     - gpytorch
-    - gunicorn
     - hydra-core
-    - importlib-metadata
-    - importlib-resources
-    - iniconfig
-    - itsdangerous
-    - jsonpickle
-    - jsonpointer
-    - jsonref
     - jupyter-server-proxy
     - jupyter-tensorboard
-    - mako
     - mlflow
-    - more-itertools==8.4.0
-    - msgpack-numpy
-    - msgpack-python
-    - multidict==4.7.6
+    - more-itertools
     - multiprocess
-    - munch==2.5.0
     - neptune-client
     - neptune-contrib
     - neptune-notebooks
     - neptune-tensorboard
-    - normality==2.0.0
     - nvidia-ml-py3
     - omegaconf
     - opencv-python
     - optuna
     - pandas-summary
-    - pathos
     - plotly
     - pluggy
     - promise
@@ -181,7 +162,7 @@ dependencies:
     - sqlparse
     - stuf
     - tensorflow-addons
-    - tensorflow-datasets==3.1.0
+    - tensorflow-datasets
     - tensorflow-io==0.11.0
     - tensorflow-metadata==0.22.2
     - tensorpack
@@ -191,8 +172,7 @@ dependencies:
     - torch==1.6.0
     - tqdm
     - typeguard
-    - typer==0.3.1
-    - webcolors
+    - typer
     - xgboost
     - xmltodict
     - yarl
