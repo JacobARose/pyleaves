@@ -5,44 +5,37 @@ channels:
   - conda-forge
 dependencies:
   - absl-py
-  - attrs=19.3.0=py_0
+  - attrs=19.3.0
   - blas=1.0=openblas
-  - bokeh=2.1.0=py37_0
-  - certifi=2020.6.20=py37hc8dfbb8_0
-  - chardet=3.0.4=py37_1003
-  - click=7.1.2=py_0
-  - cloudpickle=1.4.1=py_0
-  - colorama=0.4.3=py_0
-  - configargparse=1.2.3=pyh9f0ad1d_0
-  - configobj=5.0.6=py_0
-  - configparser=5.0.0=py_0
-  - contextlib2=0.5.5=py_2
-  - croniter=0.3.30=py_0
+  - bokeh=2.1.0
+  - click=7.1.2
+  - cloudpickle
+  - colorama=0.4.3
+  - configargparse
+  - configobj
+  - configparser
+  - contextlib2
   - cudatoolkit=10.1.243
   - cudnn=7.6.5=cuda10.1_0
-  - cycler=0.10.0=py37_0
-  - cytoolz=0.10.1
-  - dask=2.18.1
+  - cytoolz
+  - dask
   - dask-core
   - docker-py
-  - dvc=0.54.1
-  - entrypoints=0.3=py37_0
-  - ffmpeg=4.0
+  - dvc
   - fftw=3.3.8
   - funcy=1.14
-  - graphviz=2.38.0
-  - h5py=2.8.0
-  - hdf5=1.10.2
-  - heapdict=1.0.1
-  - imageio=2.8.0=py_0
+  - graphviz
+  - h5py
+  - hdf5
+  - heapdict
+  - imageio
   - imagemagick
-  - imgaug=0.4.0=py_1
-  - ipykernel=5.3.0
-  - ipython=7.15.0=py37_0
-  - ipywidgets=7.5.1=py_0
-  - joblib=0.15.1=py_0
-  - jsonpath-ng=1.5.1=py_0
-  - jsonschema=3.2.0=py37_0
+  - imgaug
+  - ipykernel
+  - ipython
+  - ipywidgets
+  - joblib
+  - jsonschema
   - jupyter
   - jupyter_client
   - jupyter_console
@@ -57,47 +50,40 @@ dependencies:
   - libopencv=3.4.2
   - libpng=1.6.37
   - libtiff=4.1.0
-  - markdown=3.1.1=py37_0
-  - markupsafe=1.1.1
-  - matplotlib=3.2.1
-  - matplotlib-base=3.2.1
-  - nbconvert=5.6.1=py37_0
-  - nbformat=5.0.7=py_0
-  - nodejs=10.13.0
-  - nomkl=3.0
-  - notebook=6.0.3=py37_0
+  - markdown
+  - matplotlib
+  - nbconvert
+  - nbformat
+  - nodejs
+  - nomkl
+  - notebook
   - numpy
   - numpy-base
-  - oauthlib=3.1.0
+  - oauthlib
   - opencv
-  - openjpeg=2.3.1
-  - openpyxl=3.0.3
-  - openssl=1.1.1g
-  - opt_einsum=3.1.0
-  - pandas=1.0.4=py37h0573a6f_0
-  - pandoc=2.2.3.2=0
+  - openjpeg
+  - openpyxl
+  - openssl
+  - opt_einsum
+  - pandas=1.0.4
   - paramiko
-  - pcre=8.43=he6710b0_0
-  - pendulum=2.1.2=py37hc8dfbb8_0
-  - pexpect=4.8.0=py37_0
+  - pendulum
+  - pexpect
   - pillow
   - pip=20.1.1=py37_1
-  - pixman=0.38.0=h7b6447c_0
-  - pkg-config=0.29.2
   - prefect=0.12.5
-  - prettytable=0.7.2
-  - prompt_toolkit=3.0.5
-  - psutil=5.7.0
-  - py-opencv=3.4.2
-  - pygraphviz=1.5
+  - prettytable
+  - prompt_toolkit
+  - psutil
+  - py-opencv
+  - pygraphviz
   - pyqt=5.9.2
-  - pysftp=0.2.9
+  - pysftp
   - python=3.7.7
-  - python-dateutil=2.8.1
-  - python-slugify=4.0.1
-  - pywavelets=1.1.1
+  - python-dateutil
+  - python-slugify
   - pyyaml=5.3.1
-  - pyzmq=18.1.1
+  - pyzmq
   - qt=5.9.7
   - qtconsole=4.7.4
   - qtpy=1.9.0
@@ -107,9 +93,8 @@ dependencies:
   - scikit-learn
   - scipy
   - seaborn
-  - setuptools=47.3.0
+  - setuptools
   - shortuuid=1.0.1
-  - six=1.15.0
   - sortedcontainers
   - sqlite
   - tabulate
@@ -118,40 +103,29 @@ dependencies:
   - tensorflow-base=2.2.0
   - tensorflow-estimator=2.2.0
   - tensorflow-gpu=2.2.0
-  - tk=8.6.10
-  - toml=0.10.1
-  - treelib=1.6.1
+  - tk
+  - toml
+  - treelib
   - typing_extensions
   - widgetsnbextension
   - yaml=0.1.7
-  - zeromq=4.3.2
+  - zeromq
   - zict=2.0.0
-  - zlib=1.2.11=h7b6447c_3
+  - zlib
   - pip:
     - aif360
-    - alembic==1.4.2
-    - antlr4-python3-runtime==4.8
-    - arrow==0.15.6
+    - alembic
     - attrdict==2.0.1
     - auto-tqdm==1.0.3
     - ax-platform==0.1.14
-    - banal==1.0.1
-    - blessings==1.7
     - boltons==20.1.0
-    - botorch==0.3.0
     - cachew==0.7.0
-    - cliff==3.4.0
-    - cmaes==0.6.0
-    - cmd2==1.3.8
     - colorlog==4.2.1
-    - coverage==5.2.1
     - datafreeze==0.1.0
     - dataset==1.3.1
     - dill==0.3.2
     - docker
-    - docopt==0.6.2
     - environments-utils
-    - flask==1.1.2
     - gorilla==0.3.0
     - gpustat
     - gpytorch
@@ -161,16 +135,16 @@ dependencies:
     - importlib-resources
     - iniconfig
     - itsdangerous
-    - jsonpickle==1.4.1
-    - jsonpointer==2.0
-    - jsonref==0.2
+    - jsonpickle
+    - jsonpointer
+    - jsonref
     - jupyter-server-proxy
     - jupyter-tensorboard
     - mako
     - mlflow
     - more-itertools==8.4.0
-    - msgpack-numpy==0.4.6.post0
-    - msgpack-python==0.5.6
+    - msgpack-numpy
+    - msgpack-python
     - multidict==4.7.6
     - multiprocess
     - munch==2.5.0
@@ -185,46 +159,42 @@ dependencies:
     - optuna
     - pandas-summary
     - pathos
-    - pbr
     - plotly
     - pluggy
-    - pox==0.2.8
-    - ppft==1.6.6.2
-    - promise==2.3
+    - promise
     - py
-    - py-cpuinfo==7.0.0
-    - py3nvml==0.2.6
+    - py3nvml
     - pydantic
-    - pyperclip==1.8.0
+    - pyperclip
     - pytest
     - pytest-cov
-    - python-box==5.1.0
-    - python-editor==1.0.4
-    - python-graphviz==0.14.1
+    - python-box
+    - python-editor
+    - python-graphviz
     - retrying
     - sacred
     - scikeras
     - scikit-optimize
     - scikit-plot
-    - simplejson==3.17.0
-    - sqlalchemy==1.3.13
+    - simplejson
+    - sqlalchemy
     - sqlparse
-    - stuf==0.9.16
+    - stuf
     - tensorflow-addons
     - tensorflow-datasets==3.1.0
     - tensorflow-io==0.11.0
     - tensorflow-metadata==0.22.2
     - tensorpack
     - tf-explain
-    - threadpoolctl==2.1.0
-    - toolz=0.10.0
+    - threadpoolctl
+    - toolz
     - torch==1.6.0
-    - tqdm==4.48.0
-    - typeguard==2.9.1
+    - tqdm
+    - typeguard
     - typer==0.3.1
     - webcolors
-    - xgboost==1.2.0
-    - xmltodict==0.12.0
-    - yarl==1.5.0
+    - xgboost
+    - xmltodict
+    - yarl
 prefix: /media/data/conda/jacob/envs/pyleaves2.2
 
