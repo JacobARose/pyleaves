@@ -5,12 +5,12 @@ channels:
   - conda-forge
 dependencies:
   - absl-py
-  - attrs=19.3.0
-  - blas=1.0=openblas
-  - bokeh=2.1.0
-  - click=7.1.2
+  - attrs
+  - blas
+  - bokeh
+  - click
   - cloudpickle
-  - colorama=0.4.3
+  - colorama
   - configargparse
   - configobj
   - configparser
@@ -22,11 +22,10 @@ dependencies:
   - dask-core
   - docker-py
   - dvc
-  - fftw=3.3.8
-  - funcy=1.14
+  - fftw
+  - funcy
   - graphviz
   - h5py
-  - hdf5
   - heapdict
   - imageio
   - imagemagick
