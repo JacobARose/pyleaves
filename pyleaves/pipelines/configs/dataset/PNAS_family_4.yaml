@@ -1,7 +1,7 @@
 # @package _group_
 
-fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/PNAS_family_100/ksplit_2'
-dataset_name: 'PNAS_100'
+fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/PNAS_family_4/ksplit_2'
+dataset_name: 'PNAS_family_4'
 num_classes: null
 threshold: 10
 color_mode: 'grayscale'
@@ -10,4 +10,3 @@ target_size: [512,512]
 val_split: 0.1
 include_classes: []
 exclude_classes: ['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified']
-description: "PNAS dataset, limited to families with >100 images/class."

@@ -1,0 +1,12 @@
+# @package _group_
+
+fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Leaves-PNAS_family_100/ksplit_10'
+dataset_name: 'Leaves-PNAS_family_100'
+num_classes: null
+threshold: 10
+color_mode: 'grayscale'
+num_channels: 3
+target_size: [512,512]
+val_split: 0.1
+include_classes: []
+exclude_classes: ['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified']
