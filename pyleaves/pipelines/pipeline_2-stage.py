@@ -22,30 +22,30 @@ from pyleaves.pipelines.pipeline_1 import *
 
 
 
-def train(config, model_config, data_config):
-    callbacks = get_callbacks(config, model_config, model, fold.fold_id, train_data=train_data, val_data=val_data, encoder=encoder)
+# def train(config, model_config, data_config):
+#     callbacks = get_callbacks(config, model_config, model, fold.fold_id, train_data=train_data, val_data=val_data, encoder=encoder)
 
-    print('[BEGINNING TRAINING]')
+#     print('[BEGINNING TRAINING]')
 
-    neptune.init(project_qualified_name=config.neptune_project_name)
-    config.dataset = data_config
-    config.model = model_config
-    params=OmegaConf.to_container(config)
-    print(config.pretty())
-    with neptune.create_experiment(name='-'.join([config.experiment_name, str(config.dataset_name),str(config.input_shape)]), params=params):
+#     neptune.init(project_qualified_name=config.neptune_project_name)
+#     config.dataset = data_config
+#     config.model = model_config
+#     params=OmegaConf.to_container(config)
+#     print(config.pretty())
+#     with neptune.create_experiment(name='-'.join([config.experiment_name, str(config.dataset_name),str(config.input_shape)]), params=params):
 
-        history = model.fit(train_data,
-                            epochs=model_config.num_epochs,
-                            callbacks=callbacks,
-                            validation_data=val_data,
-                            validation_freq=1,
-                            shuffle=True,
-                            steps_per_epoch=model_config.steps_per_epoch,
-                            validation_steps=model_config.validation_steps,
-                            verbose=1)
+#         history = model.fit(train_data,
+#                             epochs=model_config.num_epochs,
+#                             callbacks=callbacks,
+#                             validation_data=val_data,
+#                             validation_freq=1,
+#                             shuffle=True,
+#                             steps_per_epoch=model_config.steps_per_epoch,
+#                             validation_steps=model_config.validation_steps,
+#                             verbose=1)
 
-        model.predict(test_data, steps=split_datasets['test'].num_samples)
-print(['[FINISHED TRAINING]'])
+#         model.predict(test_data, steps=split_datasets['test'].num_samples)
+# print(['[FINISHED TRAINING]'])
 
 
 
@@ -102,10 +102,37 @@ def main(config : DictConfig):
 
     neptune.init(project_qualified_name=config.neptune_project_name)
     config.dataset = data_config
+
+    for k,v in data_config.items():
+        neptune.log_
+
+    config.dataset = data_config
     config.model = model_config
-    params=OmegaConf.to_container(config)
-    print(config.pretty())
-    with neptune.create_experiment(name='-'.join([config.experiment_name, str(config.dataset_name),str(config.input_shape)]), params=params):
+    # params=OmegaConf.to_container(config)
+    # params={'dataset':OmegaConf.to_container(data_config),
+    #         'model':OmegaConf.to_container(model_config),
+    #         **{k:v for k,v in OmegaConf.to_container(config).items() if ('_dir' in k) and (type(v) != dict)}}
+    params={**OmegaConf.to_container(data_config),
+            **OmegaConf.to_container(model_config),
+            **{k:v for k,v in OmegaConf.to_container(config).items() if ('_dir' in k) and (type(v) != dict)}}
+
+    from pprint import pprint
+    pprint(params)
+    
+    neptune_experiment_name = '-'.join([config.experiment_name, str(config.dataset_name),str(config.input_shape)])
+    with neptune.create_experiment(name=neptune_experiment_name, params=params, upload_source_files=['*.py']):
+
+        if type(config.tags)==list:
+            for tag in config.tags:
+                neptune.append_tags([tag])
+        elif type(config.tags)==str:
+            try:
+                tags = config.tags.split(',').strip('[]')
+                for tag in tags:
+                    neptune.append_tags([tag])
+            except:
+                neptune.log_text(config.tags)
+
 
         history = model.fit(train_data,
                             epochs=model_config.num_epochs,
@@ -117,8 +144,11 @@ def main(config : DictConfig):
                             validation_steps=model_config.validation_steps,
                             verbose=1)
 
+        print('history.history.keys() =',history.history.keys())
+
+
         model.predict(test_data, steps=split_datasets['test'].num_samples)
-print(['[FINISHED TRAINING]'])
+    print(['[FINISHED TRAINING]'])
 
 if __name__=='__main__':
     main()

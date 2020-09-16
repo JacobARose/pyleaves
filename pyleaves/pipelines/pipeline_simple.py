@@ -69,9 +69,16 @@ def main(config : DictConfig):
     neptune.init(project_qualified_name=config.neptune_project_name)
     config.dataset = data_config
     config.model = model_config
-    params=OmegaConf.to_container(config)
-    print(config.pretty())
-    with neptune.create_experiment(name='-'.join([config.experiment_name, str(config.dataset_name),str(config.input_shape)]), params=params):
+
+    params={**OmegaConf.to_container(data_config),
+            **OmegaConf.to_container(model_config),
+            **{k:v for k,v in OmegaConf.to_container(config).items() if ('_dir' in k) and (type(v) != dict)}}
+
+    from pprint import pprint
+    pprint(params)
+    
+    neptune_experiment_name = '-'.join([config.experiment_name, str(config.dataset_name),str(config.input_shape)])
+    with neptune.create_experiment(name=neptune_experiment_name, params=params, upload_source_files=['*.py']):
 
         history = model.fit(train_data,
                             epochs=model_config.num_epochs,
@@ -83,7 +90,12 @@ def main(config : DictConfig):
                             validation_steps=model_config.validation_steps,
                             verbose=1)
 
-print(['[FINISHED TRAINING]'])
+        print('history.history.keys() =',history.history.keys())
+
+
+        model.predict(test_data, steps=split_datasets['test'].num_samples)
+    print(['[FINISHED TRAINING]'])
+
 
 if __name__=='__main__':
     main()
