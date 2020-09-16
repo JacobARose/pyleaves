@@ -64,7 +64,7 @@ class ImageLoggerCallback(Callback):
         self.neptune_logger.log_image(log_name= name or self.name,
                           x=counter,
                           y=fig)
-        plt.close(fig)
+        plt.close('all')
         return scaled_img
 
     # def on_train_batch_begin(self, batch, logs=None):
@@ -110,6 +110,7 @@ class ImageLoggerCallback(Callback):
 
             self.add_log(x[i,...], counter=self._count+i, name = f'{y[i]}-{self.name}', plot_title=plot_title, canvas_color=canvas_color)
         print(f'Batch {self._batch}: Logged {np.max([x.shape[0],self.max_images])} {self.name} images to neptune')
+        plt.close('all')
 
     def on_epoch_end(self, epoch, logs={}):
         self.finished = True

@@ -300,12 +300,15 @@ class NeptuneVisualizationCallback(Callback):
 		fig, ax = plt.subplots(figsize=(16, 12))
 		plot_confusion_matrix(y_true, y_pred, labels=labels, ax=ax)
 		neptune.log_image('confusion_matrix', fig)
-		plt.close(fig)
+		
 
 		if self.num_classes == 2:
 			fig, ax = plt.subplots(figsize=(16, 12))
 			plot_roc(y_true, y_prob, ax=ax)
 			neptune.log_image('roc_curve', fig)
+
+		plt.close('all')
+
 
 
 	def on_test_end(self, epoch, logs={}):
@@ -322,7 +325,7 @@ class NeptuneVisualizationCallback(Callback):
 			fig, ax = plt.subplots(figsize=(16, 12))
 			plot_roc(y_true, y_prob, ax=ax)
 			neptune.log_image('roc_curve', fig)
-
+		plt.close('all')
 
 # class NeptuneVisualizationCallback(Callback):
 # 	"""Callback for logging to Neptune.
