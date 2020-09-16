@@ -1,6 +1,6 @@
 # @package _group_
 
-fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Fossil_family_4/ksplit_10'
+fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Fossil_family_4/ksplit_2'
 dataset_name: 'Fossil_family_4'
 num_classes: null
 threshold: 4
