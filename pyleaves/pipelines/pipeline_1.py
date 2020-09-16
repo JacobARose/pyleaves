@@ -14,6 +14,11 @@ python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_1.py dataset@da
 
 
 python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_1.py dataset@dataset=PNAS restore_last=False dataset.val_split=0.1 run_description="'increased model head size, shuffle buffer siz: 1024->512'" model.regularization.l2=4e-10 model.lr=1e-4 model.head_layers=[256,128] buffer_size=512
+
+
+
+
+ /media/data/jacob/sandbox_logs/Leaves_family_100_resnet_50_v2_[512, 512]/2020-09-16_07-45-16/model/saved_model
 """
 
 from functools import partial
