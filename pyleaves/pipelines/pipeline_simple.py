@@ -90,22 +90,76 @@ def main(config : DictConfig):
     neptune_experiment_name = '-'.join([config.experiment_name, str(config.dataset_name),str(config.input_shape)])
     with neptune.create_experiment(name=neptune_experiment_name, params=params, upload_source_files=['*.py']):
 
-        history = model.fit(train_data,
-                            epochs=model_config.num_epochs,
-                            callbacks=callbacks,
-                            validation_data=val_data,
-                            validation_freq=1,
-                            shuffle=True,
-                            steps_per_epoch=model_config.steps_per_epoch,
-                            validation_steps=model_config.validation_steps,
-                            verbose=1)
+
+        try:
+            history = model.fit(train_data,
+                                epochs=model_config.num_epochs,
+                                callbacks=callbacks,
+                                validation_data=val_data,
+                                validation_freq=1,
+                                shuffle=True,
+                                steps_per_epoch=model_config.steps_per_epoch,
+                                validation_steps=model_config.validation_steps,
+                                verbose=1)
+        except Exception as e:
+            model.save(model_config['saved_model_path'])
+            print('[Caught Exception, saving model first.\nSaved trained model located at:', model_config['saved_model_path'])
+            raise e
+
+        model.save(model_config['saved_model_path'])
+
+
 
         print('history.history.keys() =',history.history.keys())
 
+        steps = split_datasets['test'].num_samples//data_config['batch_size']
 
-        predictions = model.predict(test_data, steps=split_datasets['test'].num_samples)
+        test_results = evaluate(model, encoder, model_config, data_config, test_data=test_data, steps=steps, num_classes=encoder.num_classes, confusion_matrix=True)
+
+        print('TEST RESULTS:')
+        pprint(test_results)
+
+        for k,v in test_results.items():
+            neptune.log_metric(k, v)
+        # predictions = model.predict(test_data, steps=split_datasets['test'].num_samples)
         
-    print(['[FINISHED TRAINING]'])
+    print(['[FINISHED TRAINING AND TESTING]'])
+
+    return test_results
+
+def evaluate(model, encoder, model_config, data_config, test_data=None, steps: int=None, num_classes: int=None, confusion_matrix=True):
+
+    print('Preparing for model evaluation')
+
+    test_data = test_data
+    num_classes = num_classes
+
+    text_labels = encoder.classes
+    steps = steps
+
+    callbacks=[]
+    if confusion_matrix:
+        from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
+        callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=text_labels, steps=steps))
+
+    test_results = model.evaluate(test_data, callbacks=callbacks, steps=steps, verbose=1)
+
+    print('Model evaluation complete.')
+    print('Results:')
+    for m, result in zip(model.metrics_names, test_results):
+        print(f'{m}: {result}')
+
+        neptune.log_metric(f'test_{m}', result)
+
+    return {m:result for m,result in zip(model.metrics_names, test_results)}
+
+
+
+
+
+
+
+
 
 
 if __name__=='__main__':
