@@ -8,3 +8,7 @@ from omegaconf import DictConfig
 def main(config : DictConfig):
 
     print(config.pretty())
+
+
+if __name__=="__main__":
+    main()
