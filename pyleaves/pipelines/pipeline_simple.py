@@ -70,7 +70,7 @@ def main(config : DictConfig):
 
     print('Dataset config: \n',data_config.pretty())
 
-    model_config = create_model_config(**OmegaConf.merge(config,data_config,config.model))
+    model_config = create_model_config(**OmegaConf.merge(config,data_config))
     model = build_model(model_config)
     print('Model config: \n',model_config.pretty())
     model.summary()
