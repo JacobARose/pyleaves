@@ -790,9 +790,9 @@ def build_model(cfg):
                                            average='weighted',
                                            name='weighted_f1'))
     if 'accuracy' in cfg['METRICS']:
-        METRICS.append(tf.keras.metrics.CategoricalAccuracy())
-        METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=3))
-        METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=5))
+        METRICS.append(tf.keras.metrics.CategoricalAccuracy(name='accuracy'))
+        METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=3, name='top-3_accuracy'))
+        METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='top-5_accuracy'))
     if 'precision' in cfg['METRICS']:
         METRICS.append(tf.keras.metrics.Precision())
     if 'recall' in cfg['METRICS']:
