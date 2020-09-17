@@ -85,16 +85,17 @@ from pyleaves.mains.paleoai_main import to_serializable
 
 
 def create_dataset_config(dataset_name: str='Leaves-PNAS',
+                          fold_dir= '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Leaves-PNAS/ksplit_2',
+                          val_split: float=0.0,
+                          class_names: List[str]=None,
                           exclude_classes: List[str]=['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified'],
                           include_classes: List[str]=[],
                           target_size: Tuple[int,int]=(512,512),
                           num_channels: int=3,
                           color_mode: str='grayscale',
-                          val_split: float=0.0,
-                          fold_dir= '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Leaves-PNAS/ksplit_10',
                           batch_size: int=1,
                           buffer_size: int=200,
-                          augmentations: Dict[str,float]={'flip':0.0},
+                          augmentations: Dict[str,float]={'flip':1.0},
                           seed: int=None,
                           use_tfrecords: bool=True,
                           tfrecord_dir: str=None,
@@ -115,13 +116,14 @@ def create_dataset_config(dataset_name: str='Leaves-PNAS',
 
     params = OmegaConf.create(
                 dict(dataset_name=dataset_name,
+                     fold_dir=fold_dir,
+                     val_split=val_split,
+                     class_names=class_names,
                      exclude_classes=exclude_classes,
                      include_classes=include_classes,
                      target_size=target_size,
                      num_channels=num_channels,
                      color_mode=color_mode,
-                     val_split=val_split,
-                     fold_dir=fold_dir,
                      batch_size=batch_size,
                      buffer_size=buffer_size,
                      augmentations=augmentations,
@@ -150,7 +152,7 @@ def create_model_config(model_name: str='resnet_50_v2',
                         lr_decay: float=None,
                         lr_momentum: float=None,
                         lr_decay_epochs: int=10,
-                        regularization: Dict[str,float]={'l1': None},
+                        regularization: Dict[str,float]={'l2': 1e-5},
                         METRICS: List[str]=['f1','accuracy'],
                         head_layers: List[int]=[512,256],
                         batch_size: int=16,
@@ -216,10 +218,11 @@ def initialize_experiment(config, restore_last=True, restore_tfrecords=True):
 
     print('='*40)
     print('Initializing experiment with the following configuration:')
-    for k,v in config.items():
-        if '_dir' in k or '_path' in k:
-            print(f'{k}: {v}')
-            print('-'*10)
+    print(config.pretty())
+    # for k,v in config.items():
+    #     if '_dir' in k or '_path' in k:
+    #         print(f'{k}: {v}')
+    #         print('-'*10)
     print('='*40)
     
     return config
@@ -262,6 +265,7 @@ def create_dataset(data_fold: DataFold,
     from pyleaves.train.paleoai_train import load_data, prep_dataset
 
     split_data, split_datasets, encoder = load_data(data_fold=data_fold,
+                                                    class_names=cfg.class_names,
                                                     exclude_classes=cfg.exclude_classes,
                                                     include_classes=cfg.include_classes,
                                                     use_tfrecords=cfg.use_tfrecords,
@@ -306,24 +310,24 @@ def create_dataset(data_fold: DataFold,
     split_data = {'train':train_data,'val':val_data,'test':test_data}
     # split_data = {k:v for k,v in split_data.items() if v is not None}
 
-    if cfg.debug:
+    # if cfg.debug:
         
-        print('debug==True, plotting 1 batch from each data subset to neptune.')
-        for k,v in split_data.items():
-            if not v:
-                continue
-            print(f'Uploading first batch from {k}, {cfg.dataset_name}, {cfg.fold_dir}')
-            batch = next(iter(v))
-            x, y = batch[0].numpy(), batch[1].numpy()
-            for i in range(y.shape[0]):
-                neptune.log_image(log_name=f'debug-{k}-images', x=i, y=x[i,...])
-        import pdb;pdb.set_trace()
-        if cfg.debugging.overfit_one_batch:
-            print('[DEBUGGING] Attempting to overfit to 1 batch. All Data subsets are limited to first batch.')
-            split_data = get_one_batch_dataloaders(split_data)
+    #     print('debug==True, plotting 1 batch from each data subset to neptune.')
+    #     for k,v in split_data.items():
+    #         if not v:
+    #             continue
+    #         print(f'Uploading first batch from {k}, {cfg.dataset_name}, {cfg.fold_dir}')
+    #         batch = next(iter(v))
+    #         x, y = batch[0].numpy(), batch[1].numpy()
+    #         for i in range(y.shape[0]):
+    #             neptune.log_image(log_name=f'debug-{k}-images', x=i, y=x[i,...])
+    #     import pdb;pdb.set_trace()
+    #     if cfg.debugging.overfit_one_batch:
+    #         print('[DEBUGGING] Attempting to overfit to 1 batch. All Data subsets are limited to first batch.')
+    #         split_data = get_one_batch_dataloaders(split_data)
 
-        if cfg.debugging.log_model_input_stats:
-            log_model_input_stats(split_data=split_data)
+    #     if cfg.debugging.log_model_input_stats:
+    #         log_model_input_stats(split_data=split_data)
 
 
     return split_data, split_datasets, encoder

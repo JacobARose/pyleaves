@@ -34,6 +34,7 @@ def main(config : DictConfig):
                                                preprocess_input,
                                                neptune)
     from paleoai_data.utils.kfold_cross_validation import DataFold, StructuredDataKFold
+    from pprint import pprint
 
 
     gpu_num = set_tf_config(gpu_num=config.gpu_num, num_gpus=1)
@@ -45,19 +46,17 @@ def main(config : DictConfig):
     config = initialize_experiment(config, restore_last=config.restore_last, restore_tfrecords=True)
 
 
-    fold_path = StructuredDataKFold.query_fold_dir(config.dataset.fold_dir, config.fold_id)
-    fold = DataFold.from_artifact_path(fold_path)
     if config.fold_id is None:
         config.fold_id = 0
-    # fold = kfold_loader.folds[config.fold_id]
-    fold.train_data
+    fold_path = DataFold.query_fold_dir(config.dataset.fold_dir, config.fold_id)
+    fold = DataFold.from_artifact_path(fold_path)
 
     config = flatten_dict(config, exceptions=['debugging'])
     data_config = create_dataset_config(**config)
 
     # config=cfg
     data, split_datasets, encoder = create_dataset(data_fold=fold,
-                                                cfg=data_config)
+                                                   cfg=data_config)
 
     if config['steps_per_epoch'] is None:
         config['steps_per_epoch'] = split_datasets['train'].num_samples//data_config['batch_size']
@@ -78,7 +77,6 @@ def main(config : DictConfig):
     callbacks = get_callbacks(config, model_config, model, fold.fold_id, train_data=train_data, val_data=val_data, encoder=encoder)
 
     print('[BEGINNING TRAINING]')
-
     neptune.init(project_qualified_name=config.neptune_project_name)
     config.dataset = data_config
     config.model = model_config
@@ -87,7 +85,6 @@ def main(config : DictConfig):
             **OmegaConf.to_container(model_config),
             **{k:v for k,v in OmegaConf.to_container(config).items() if ('_dir' in k) and (type(v) != dict)}}
 
-    from pprint import pprint
     pprint(params)
     
     neptune_experiment_name = '-'.join([config.experiment_name, str(config.dataset_name),str(config.input_shape)])
@@ -106,7 +103,8 @@ def main(config : DictConfig):
         print('history.history.keys() =',history.history.keys())
 
 
-        model.predict(test_data, steps=split_datasets['test'].num_samples)
+        predictions = model.predict(test_data, steps=split_datasets['test'].num_samples)
+        
     print(['[FINISHED TRAINING]'])
 
 

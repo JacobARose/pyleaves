@@ -326,6 +326,7 @@ def decode_example(serialized_example):
 
 
 def initialize_data_from_paleoai(fold: DataFold,
+                                 class_names: List[str]=None,
                                  exclude_classes=[],
                                  include_classes=[],
                                  val_split: float=0.0,
@@ -333,7 +334,9 @@ def initialize_data_from_paleoai(fold: DataFold,
 
     train_data, test_data = fold.train_data, fold.test_data
 
-    encoder = base_dataset.LabelEncoder(fold.metadata.class_names)
+    class_names = class_names or fold.metadata.class_names
+
+    encoder = base_dataset.LabelEncoder(class_names)
     classes = list((set(encoder.classes)-set(exclude_classes)).union(set(include_classes)))
     train_dataset, _ = fold.train_dataset.enforce_class_whitelist(class_names=classes)
     test_dataset, _ = fold.test_dataset.enforce_class_whitelist(class_names=classes)
@@ -492,6 +495,7 @@ def load_data_from_tensor_slices(split_data, shuffle_train=True, seed=None):
 
 
 def load_data(data_fold: DataFold,
+              class_names: List[str]=None,
               exclude_classes=[],
               include_classes=[],
               use_tfrecords=False,
@@ -502,6 +506,7 @@ def load_data(data_fold: DataFold,
               seed=None):
 
     split_data, split_datasets, encoder = initialize_data_from_paleoai(fold=data_fold,
+                                                                       class_names=class_names,
                                                                        exclude_classes=exclude_classes,
                                                                        include_classes=include_classes,
                                                                        val_split=val_split,
