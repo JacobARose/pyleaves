@@ -16,14 +16,26 @@ from omegaconf import OmegaConf, DictConfig
 #     config = compose(config_name="config", overrides=['dataset@dataset=PNAS','use_tfrecords=False'])
 #     print(config.pretty())
 import hydra
-from pyleaves.pipelines.pipeline_1 import *
+# from pyleaves.pipelines.pipeline_1 import *
 
 
 @hydra.main(config_path='configs', config_name='config')
 def main(config : DictConfig):
 
+    import os
     from pyleaves.train.paleoai_train import build_model
     from pyleaves.utils import set_tf_config
+    from pyleaves.pipelines.pipeline_1 import (initialize_experiment,
+                                               flatten_dict,
+                                               create_dataset_config,
+                                               create_model_config, 
+                                               create_dataset,
+                                               get_callbacks,
+                                               preprocess_input,
+                                               neptune)
+    from paleoai_data.utils.kfold_cross_validation import KFoldLoader
+
+
     gpu_num = set_tf_config(gpu_num=config.gpu_num, num_gpus=1)
     import tensorflow as tf
     from tensorflow.keras import backend as K
