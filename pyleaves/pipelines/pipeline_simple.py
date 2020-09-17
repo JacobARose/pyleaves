@@ -33,7 +33,7 @@ def main(config : DictConfig):
                                                get_callbacks,
                                                preprocess_input,
                                                neptune)
-    from paleoai_data.utils.kfold_cross_validation import KFoldLoader
+    from paleoai_data.utils.kfold_cross_validation import DataFold, StructuredDataKFold
 
 
     gpu_num = set_tf_config(gpu_num=config.gpu_num, num_gpus=1)
@@ -43,12 +43,13 @@ def main(config : DictConfig):
     preprocess_input(tf.zeros([4, 224, 224, 3]));
 
     config = initialize_experiment(config, restore_last=config.restore_last, restore_tfrecords=True)
-    # config.dataset.fold_dir = '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/PNAS_family_100/ksplit_2'
-    kfold_loader = KFoldLoader(root_dir=config.dataset.fold_dir)
+
+
+    fold_path = StructuredDataKFold.query_fold_dir(config.dataset.fold_dir, config.fold_id)
+    fold = DataFold.from_artifact_path(fold_path)
     if config.fold_id is None:
         config.fold_id = 0
-    fold = kfold_loader.folds[config.fold_id]
-    # fold
+    # fold = kfold_loader.folds[config.fold_id]
     fold.train_data
 
     config = flatten_dict(config, exceptions=['debugging'])

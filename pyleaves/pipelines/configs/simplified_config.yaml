@@ -1,0 +1,59 @@
+defaults:
+
+    - dataset/base
+    - model/base
+    - dataset@dataset: Leaves-PNAS
+    - model@model: resnet_50_v2
+    
+    - db@db : sqlite
+
+misc:
+    neptune_project_name: "jacobarose/simplified_baselines"
+    neptune_experiment_dir: "/media/data/jacob/simplified_baselines"
+    run_description: ""
+    experiment_name: ???
+    experiment_dir: ???
+    experiment_start_time: null
+    restore_last: True
+    seed: 45
+
+run_dirs:
+    log_dir: null    
+    model_dir: null
+    tfrecord_dir: null
+    results_dir: null
+    saved_model_path: null
+    checkpoints_path: null
+
+orchestration:
+    n_jobs: 1
+    num_gpus: 1
+    gpu_num: null
+    debug: False
+
+callbacks:
+    train_confusion_matrix: True
+    eval_confusion_matrix: True
+    early_stopping_patience: 15
+    log_epochs: [5,10]
+
+debugging:
+    overfit_one_batch: False # set this to True to limit the training pipeline to just repeat a single batch
+    log_model_input_stats: False # Set this to True to log statistical means of the input images from the first batch for each subset
+
+tags:
+    - null
+
+
+# fold_id: null
+# batch_size: 16
+# buffer_size: 200
+
+# frozen_layers: null
+# augmentations:
+#     - flip: 1.0
+# num_epochs: 150
+# steps_per_epoch: null
+# validation_steps: null
+# use_tfrecords: true
+# samples_per_shard: 300
