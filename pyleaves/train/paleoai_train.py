@@ -785,7 +785,7 @@ def build_model(cfg):
                                            average='weighted',
                                            name='weighted_f1'))
     if 'accuracy' in cfg['METRICS']:
-        METRICS.append('accuracy')
+        # METRICS.append('accuracy')
         METRICS.append(tf.keras.metrics.CategoricalAccuracy())
     if 'precision' in cfg['METRICS']:
         METRICS.append(tf.keras.metrics.Precision())
