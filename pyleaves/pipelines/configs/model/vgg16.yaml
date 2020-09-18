@@ -1,14 +1,15 @@
 # @package _group_
 
-model_name: 'vgg16'
-optimizer: 'Adam'
-loss: 'categorical_crossentropy'
-lr: 4.0e-5
-lr_decay: 1.0
-lr_decay_epochs: 10
-lr_momentum: null
-regularization:
-    l2: 1e-10
-METRICS: ['f1','accuracy']
+params:
+    model_name: 'vgg16'
+    optimizer: 'Adam'
+    loss: 'categorical_crossentropy'
+    lr: 4.0e-5
+    lr_decay: 1.0
+    lr_decay_epochs: 10
+    lr_momentum: null
+    regularization:
+        l2: 1e-10
+    METRICS: ['f1','accuracy']
 
-head_layers: [256,128]
+    head_layers: [256,128]

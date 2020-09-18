@@ -1,16 +1,16 @@
 # @package _group_
 
+params:
+    model_name: 'resnet_50_v2'
+    optimizer: 'Adam'
+    loss: 'categorical_crossentropy'
+    lr: 4.0e-5
+    lr_decay: 1.0
+    lr_decay_epochs: 10
+    lr_momentum: null
+    regularization:
+        l2: 1e-10
+    METRICS: ['f1','accuracy']
 
-model_name: 'vgg16'
-optimizer: 'Adam'
-loss: 'categorical_crossentropy'
-lr: 4.0e-5
-lr_decay: 1.0
-lr_decay_epochs: 10
-lr_momentum: null
-regularization:
-    l2: 1e-10
-METRICS: ['f1','accuracy']
-
-head_layers: [256,128]
-frozen_layers: null
+    head_layers: [256,128]
+    frozen_layers: null

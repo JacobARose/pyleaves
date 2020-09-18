@@ -12,7 +12,7 @@ misc:
     neptune_project_name: "jacobarose/simplified_baselines"
     neptune_experiment_dir: "/media/data/jacob/simplified_baselines"
     run_description: ""
-    experiment_name: ${dataset.params.extract.dataset_name}_${model.model_name}_${dataset.params.training.target_size}
+    experiment_name: ${dataset.params.extract.dataset_name}_${model.params.model_name}_${dataset.params.training.target_size}
     experiment_dir: ${misc.neptune_experiment_dir}/${misc.experiment_name}/${misc.experiment_start_time}
     restore_last: True
     seed: 45
@@ -23,7 +23,7 @@ run_dirs:
     results_dir: '${misc.experiment_dir}/results_dir'
     saved_model_path: '${run_dirs.model_dir}/saved_model'
     checkpoints_path: '${run_dirs.model_dir}/checkpoints'
-    tfrecord_dir: '/media/data/jacob/experimental_data/tfrecords/{dataset.params.dataset_name}'
+    tfrecord_dir: '/media/data/jacob/experimental_data/tfrecords/{dataset.params.extract.dataset_name}'
 
 orchestration:
     n_jobs: 1
@@ -43,17 +43,3 @@ debugging:
 
 tags:
     - null
-
-
-# fold_id: null
-# batch_size: 16
-# buffer_size: 200
-
-# frozen_layers: null
-# augmentations:
-#     - flip: 1.0
-# num_epochs: 150
-# steps_per_epoch: null
-# validation_steps: null
-# use_tfrecords: true
-# samples_per_shard: 300

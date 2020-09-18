@@ -5,7 +5,7 @@ from omegaconf import DictConfig, OmegaConf
 from datetime import datetime
 from pprint import pprint
 
-@hydra.main(config_path='configs', config_name='config')
+@hydra.main(config_path='configs', config_name='simplified_config')
 def main(config : DictConfig):
 
     date_format = '%Y-%m-%d_%H-%M-%S'
