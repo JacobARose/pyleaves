@@ -61,7 +61,7 @@ def recursively_instantiate_dirs(config: DictConfig, dir_suffix: str='_dir', ver
     """    
     for k,v in config.items():
         if isinstance(v,(DictConfig,dict)):
-            recursively_instantiate_dirs(config, dir_suffix=dir_suffix, verbose=verbose)
+            recursively_instantiate_dirs(config=v, dir_suffix=dir_suffix, verbose=verbose)
         if dir_suffix in k:
             if verbose:
                 if os.path.exists(v):
