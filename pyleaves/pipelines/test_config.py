@@ -9,6 +9,10 @@ def main(config : DictConfig):
 
     print(config.pretty())
 
+    if config.debug:
+        import pdb
+        pdb.set_trace()
+
 
 if __name__=="__main__":
     main()
