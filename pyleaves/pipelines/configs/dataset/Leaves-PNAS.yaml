@@ -2,7 +2,7 @@
 
 params:
   extract:
-    fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Leaves-PNAS/ksplit_2'
+    fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Leaves-PNAS/ksplit_10'
     dataset_name: 'Leaves-PNAS'
     num_classes: null
     threshold: 10
