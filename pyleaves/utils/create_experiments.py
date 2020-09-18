@@ -5,6 +5,10 @@
 
 '''
 
+DEPRECATED: Jacob Rose Sept 18, 2020
+-This references an old experiment configuration and should be removed by the next major version
+
+
 This is intended to be primarily a command line script for coordinating the creation of all requisite files for each experiment definition.
 
 '''
