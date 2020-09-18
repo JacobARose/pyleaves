@@ -1,13 +1,18 @@
 
 
 import hydra
-from omegaconf import DictConfig
-
+from omegaconf import DictConfig, OmegaConf
+from datetime import datetime
+from pprint import pprint
 
 @hydra.main(config_path='configs', config_name='config')
 def main(config : DictConfig):
 
-    print(config.pretty())
+    date_format = '%Y-%m-%d_%H-%M-%S'
+    config.experiment_start_time = datetime.now().strftime(date_format)
+
+    pprint(OmegaConf.to_container(config))
+    # print(config.pretty())
 
     if config.debug:
         import pdb
