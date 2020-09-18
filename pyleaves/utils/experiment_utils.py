@@ -15,20 +15,20 @@ import shutil
 from omegaconf import DictConfig
     
 def clean_experiment_tree(config: DictConfig):
-    if not os.path.isdir(config.experiment_dir):
-        print(f'Attempted to clean nonexistent experiment directory at {config.experiment_dir}. Continuing without action.')
+    if not os.path.isdir(config.misc.experiment_dir):
+        print(f'Attempted to clean nonexistent experiment directory at {config.misc.experiment_dir}. Continuing without action.')
         return
-    print('Cleaning experiment file tree from root:\n',config.experiment_dir)
-    shutil.rmtree(config.experiment_dir)
-    assert not os.path.isdir(config.experiment_dir)
+    print('Cleaning experiment file tree from root:\n',config.misc.experiment_dir)
+    shutil.rmtree(config.misc.experiment_dir)
+    assert not os.path.isdir(config.misc.experiment_dir)
     
 def cleanup_tfrecords(config: DictConfig):
-    if not os.path.isdir(config.tfrecord_dir):
-        print(f'Attempted to clean nonexistent tfrecord directory at {config.tfrecord_dir}. Continuing without action.')
+    if not os.path.isdir(config.run_dirs.tfrecord_dir):
+        print(f'Attempted to clean nonexistent tfrecord directory at {config.run_dirs.tfrecord_dir}. Continuing without action.')
         return
-    print('Cleaning up tfrecord files located at:\n',config.tfrecord_dir)
-    shutil.rmtree(config.tfrecord_dir)
-    assert not os.path.isdir(config.tfrecord_dir)
+    print('Cleaning up tfrecord files located at:\n',config.run_dirs.tfrecord_dir)
+    shutil.rmtree(config.run_dirs.tfrecord_dir)
+    assert not os.path.isdir(config.run_dirs.tfrecord_dir)
 
 
 def resolve_config_interpolations(config: DictConfig) -> dict:
