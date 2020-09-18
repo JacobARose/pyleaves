@@ -2,7 +2,6 @@
 
 #This should be added in the defaults of the global config
 params:
-
   extract:
     fold_id: null
     fold_dir: null

@@ -13,6 +13,7 @@ def main(config : DictConfig):
         import pdb
         pdb.set_trace()
 
+    #   print(HydraConfig.get().overrides.task)
 
 if __name__=="__main__":
     main()
