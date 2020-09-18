@@ -23,7 +23,7 @@ run_dirs:
     results_dir: '${misc.experiment_dir}/results_dir'
     saved_model_path: '${run_dirs.model_dir}/saved_model'
     checkpoints_path: '${run_dirs.model_dir}/checkpoints'
-    tfrecord_dir: '/media/data/jacob/experimental_data/tfrecords/{dataset.params.extract.dataset_name}'
+    tfrecord_dir: '/media/data/jacob/experimental_data/tfrecords/${dataset.params.extract.dataset_name}'
 
 orchestration:
     n_jobs: 1

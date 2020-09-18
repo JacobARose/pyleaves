@@ -19,6 +19,31 @@ import hydra
 # from pyleaves.pipelines.pipeline_1 import *
 
 
+def initialize_experiment(config, restore_last=True, restore_tfrecords=True):
+    date_format = '%Y-%m-%d_%H-%M-%S'
+
+    config.misc.experiment_start_time = datetime.now().strftime(date_format)
+
+    if not restore_last:
+        clean_experiment_tree(config)
+        
+    if not restore_tfrecords:
+        cleanup_tfrecords(config)
+
+    for k,v in config.items():
+        if '_dir' in k:
+            ensure_dir_exists(v)
+
+    print('='*40)
+    print('Initializing experiment with the following configuration:')
+    print(config.pretty())
+    print('='*40)
+    
+    return config
+
+
+
+
 @hydra.main(config_path='configs', config_name='config')
 def main(config : DictConfig):
 
