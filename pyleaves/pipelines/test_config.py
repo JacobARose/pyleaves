@@ -9,7 +9,9 @@ from pprint import pprint
 def main(config : DictConfig):
 
     date_format = '%Y-%m-%d_%H-%M-%S'
-    config.experiment_start_time = datetime.now().strftime(date_format)
+    config.misc.experiment_start_time = datetime.now().strftime(date_format)
+
+    
 
     pprint(OmegaConf.to_container(config))
     # print(config.pretty())
