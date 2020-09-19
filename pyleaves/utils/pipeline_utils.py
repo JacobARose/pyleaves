@@ -537,7 +537,7 @@ def tf_data2np(data: tf.data.Dataset, num_batches: int=4):
 
 def get_callbacks(config, model_config, model, csv_path: str, train_data=None, val_data=None, encoder=None):
     from neptunecontrib.monitoring.keras import NeptuneMonitor
-    from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger#, tf_data2np
+    from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger
     from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback,ReduceLROnPlateau,TensorBoard
     from pyleaves.utils.neptune_utils import ImageLoggerCallback
 
@@ -548,7 +548,7 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
     backup_callback.set_model(model)
 
     # log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    tensorboard_callback = TensorBoard(log_dir=config.run_dirs.log_dir, histogram_freq=1)
+    tensorboard_callback = TensorBoard(log_dir=config.run_dirs.log_dir)#, histogram_freq=1)
 
 
     print('building callbacks')
@@ -600,7 +600,7 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
         else:
             num_batches = 10
             print(f'invalid value for config.callbacks.confusion_matrix.num_batches={config.callbacks.confusion_matrix.num_batches}.\nContinuing with 10 batches')
-        validation_data_np = tf_data2np(data=val_data, num_batches=6)
+        validation_data_np = tf_data2np(data=val_data, num_batches=num_batches)
         val_neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=model_config.num_classes)
         callbacks.append(val_neptune_visualization_callback)
 
