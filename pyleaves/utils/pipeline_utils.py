@@ -279,7 +279,7 @@ def load_data_from_tensor_slices(data: List[List], cache: Union[bool,str], train
     y_data = tf.data.Dataset.from_tensor_slices(data[1])
     data = tf.data.Dataset.zip((x_data, y_data))
     if training:
-        num_train_samples = len(x_data)
+        num_train_samples = len(data[0])
         data = data.shuffle(num_train_samples,seed=seed, reshuffle_each_iteration=True)
 
     if cache:
