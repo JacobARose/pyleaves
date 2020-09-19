@@ -124,17 +124,16 @@ def main(config : DictConfig):
     callbacks = get_callbacks(config, model_config, model, fold.fold_id, train_data=train_data, val_data=val_data, encoder=encoder)
 
     print('[BEGINNING TRAINING]')
-    model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     params={}#**OmegaConf.to_container(data_config),
     #         **OmegaConf.to_container(model_config),
     #         **{k:v for k,v in OmegaConf.to_container(config).items() if ('_dir' in k) and (type(v) != dict)}}
 
-    pprint(params)
+    # pprint(params)
 
     neptune_experiment_name = config.misc.experiment_name
     with neptune.create_experiment(name=neptune_experiment_name, params=params, upload_source_files=['*.py']):
 
-
+        model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
         log_hydra_config(backup_dir=config.run_dirs.log_dir)
 
         try:
