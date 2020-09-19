@@ -134,24 +134,24 @@ def main(config : DictConfig):
 
         if config.orchestration.debug:
             import pdb;pdb.set_trace()
-            print_config(config)        
+            print_config(config)
 
         try:
             history = model.fit(train_data,
-                                epochs=model_config.num_epochs,
+                                epochs=data_config.training.num_epochs,
                                 callbacks=callbacks,
                                 validation_data=val_data,
                                 validation_freq=1,
                                 shuffle=True,
-                                steps_per_epoch=model_config.steps_per_epoch,
-                                validation_steps=model_config.validation_steps,
+                                steps_per_epoch=data_config.training.steps_per_epoch,
+                                validation_steps=data_config.training.validation_steps,
                                 verbose=1)
         except Exception as e:
-            model.save(model_config['saved_model_path'])
-            print('[Caught Exception, saving model first.\nSaved trained model located at:', model_config['saved_model_path'])
+            model.save(config.run_dirs.saved_model_path)
+            print('[Caught Exception, saving model first.\nSaved trained model located at:', config.run_dirs.saved_model_path)
             raise e
 
-        model.save(model_config['saved_model_path'])
+        model.save(config.run_dirs.saved_model_path)
 
 
 
