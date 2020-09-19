@@ -49,6 +49,9 @@ import tensorflow_datasets as tfds
 import tensorflow_addons as tfa
 from tensorflow.keras.callbacks import EarlyStopping, CSVLogger, LambdaCallback
 
+
+import importlib
+
 def load_img(image_path):
     img = tf.io.read_file(image_path)
     img = tf.image.decode_jpeg(img, channels=3)
@@ -157,14 +160,46 @@ def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=Fals
 
     return image
 
-def apply_preprocess(x, y, num_classes, preprocess_config):
+# def apply_preprocess(x, y, num_classes, preprocess_config):
     
-    return hydra.utils.call(preprocess_config, x), tf.one_hot(y, depth=num_classes)
+#     preprocess_module = importlib.import_module(preprocess_config._target_)
+
+#     preprocess_input = preprocess_module.preprocess_input
+
+#     return hydra.utils.call(preprocess_config, x), tf.one_hot(y, depth=num_classes)
     # return preprocess_input(x), tf.one_hot(y, depth=num_classes)
+
+def get_preprocess_func(from_module: str="tensorflow.keras.applications.imagenet_utils", **kwargs):
+
+    preprocess_module = importlib.import_module(from_module)
+    preprocess_input = preprocess_module.preprocess_input
+    preprocess_input(tf.zeros([4, 32, 32, 3]))
+
+    # preprocess_input = lambda x: x
+
+    def preprocess_func(x):
+        return preprocess_input(x)
+    _temp = tf.zeros([4, 32, 32, 3])
+    preprocess_func(_temp)
+
+    return preprocess_func
+
+
+def apply_preprocess(dataset, num_classes, preprocessing_module):
+    
+    preprocess_input = get_preprocess_func(from_module=preprocessing_module)
+
+    dataset = dataset.map(lambda x,y: (preprocess_input(x), tf.one_hot(y, depth=num_classes)),
+                          num_parallel_calls=-1)
+    return dataset
+
+
+
+
 
 
 def prep_dataset(dataset,
-                 preprocess_config: DictConfig,
+                 preprocess_module: DictConfig,
                  batch_size=32,
                  buffer_size=100,
                  shuffle=False,
@@ -183,10 +218,11 @@ def prep_dataset(dataset,
     dataset = dataset.map(lambda x,y: (resize(x), y),
                           num_parallel_calls=-1)
 
+    dataset = apply_preprocess(dataset, num_classes, preprocessing_module=preprocess_module)
 
-    preprocess_input = partial(apply_preprocess, num_classes=num_classes, preprocess_config=preprocess_config)
-    dataset = dataset.map(lambda x,y: preprocess_input(x,y),
-                          num_parallel_calls=-1)
+    # preprocess_input = partial(apply_preprocess, num_classes=num_classes, preprocess_config=preprocess_config)
+    # dataset = dataset.map(lambda x,y: preprocess_input(x,y),
+    #                       num_parallel_calls=-1)
 
     if shuffle:
         dataset = dataset.shuffle(buffer_size, seed=seed, reshuffle_each_iteration=True)

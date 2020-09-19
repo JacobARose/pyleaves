@@ -68,9 +68,7 @@ def main(config : DictConfig):
     from tensorflow.keras import backend as K
     K.clear_session()
     # preprocess_input(tf.zeros([4, 224, 224, 3]));
-    if config.orchestration.debug:
-        import pdb;pdb.set_trace()
-        print_config(config)
+
 
     config = initialize_experiment(config, restore_last=config.misc.restore_last, restore_tfrecords=True)
 
@@ -92,6 +90,10 @@ def main(config : DictConfig):
 
     # data, split_datasets, encoder = create_dataset(data_fold=fold,
     #                                                cfg=data_config)
+    if config.orchestration.debug:
+        import pdb;pdb.set_trace()
+        print_config(config)
+
 
     data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
                                                                          data_config=data_config,

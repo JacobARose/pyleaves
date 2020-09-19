@@ -17,6 +17,6 @@ params:
     frozen_layers: null
 
     preprocess_input:
-        _target_: tensorflow.keras.applications.imagenet_utils.preprocess_input
+        _target_: tensorflow.keras.applications.imagenet_utils
         data_format: 'channels_last'
         mode: 'tf'

@@ -16,4 +16,4 @@ params:
     head_layers: [256,128]
 
     preprocess_input:
-        _target_: tensorflow.keras.applications.resnet_v2.preprocess_input
+        _target_: tensorflow.keras.applications.resnet_v2
