@@ -9,8 +9,8 @@ defaults:
 
 misc:
     experiment_start_time: null
-    neptune_project_name: "jacobarose/simplified_baselines"
-    neptune_experiment_dir: "/media/data/jacob/simplified_baselines"
+    neptune_project_name: "jacobarose/simplified-baselines"
+    neptune_experiment_dir: "/media/data/jacob/simplified-baselines"
     run_description: ""
     experiment_name: ${dataset.params.extract.dataset_name}_${model.params.model_name}_${dataset.params.training.target_size}
     experiment_dir: ${misc.neptune_experiment_dir}/${misc.experiment_name}/${misc.experiment_start_time}
