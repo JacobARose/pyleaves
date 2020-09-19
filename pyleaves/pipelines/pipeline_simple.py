@@ -38,11 +38,12 @@ import yaml
 
 def log_hydra_config(backup_dir: str=None, config: DictConfig=None):
     
-    if config:
+    if config is not None:
         config_output_path = os.path.join(config.run_dirs.log_dir,'config.yaml')
         with open(config_output_path, 'w') as f:
-            yaml.dump(resolve_config_interpolations(config=config), f)
+            yaml.dump(resolve_config_interpolations(config=config, log_nodes=True), f)
         neptune.log_artifact(config_output_path)
+        print(f'Logged resolved config to {config_output_path}')
 
     if type(config.tags)==list:
         for tag in config.tags:
@@ -57,6 +58,14 @@ def log_hydra_config(backup_dir: str=None, config: DictConfig=None):
 
             if isinstance(backup_dir, str):
                 shutil.copy(filepath, backup_dir)
+
+
+def log_config_as_properties(config: DictConfig):
+
+    for k,v in config.items():
+
+
+
 
 
 

@@ -14,7 +14,8 @@ from pyleaves.utils import ensure_dir_exists
 import os
 import shutil
 from omegaconf import DictConfig
-    
+import neptune
+
 def clean_experiment_tree(config: DictConfig):
     if not os.path.isdir(config.misc.experiment_dir):
         print(f'Attempted to clean nonexistent experiment directory at {config.misc.experiment_dir}. Continuing without action.')
@@ -32,7 +33,7 @@ def cleanup_tfrecords(config: DictConfig):
     assert not os.path.isdir(config.run_dirs.tfrecord_dir)
 
 
-def resolve_config_interpolations(config: DictConfig) -> dict:
+def resolve_config_interpolations(config: DictConfig, log_nodes: bool=False, prefix: str='') -> dict:
     """Recursively walk through a DictConfig object an convert any values that are also of type DictConfig to a regular dict.
 
     This is useful for displaying the true contents of a DictConfig that contains value interpolations, since by default they display the raw interpolation instead of its resolved value.
@@ -46,10 +47,13 @@ def resolve_config_interpolations(config: DictConfig) -> dict:
     
     pretty_config = {}
     for k,v in config.items():
+        level_key = prefix + k
         if isinstance(v,DictConfig):
-            pretty_config[k] = resolve_config_interpolations(v)
+            pretty_config[level_key] = resolve_config_interpolations(v, log_nodes=True, prefix = level_key)
         else:
-            pretty_config[k] = v
+            pretty_config[level_key] = v
+            if log_nodes:
+                neptune.set_property(level_key, v)
     return pretty_config
 
 def print_config(config):
