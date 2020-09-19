@@ -537,7 +537,7 @@ def tf_data2np(data: tf.data.Dataset, num_batches: int=4):
 
 def get_callbacks(config, model_config, model, fold_id: int=-1, train_data=None, val_data=None, encoder=None):
     from neptunecontrib.monitoring.keras import NeptuneMonitor
-    from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger, tf_data2np
+    from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger#, tf_data2np
     from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback,ReduceLROnPlateau,TensorBoard
     from pyleaves.utils.neptune_utils import ImageLoggerCallback
 
@@ -558,7 +558,7 @@ def get_callbacks(config, model_config, model, fold_id: int=-1, train_data=None,
                  CSVLogger(str(Path(config.run_dirs.results_dir,f'results-fold_{fold_id}.csv')), separator=',', append=True),
                  EarlyStopping(monitor='val_loss', patience=config.callbacks.early_stopping_patience, verbose=1, restore_best_weights=True)]
 
-    if config.log_images and (train_data is not None):
+    if config.callbacks.log_images and (train_data is not None):
         callbacks.append(ImageLoggerCallback(data=train_data, 
                                              freq=10, 
                                              max_images=-1,
