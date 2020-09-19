@@ -90,10 +90,6 @@ def main(config : DictConfig):
 
     # data, split_datasets, encoder = create_dataset(data_fold=fold,
     #                                                cfg=data_config)
-    if config.orchestration.debug:
-        import pdb;pdb.set_trace()
-        print_config(config)
-
 
     data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
                                                                    data_config=data_config,
@@ -109,10 +105,14 @@ def main(config : DictConfig):
         data_config.training.validation_steps = split_datasets['val'].num_samples//data_config.training.batch_size
 
     train_data, val_data, test_data = data['train'], data['val'], data['test']
-    data_config.num_classes=encoder.num_classes
+    data_config.extract.num_classes=encoder.num_classes
 
     model_config.input_shape = (*training_config.target_size, extract_config.num_channels)
     model_config.num_classes = encoder.num_classes
+
+    if config.orchestration.debug:
+        import pdb;pdb.set_trace()
+        print_config(config)
 
     model = build_model(model_config)
     

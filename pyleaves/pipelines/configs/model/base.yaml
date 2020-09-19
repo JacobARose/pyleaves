@@ -3,6 +3,9 @@
 params:
     model_name: 'resnet_50_v2'
     weights: null
+    input_shape: [256,256,'${params.num_channels}']
+    num_classes: null
+    num_channels: 3
     optimizer: 'Adam'
     loss: 'categorical_crossentropy'
     lr: 4.0e-5

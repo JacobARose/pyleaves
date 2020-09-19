@@ -3,6 +3,7 @@
 params:
     model_name: 'vgg16'
     weights: 'imagenet'
+    input_shape: [224,224,3]
     optimizer: 'Adam'
     loss: 'categorical_crossentropy'
     lr: 4.0e-5

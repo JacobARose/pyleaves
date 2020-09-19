@@ -3,6 +3,7 @@
 params:
     model_name: 'resnet_50_v2'
     weights: 'imagenet'
+    input_shape: [299,299,3]
     optimizer: 'Adam'
     loss: 'categorical_crossentropy'
     lr: 4.0e-5 #Karpathy recommends 3e-4
