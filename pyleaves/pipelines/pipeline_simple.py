@@ -60,10 +60,6 @@ def log_hydra_config(backup_dir: str=None, config: DictConfig=None):
                 shutil.copy(filepath, backup_dir)
 
 
-def log_config_as_properties(config: DictConfig):
-
-    for k,v in config.items():
-
 
 
 
