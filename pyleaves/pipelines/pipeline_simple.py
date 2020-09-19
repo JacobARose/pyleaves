@@ -23,6 +23,8 @@ import hydra
 # from pyleaves.pipelines.pipeline_1 import *
 
 from pyleaves.datasets import base_dataset
+
+from pyleaves.utils.experiment_utils import resolve_config_interpolations
 from paleoai_data.utils.kfold_cross_validation import DataFold
 from typing import List, Union
 import random
@@ -34,12 +36,13 @@ import neptune
 from pathlib import Path
 
 
-def log_hydra_config(backup_dir: str=None):
+def log_hydra_config(backup_dir: str=None, config: DictConfig=None):
+    
+    if config:
+        neptune.log_artifact(resolve_config_interpolations(config=config))
 
     override_dir = os.path.join(os.getcwd(),'.hydra')
-    
     config_files = ['config.yaml', 'overrides.yaml', 'hydra.yaml']
-
     for f in config_files:
         filepath = os.path.join(override_dir, f)
         if os.path.exists(filepath):
@@ -132,7 +135,7 @@ def main(config : DictConfig):
     with neptune.create_experiment(name=neptune_experiment_name, params=params, upload_source_files=['*.py']):
 
         model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-        log_hydra_config(backup_dir=config.run_dirs.log_dir)
+        log_hydra_config(backup_dir=config.run_dirs.log_dir, config=config)
 
         if config.orchestration.debug:
             import pdb;pdb.set_trace()
