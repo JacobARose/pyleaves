@@ -2,6 +2,7 @@
 
 params:
     model_name: 'resnet_50_v2'
+    weights: null
     optimizer: 'Adam'
     loss: 'categorical_crossentropy'
     lr: 4.0e-5
@@ -14,3 +15,8 @@ params:
 
     head_layers: [256,128]
     frozen_layers: null
+
+    preprocess_input:
+        _target_: tensorflow.keras.applications.imagenet_utils.preprocess_input
+        data_format: 'channels_last'
+        mode: 'tf'

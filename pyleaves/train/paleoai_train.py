@@ -432,68 +432,6 @@ def load_data_from_tensor_slices(split_data, shuffle_train=True, seed=None):
     return loaded_split_data
 
 
-
-# def load_data_from_tfrecords(tfrecord_dir,
-#                              data=None,
-#                              target_shape=(768,768,3),
-#                              samples_per_shard=800,
-#                              subset_keys=['train','validation'],
-#                              num_classes=None):
-
-#     if data:
-#         for k,v in data.items():
-#             data[k] = pd.DataFrame({'source_path':v[0],'label':v[1]})
-
-#         train_coder = TFRecordCoder(data = data[subset_keys[0]],
-#                                     output_dir = tfrecord_dir,
-#                                     subset=subset_keys[0],
-#                                     target_shape=target_shape,
-#                                     samples_per_shard=samples_per_shard,
-#                                     num_classes=num_classes)
-
-
-#         val_coder = TFRecordCoder(data = data[subset_keys[1]],
-#                                   output_dir = tfrecord_dir,
-#                                   subset=subset_keys[1],
-#                                   target_shape=target_shape,
-#                                   samples_per_shard=samples_per_shard,
-#                                   num_classes=num_classes)
-#         train_coder.execute_convert()
-#         val_coder.execute_convert()
-
-#     files = {subset_keys[0]: [os.path.join(tfrecord_dir,f) for f in os.listdir(tfrecord_dir) if subset_keys[0] in f],
-#              subset_keys[1]: [os.path.join(tfrecord_dir,f) for f in os.listdir(tfrecord_dir) if subset_keys[1] in f]}
-
-#     # import pdb;pdb.set_trace()
-#     split_datasets = {}
-#     for subset, tfrecord_paths in files.items():
-#         split_datasets[subset] = tf.data.Dataset.from_tensor_slices(tfrecord_paths) \
-#                                                 .cache() \
-#                                                 .shuffle(100) \
-#                                                 .interleave(tf.data.TFRecordDataset) \
-#                                                 .map(decode_example, num_parallel_calls=-1)
-#     return split_datasets
-
-
-# def load_data_from_tensor_slices(split_data, shuffle_train=True, seed=None):
-#     train_x = tf.data.Dataset.from_tensor_slices(split_data['train'][0])
-#     train_y = tf.data.Dataset.from_tensor_slices(split_data['train'][1])
-#     num_train_samples = len(split_data['train'][0])
-#     train_data = tf.data.Dataset.zip((train_x, train_y))
-#     if shuffle_train:
-#         train_data = train_data.shuffle(int(num_train_samples),seed=seed, reshuffle_each_iteration=True)
-#     train_data = train_data.cache()
-#     train_data = train_data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
-
-#     test_x = tf.data.Dataset.from_tensor_slices(split_data['test'][0])
-#     test_y = tf.data.Dataset.from_tensor_slices(split_data['test'][1])
-#     test_data = tf.data.Dataset.zip((test_x, test_y))
-#     test_data = test_data.cache()
-#     test_data = test_data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=tf.uint8),y), num_parallel_calls=-1)
-
-#     return train_data, test_data
-
-
 def load_data(data_fold: DataFold,
               class_names: List[str]=None,
               exclude_classes=[],

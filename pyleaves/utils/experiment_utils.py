@@ -9,6 +9,7 @@ This script is meant to define helper functions for initializiing a new experime
 """
 
 from datetime import datetime
+from pprint import pprint
 from pyleaves.utils import ensure_dir_exists
 import os
 import shutil
@@ -51,6 +52,10 @@ def resolve_config_interpolations(config: DictConfig) -> dict:
             pretty_config[k] = v
     return pretty_config
 
+def print_config(config):
+    pprint(resolve_config_interpolations(config))
+
+
 def recursively_instantiate_dirs(config: DictConfig, dir_suffix: str='_dir', verbose=False):
     """Walk through a DictConfig, searching for any keys that end in dir_suffix and creating the directory if it doesn't already exist. Will recursively search for keys if any value is itself dict-like.
 
@@ -87,7 +92,7 @@ def initialize_experiment(config: DictConfig, restore_last: bool=True, restore_t
     if verbose:
         print('='*40)
         print('Initializing experiment with the following configuration:')
-        print(resolve_config_interpolations(config))
+        pprint(resolve_config_interpolations(config))
         print('='*40)
     
     return config

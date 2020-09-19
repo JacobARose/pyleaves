@@ -46,19 +46,19 @@ def add_regularization(model, regularizer=tf.keras.regularizers.l2(0.0001)):
 
     return model
 
-def get_model_default_param(config, param):
-    #TODO REFACTOR, Functionality currently moved to config_v2.py (4/18/20)
-    model_name = config.model_name
-    color_type = config.color_type
-#     import pdb; pdb.set_trace()
-    if param=='input_shape':
-        target_size=(224,224)
-        num_channels=3
-        if model_name=='xception':
-            target_size=(299,299)
-        elif model_name=='vgg16' and color_type=='grayscale':
-            num_channels=1
-        return (*target_size,num_channels)
+# def get_model_default_param(config, param):
+#     #TODO REFACTOR, Functionality currently moved to config_v2.py (4/18/20)
+#     model_name = config.model_name
+#     color_type = config.color_type
+# #     import pdb; pdb.set_trace()
+#     if param=='input_shape':
+#         target_size=(224,224)
+#         num_channels=3
+#         if model_name=='xception':
+#             target_size=(299,299)
+#         elif model_name=='vgg16' and color_type=='grayscale':
+#             num_channels=1
+#         return (*target_size,num_channels)
 
 
 def get_keras_preprocessing_function(model_name: str, input_format=tuple, x_col='path', y_col='label'):
@@ -106,8 +106,18 @@ def get_keras_preprocessing_function(model_name: str, input_format=tuple, x_col=
 class BaseModel:
     '''
     Base Class that implements basic model load/save methods for subclasses. Model building to be delegated to each individual subclass.
+    e.g.
+        model_config = {
+                        'num_classes':32,
+                        'weights': "imagenet",
+                        'frozen_layers':(0,-4),
+                        'input_shape':(224,224,3),
+                        'lr':1e-5,
+                        'regularization':{"l2": 1e-4}
+                        }
+
     '''
-    def __init__(self, model_config, name=''):
+    def __init__(self, model_config, name='', init_dirs=False):
 
         self.name = name
         self.config = model_config
@@ -119,10 +129,16 @@ class BaseModel:
             self.lr = model_config.lr
         else:
             self.lr = model_config.base_learning_rate
+        
+        if 'weights' in model_config:
+            self.weights = model_config.weights
+        else:
+            self.weights = None
 
         self.regularization = model_config.regularization
 
-        self.init_dirs()
+        if init_dirs:
+            self.init_dirs()
 
 #         self.model = self.build_model()
 #         self.weights = self.model.get_weights()
@@ -135,21 +151,15 @@ class BaseModel:
         '''
         Implement this method in subclasses.
         '''
-        return None
+        raise NotImplementedError
 
     def build_head(self, base):
         '''
         Implement this method in subclasses.
         '''
-        return None
+        raise NotImplementedError
 
     def build_model(self, regularization=True):
-        # import pdb; pdb.set_trace()
-
-        # from tensorflow.keras import backend as K
-        # K.clear_session()
-        # K.reset_default_graph()
-        # K.reset_eager_session
 
         base = self.build_base()
         model = self.build_head(base)

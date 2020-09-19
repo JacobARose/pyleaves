@@ -2,6 +2,7 @@
 
 params:
     model_name: 'vgg16'
+    weights: 'imagenet'
     optimizer: 'Adam'
     loss: 'categorical_crossentropy'
     lr: 4.0e-5
@@ -13,3 +14,6 @@ params:
     METRICS: ['f1','accuracy']
 
     head_layers: [256,128]
+
+    preprocess_input:
+        _target_: tensorflow.keras.applications.vgg16.preprocess_input

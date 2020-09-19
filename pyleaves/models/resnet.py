@@ -66,11 +66,14 @@ class ResNet(BaseModel):
                 weights.update({layer.name:w})
         return weights
 
-    def build_base(self):
+    def build_base(self, weights=None, input_shape=None):
 
-        base = self.base_model(weights='imagenet',
+        weights = weights or self.weights
+        input_shape = input_shape or self.input_shape
+
+        base = self.base_model(weights=weights,
                                include_top=False,
-                               input_tensor=Input(shape=self.input_shape))   #(224,224,3)))
+                               input_tensor=Input(shape=input_shape))
 
         if self.frozen_layers is not None:
             for layer in base.layers[self.frozen_layers[0]:self.frozen_layers[1]]:
