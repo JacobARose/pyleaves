@@ -44,7 +44,7 @@ def log_hydra_config(backup_dir: str=None):
         if os.path.exists(filepath):
             neptune.log_artifact(filepath)
 
-            if isinstance(backup_dir):
+            if isinstance(backup_dir, str):
                 shutil.copy(filepath, backup_dir)
 
 
@@ -110,10 +110,6 @@ def main(config : DictConfig):
     model_config.input_shape = (*training_config.target_size, extract_config.num_channels)
     model_config.num_classes = encoder.num_classes
 
-    if config.orchestration.debug:
-        import pdb;pdb.set_trace()
-        print_config(config)
-
     model = build_model(model_config)
 
     config.dataset.params = data_config
@@ -135,6 +131,10 @@ def main(config : DictConfig):
 
         model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
         log_hydra_config(backup_dir=config.run_dirs.log_dir)
+
+        if config.orchestration.debug:
+            import pdb;pdb.set_trace()
+            print_config(config)        
 
         try:
             history = model.fit(train_data,
