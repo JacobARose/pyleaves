@@ -269,6 +269,8 @@ def extract_data(fold: DataFold,
 
 def load_data_from_tensor_slices(data: List[List], cache: Union[bool,str], training=False, seed=None):
 
+    num_samples = len(data[0])
+
     def load_img(image_path):
         img = tf.io.read_file(image_path)
         img = tf.image.decode_jpeg(img, channels=3)
@@ -279,8 +281,7 @@ def load_data_from_tensor_slices(data: List[List], cache: Union[bool,str], train
     y_data = tf.data.Dataset.from_tensor_slices(data[1])
     data = tf.data.Dataset.zip((x_data, y_data))
     if training:
-        num_train_samples = len(data[0])
-        data = data.shuffle(num_train_samples,seed=seed, reshuffle_each_iteration=True)
+        data = data.shuffle(num_samples,seed=seed, reshuffle_each_iteration=True)
 
     if cache:
         if isinstance(cache, str):
