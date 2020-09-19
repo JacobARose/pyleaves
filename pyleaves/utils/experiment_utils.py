@@ -52,7 +52,7 @@ def resolve_config_interpolations(config: DictConfig, log_nodes: bool=False, pre
         else:
             level_key = k
         if isinstance(v,DictConfig):
-            pretty_config[level_key] = resolve_config_interpolations(v, log_nodes=log_nodes, prefix = level_key)
+            return resolve_config_interpolations(v, log_nodes=log_nodes, prefix = level_key)
         elif isinstance(v, list):
             pretty_config[level_key] = str(v)
         else:
