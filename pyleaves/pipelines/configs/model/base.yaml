@@ -13,7 +13,7 @@ params:
     lr_decay_epochs: 10
     lr_momentum: null
     regularization:
-        l2: 1e-10
+        l2: 1e-6
     METRICS: ['f1','accuracy']
 
     head_layers: [256,128]

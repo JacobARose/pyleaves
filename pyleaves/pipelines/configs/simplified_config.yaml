@@ -34,7 +34,7 @@ orchestration:
 callbacks:
     confusion_matrix: 
         log_train: False
-        log_val: False
+        log_val: True
         num_batches: "all"
     early_stopping_patience: 15
     log_images: False

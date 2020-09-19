@@ -31,6 +31,7 @@ from more_itertools import unzip
 import shutil
 import os
 import neptune
+from pathlib import Path
 
 
 def log_hydra_config(backup_dir: str=None):
@@ -117,7 +118,8 @@ def main(config : DictConfig):
 
     neptune.init(project_qualified_name=config.misc.neptune_project_name)
 
-    callbacks = get_callbacks(config, model_config, model, fold.fold_id, train_data=train_data, val_data=val_data, encoder=encoder)
+    csv_path = str(Path(config.run_dirs.results_dir,f'results-fold_{extract_config.fold_id}.csv'))
+    callbacks = get_callbacks(config, model_config, model, csv_path, train_data=train_data, val_data=val_data, encoder=encoder)
 
     print('[BEGINNING TRAINING]')
     params={}#**OmegaConf.to_container(data_config),
@@ -151,21 +153,24 @@ def main(config : DictConfig):
             print('[Caught Exception, saving model first.\nSaved trained model located at:', config.run_dirs.saved_model_path)
             raise e
 
+        if os.path.exists(csv_path):
+            neptune.log_artifact(csv_path)
+
         model.save(config.run_dirs.saved_model_path)
-
-
+        print('[STAGE COMPLETED]')
+        print(f'Saved trained model to {config.run_dirs.saved_model_path}')
 
         print('history.history.keys() =',history.history.keys())
 
-        steps = split_datasets['test'].num_samples//data_config['batch_size']
+        steps = split_datasets['test'].num_samples//data_config.training.batch_size
 
         test_results = evaluate(model, encoder, model_config, data_config, test_data=test_data, steps=steps, num_classes=encoder.num_classes, confusion_matrix=True)
 
         print('TEST RESULTS:')
         pprint(test_results)
 
-        for k,v in test_results.items():
-            neptune.log_metric(k, v)
+        # for k,v in test_results.items():
+        #     neptune.log_metric(k, v)
         # predictions = model.predict(test_data, steps=split_datasets['test'].num_samples)
         
     print(['[FINISHED TRAINING AND TESTING]'])
