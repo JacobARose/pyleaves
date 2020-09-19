@@ -119,7 +119,7 @@ def main(config : DictConfig):
     config.dataset.params = data_config
     config.model.params = model_config
 
-    neptune.init(project_qualified_name=config.neptune_project_name)
+    neptune.init(project_qualified_name=config.misc.neptune_project_name)
 
     callbacks = get_callbacks(config, model_config, model, fold.fold_id, train_data=train_data, val_data=val_data, encoder=encoder)
 
