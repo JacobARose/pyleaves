@@ -59,13 +59,15 @@ def main(config : DictConfig):
     from pprint import pprint
 
 
-    gpu_num = set_tf_config(gpu_num=config.gpu_num, num_gpus=1)
+    gpu_num = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus)
     import tensorflow as tf
     from tensorflow.keras import backend as K
     K.clear_session()
     # preprocess_input(tf.zeros([4, 224, 224, 3]));
+    if config.orchestration.debug:
+        import pdb;pdb.set_trace()
 
-    config = initialize_experiment(config, restore_last=config.restore_last, restore_tfrecords=True)
+    config = initialize_experiment(config, restore_last=config.misc.restore_last, restore_tfrecords=True)
 
     if config.dataset.params.extract.fold_id is None:
         config.dataset.params.extract.fold_id = 0
