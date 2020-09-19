@@ -41,7 +41,7 @@ def log_hydra_config(backup_dir: str=None, config: DictConfig=None):
     if config is not None:
         config_output_path = os.path.join(config.run_dirs.log_dir,'config.yaml')
         with open(config_output_path, 'w') as f:
-            yaml.dump(resolve_config_interpolations(config=config, log_nodes=True), f)
+            yaml.dump(resolve_config_interpolations(config=config, log_nodes=False), f)
         neptune.log_artifact(config_output_path)
         print(f'Logged resolved config to {config_output_path}')
 
@@ -137,7 +137,9 @@ def main(config : DictConfig):
     callbacks = get_callbacks(config, model_config, model, csv_path, train_data=train_data, val_data=val_data, encoder=encoder)
 
     print('[BEGINNING TRAINING]')
-    params={}#**OmegaConf.to_container(data_config),
+    params=resolve_config_interpolations(config=config, log_nodes=False)
+    
+    #**OmegaConf.to_container(data_config),
     #         **OmegaConf.to_container(model_config),
     #         **{k:v for k,v in OmegaConf.to_container(config).items() if ('_dir' in k) and (type(v) != dict)}}
 
