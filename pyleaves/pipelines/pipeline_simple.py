@@ -56,7 +56,7 @@ def main(config : DictConfig):
     import os
     from pyleaves.train.paleoai_train import build_model
     from pyleaves.utils import set_tf_config
-    from pyleaves.utils.experiment_utils import initialize_experiment
+    from pyleaves.utils.experiment_utils import initialize_experiment, print_config
 
     from pyleaves.utils.pipeline_utils import create_dataset, get_callbacks, build_model
     from paleoai_data.utils.kfold_cross_validation import DataFold, StructuredDataKFold
@@ -70,6 +70,7 @@ def main(config : DictConfig):
     # preprocess_input(tf.zeros([4, 224, 224, 3]));
     if config.orchestration.debug:
         import pdb;pdb.set_trace()
+        print_config(config)
 
     config = initialize_experiment(config, restore_last=config.misc.restore_last, restore_tfrecords=True)
 
