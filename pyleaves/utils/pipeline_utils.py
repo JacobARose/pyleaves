@@ -373,7 +373,7 @@ def create_dataset(data_fold: DataFold,
     split_data = {}
     if 'train' in loaded_data.keys():
         split_data['train'] = prep_dataset(loaded_data['train'],
-                                           preprocess_config=preprocess_config,
+                                           preprocess_module=preprocess_config._target_,
                                            batch_size=data_config.training.batch_size,
                                            buffer_size=data_config.training.buffer_size,
                                            shuffle=True,
@@ -386,7 +386,7 @@ def create_dataset(data_fold: DataFold,
                                            seed=seed)
     if 'val' in loaded_data.keys():
         split_data['val'] = prep_dataset(loaded_data['val'],
-                                         preprocess_config=preprocess_config,
+                                         preprocess_module=preprocess_config._target_,
                                          batch_size=data_config.training.batch_size,
                                          target_size=data_config.training.target_size,
                                          num_channels=data_config.extract.num_channels,
@@ -397,7 +397,7 @@ def create_dataset(data_fold: DataFold,
 
     if 'test' in loaded_data.keys():
         split_data['test'] = prep_dataset(loaded_data['test'],
-                                          preprocess_config=preprocess_config,
+                                          preprocess_module=preprocess_config._target_,
                                           batch_size=data_config.training.batch_size,
                                           target_size=data_config.training.target_size,
                                           num_channels=data_config.extract.num_channels,
