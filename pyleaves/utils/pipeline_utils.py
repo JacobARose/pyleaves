@@ -156,7 +156,7 @@ def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=Fals
 
     return image
 
-def apply_preprocess(x, y, num_classes=10, preprocess_config):
+def apply_preprocess(x, y, num_classes, preprocess_config):
     
     return hydra.utils.call(preprocess_config, x), tf.one_hot(y, depth=num_classes)
     # return preprocess_input(x), tf.one_hot(y, depth=num_classes)
