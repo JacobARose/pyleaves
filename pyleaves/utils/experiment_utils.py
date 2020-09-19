@@ -47,7 +47,10 @@ def resolve_config_interpolations(config: DictConfig, log_nodes: bool=False, pre
     
     pretty_config = {}
     for k,v in config.items():
-        level_key = '.'.join([prefix, k])
+        if prefix:
+            level_key = '.'.join([prefix, k])
+        else:
+            level_key = k
         if isinstance(v,DictConfig):
             pretty_config[level_key] = resolve_config_interpolations(v, log_nodes=log_nodes, prefix = level_key)
         else:
