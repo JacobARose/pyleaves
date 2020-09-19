@@ -23,3 +23,5 @@ params:
         _target_: tensorflow.keras.applications.imagenet_utils
         data_format: 'channels_last'
         mode: 'tf'
+
+        # TODO Look up actual mode for resnet preprocess_input

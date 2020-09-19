@@ -115,17 +115,16 @@ def main(config : DictConfig):
         print_config(config)
 
     model = build_model(model_config)
-    
-    model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
 
     config.dataset.params = data_config
     config.model.params = model_config
 
+    neptune.init(project_qualified_name=config.neptune_project_name)
+
     callbacks = get_callbacks(config, model_config, model, fold.fold_id, train_data=train_data, val_data=val_data, encoder=encoder)
 
     print('[BEGINNING TRAINING]')
-    neptune.init(project_qualified_name=config.neptune_project_name)
-
+    model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
     params={}#**OmegaConf.to_container(data_config),
     #         **OmegaConf.to_container(model_config),
     #         **{k:v for k,v in OmegaConf.to_container(config).items() if ('_dir' in k) and (type(v) != dict)}}
