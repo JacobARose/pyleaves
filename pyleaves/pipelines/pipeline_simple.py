@@ -6,6 +6,10 @@ python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_simple.py datas
 python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_simple.py dataset@dataset=PNAS_50 restore_last=False dataset.val_split=0.1 run_description="'First attempt at PNAS_50 after successfully improved baseline performance on PNAS_100 by increasing l2 reg from 4e-10 -> 4e-6 to reduce overfitting'" model.regularization.l2=4e-6 model.lr=1e-4 model.head_layers=[256,128] buffer_size=512 +tags=['reference','PNAS_50'] use_tfrecords=False
 
 
+
+python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_simple.py misc.debug=True
+
+
 '''
 
 
@@ -46,7 +50,7 @@ def log_hydra_config(backup_dir: str=None):
 
 
 
-@hydra.main(config_path='configs', config_name='config')
+@hydra.main(config_path='configs', config_name='simplified_config')
 def main(config : DictConfig):
 
     import os
@@ -104,7 +108,7 @@ def main(config : DictConfig):
     train_data, val_data, test_data = data['train'], data['val'], data['test']
     data_config.num_classes=encoder.num_classes
 
-    model_config.input_shape = (training_config.target_size, extract_config.num_channels)
+    model_config.input_shape = (*training_config.target_size, extract_config.num_channels)
     model_config.num_classes = encoder.num_classes
 
     model = build_model(model_config)
