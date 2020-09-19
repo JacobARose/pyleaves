@@ -41,6 +41,10 @@ def log_hydra_config(backup_dir: str=None, config: DictConfig=None):
     if config:
         neptune.log_artifact(resolve_config_interpolations(config=config))
 
+    if type(config.tags)==list:
+        for tag in config.tags:
+            neptune.append_tag(tag)
+
     override_dir = os.path.join(os.getcwd(),'.hydra')
     config_files = ['config.yaml', 'overrides.yaml', 'hydra.yaml']
     for f in config_files:
@@ -136,6 +140,7 @@ def main(config : DictConfig):
 
         model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
         log_hydra_config(backup_dir=config.run_dirs.log_dir, config=config)
+
 
         if config.orchestration.debug:
             import pdb;pdb.set_trace()

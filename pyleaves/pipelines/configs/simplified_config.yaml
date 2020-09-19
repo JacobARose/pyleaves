@@ -36,7 +36,12 @@ callbacks:
         log_train: False
         log_val: True
         num_batches: "all"
-    early_stopping_patience: 15
+    reduce_lr_on_plateau:
+        patience: 10
+        monitor: "val_weighted_f1"        
+    early_stopping:
+        patience: 15
+        monitor: "val_weighted_f1"
     log_images: False
     log_epochs: [5,10]
 
