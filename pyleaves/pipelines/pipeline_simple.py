@@ -34,12 +34,15 @@ import shutil
 import os
 import neptune
 from pathlib import Path
-
+import yaml
 
 def log_hydra_config(backup_dir: str=None, config: DictConfig=None):
     
     if config:
-        neptune.log_artifact(resolve_config_interpolations(config=config))
+        config_output_path = os.path.join(config.run_dirs.log_dir,'config.yaml')
+        with open(config_output_path, 'w') as f:
+            yaml.dump(resolve_config_interpolations(config=config), f)
+        neptune.log_artifact(config_output_path)
 
     if type(config.tags)==list:
         for tag in config.tags:
