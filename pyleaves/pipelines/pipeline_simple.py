@@ -96,17 +96,17 @@ def main(config : DictConfig):
 
 
     data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
-                                                                         data_config=data_config,
-                                                                         preprocess_config=preprocess_config,
-                                                                         cache=True,
-                                                                         seed=config.misc.seed)
+                                                                   data_config=data_config,
+                                                                   preprocess_config=preprocess_config,
+                                                                   cache=True,
+                                                                   seed=config.misc.seed)
  
 
     if data_config.training.steps_per_epoch is None:
-        data_config.training.steps_per_epoch = split_datasets['train'].num_samples//data_config['batch_size']
+        data_config.training.steps_per_epoch = split_datasets['train'].num_samples//data_config.training.batch_size
 
     if (data_config.training.validation_steps is None) and ('val' in split_datasets):
-        data_config.training.validation_steps = split_datasets['val'].num_samples//data_config['batch_size']
+        data_config.training.validation_steps = split_datasets['val'].num_samples//data_config.training.batch_size
 
     train_data, val_data, test_data = data['train'], data['val'], data['test']
     data_config.num_classes=encoder.num_classes
