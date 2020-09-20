@@ -9,6 +9,7 @@ This script is meant to define helper functions for initializiing a new experime
 """
 
 from datetime import datetime
+from pathlib import Path
 from pprint import pprint
 from pyleaves.utils import ensure_dir_exists
 import os
@@ -76,7 +77,7 @@ def recursively_instantiate_dirs(config: DictConfig, dir_suffix: str='_dir', ver
     for k,v in config.items():
         if isinstance(v,(DictConfig,dict)):
             recursively_instantiate_dirs(config=v, dir_suffix=dir_suffix, verbose=verbose)
-        if k.endswith(dir_suffix):
+        if k.endswith(dir_suffix) and isinstance(v, (str, Path)):
             if verbose:
                 if os.path.exists(v):
                     print(f'Using existing directory: {v}')
