@@ -565,7 +565,7 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
                  reduce_lr,
                  NeptuneMonitor(),
                  CSVLogger(csv_path, separator=',', append=True),
-                 EarlyStopping(monitor=config.callbacks.early_stopping.monitor, patience=config.callbacks.early_stopping.patience, verbose=1, restore_best_weights=True)]
+                 EarlyStopping(monitor=config.callbacks.early_stopping.monitor, patience=config.callbacks.early_stopping.patience, min_delta=config.callbacks.min_delta, verbose=1, restore_best_weights=True)]
 
     if config.callbacks.log_images and (train_data is not None):
         callbacks.append(ImageLoggerCallback(data=train_data, 

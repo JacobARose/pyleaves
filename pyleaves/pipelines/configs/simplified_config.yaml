@@ -42,7 +42,8 @@ callbacks:
         monitor: "val_weighted_f1"        
     early_stopping:
         patience: 15
-        monitor: "val_weighted_f1"
+        monitor: "val_loss"
+        min_delta: 0.1
     log_images: False
     log_epochs: [5,10]
 
