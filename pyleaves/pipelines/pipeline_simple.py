@@ -117,6 +117,7 @@ def main(config : DictConfig):
                                                                    data_config=data_config,
                                                                    preprocess_config=preprocess_config,
                                                                    cache=True,
+                                                                   cache_image_dir=config.run_dirs.cache_dir,
                                                                    seed=config.misc.seed)
  
 

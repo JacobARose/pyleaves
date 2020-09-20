@@ -210,6 +210,7 @@ def prep_dataset(dataset,
                  augmentations=[{}],
                  aug_prob=1.0,
                  training=False,
+                 cache_dir: str=None,
                  seed=None):
 
     
@@ -249,6 +250,9 @@ def prep_dataset(dataset,
             dataset = dataset.map(lambda x,y: rgb2gray_3channel(x, y), num_parallel_calls=-1)
         elif num_channels==1:
             dataset = dataset.map(lambda x,y: rgb2gray_1channel(x, y), num_parallel_calls=-1)
+
+    if cache_dir:
+        dataset = dataset.cache(cache_dir)
 
     dataset = dataset.prefetch(1)
     return dataset
@@ -359,6 +363,7 @@ def create_dataset(data_fold: DataFold,
                    preprocess_config: DictConfig,
                    class_names: List[str]=None,
                    cache: Union[bool,str]=True,
+                   cache_image_dir: str=None,
                    seed: int=None):
 
     # dataset, split_datasets, encoder
@@ -383,6 +388,7 @@ def create_dataset(data_fold: DataFold,
                                            num_classes=num_classes,
                                            augmentations=data_config.training.augmentations,
                                            training=True,
+                                           cache_dir=cache_image_dir,
                                            seed=seed)
     if 'val' in loaded_data.keys():
         split_data['val'] = prep_dataset(loaded_data['val'],
@@ -393,6 +399,7 @@ def create_dataset(data_fold: DataFold,
                                          color_mode=data_config.extract.color_mode,
                                          num_classes=num_classes,
                                          training=False,
+                                         cache_dir=cache_image_dir,
                                          seed=seed)
 
     if 'test' in loaded_data.keys():
@@ -404,6 +411,7 @@ def create_dataset(data_fold: DataFold,
                                           color_mode=data_config.extract.color_mode,
                                           num_classes=num_classes,
                                           training=False,
+                                          cache_dir=cache_image_dir,
                                           seed=seed)
 
     return split_data, extracted_data, split_datasets, encoder
