@@ -45,6 +45,8 @@ def log_hydra_config(backup_dir: str=None, config: DictConfig=None):
             neptune.set_property('dataset_training_'+k,v)
         for k,v in config.model.params.items():
             neptune.set_property('model_'+k,v)
+        for k,v in config.run_dirs.items():
+            neptune.set_property('run_dirs_'+k,v)
         # config_output_path = os.path.join(config.run_dirs.log_dir,'config.yaml')
         # with open(config_output_path, 'w') as f:
         #     yaml.dump(resolve_config_interpolations(config=config, log_nodes=False), f)
