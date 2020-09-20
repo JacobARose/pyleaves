@@ -24,7 +24,7 @@ run_dirs:
     saved_model_path: '${run_dirs.model_dir}/saved_model'
     checkpoints_path: '${run_dirs.model_dir}/checkpoints'
     tfrecord_dir: '/media/data/jacob/experimental_data/tfrecords/${dataset.params.extract.dataset_name}'
-    cache_dir: ${misc.experiment_dir}/cache
+    cache_dir: null #${misc.experiment_dir}/cache
 
 orchestration:
     n_jobs: 1
