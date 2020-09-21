@@ -160,12 +160,8 @@ def main(config : DictConfig):
         log_hydra_config(backup_dir=config.run_dirs.log_dir, config=config)
 
 
-        if config.orchestration.debug:
-            import pdb;pdb.set_trace()
-            print_config(config)
-
         print('[BEGINNING TRAINING]')
-        
+
         try:
             history = model.fit(train_data,
                                 epochs=data_config.training.num_epochs,
@@ -184,6 +180,10 @@ def main(config : DictConfig):
             model.save(config.run_dirs.saved_model_path)
             print('[Caught Exception, saving model first.\nSaved trained model located at:', config.run_dirs.saved_model_path)
             raise e
+
+        if config.orchestration.debug:
+            import pdb;pdb.set_trace()
+            print_config(config)
 
         if os.path.exists(csv_path):
             neptune.log_artifact(csv_path)
