@@ -545,7 +545,8 @@ def tf_data2np(data: tf.data.Dataset, num_batches: int=4):
 
 def get_callbacks(config, model_config, model, csv_path: str, train_data=None, val_data=None, encoder=None):
     from neptunecontrib.monitoring.keras import NeptuneMonitor
-    from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger
+    # from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger
+    from tensorflow.keras.callbacks import EarlyStopping, CSVLogger
     from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback,ReduceLROnPlateau,TensorBoard
     from pyleaves.utils.neptune_utils import ImageLoggerCallback
 
@@ -562,7 +563,8 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
     print('building callbacks')
     callbacks = [tensorboard_callback, #backup_callback,               reduce_lr, #           NeptuneMonitor(),
                  CSVLogger(csv_path, separator=',', append=True),
-                 EarlyStopping(monitor=config.callbacks.early_stopping.monitor, patience=config.callbacks.early_stopping.patience, min_delta=config.callbacks.early_stopping.min_delta, verbose=1, restore_best_weights=False)]#True)]
+                 EarlyStopping(monitor='val_loss', patience=1, min_delta=0.1, verbose=1, restore_best_weights=False)]
+                #  EarlyStopping(monitor=config.callbacks.early_stopping.monitor, patience=config.callbacks.early_stopping.patience, min_delta=config.callbacks.early_stopping.min_delta, verbose=1, restore_best_weights=False)]#True)]
 
     if config.callbacks.log_images and (train_data is not None):
         callbacks.append(ImageLoggerCallback(data=train_data, 
