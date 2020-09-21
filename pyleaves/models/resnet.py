@@ -24,7 +24,8 @@ from tensorflow.keras import datasets, layers, models
 import itertools
 import matplotlib.pyplot as plt
 import pyleaves
-from pyleaves.models.base_model import add_regularization
+# from pyleaves.models.base_model import add_regularization
+from pyleaves.base.base_model import add_regularization
 # from pyleaves.config import DatasetConfig, TrainConfig, ExperimentConfig, ModelConfig
 # from pyleaves.models.base_model import BaseModel
 
