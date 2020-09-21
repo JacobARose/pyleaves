@@ -452,7 +452,8 @@ def build_head(base, num_classes=10, head_layers: List[int]=None):
             ])
 
     else:
-        layers = [base] # ToDo try adding all base layers one by one
+        # layers = [base] # ToDo try adding all base layers one by one
+        layers = [layer for layer in base.layers] # ToDo try adding all base layers one by one
         layers.append(tf.keras.layers.GlobalAveragePooling2D())
         for layer_num, layer_units in enumerate(head_layers):
             layers.append(tf.keras.layers.Dense(layer_units,activation='relu',name=f'dense{layer_num}'))
