@@ -19,6 +19,7 @@ import numpy as np
 import os
 join = os.path.join
 import tempfile
+from time import time
 import tensorflow as tf
 from pyleaves.utils import ensure_dir_exists, validate_filepath
 from pyleaves.train.metrics import METRICS
@@ -26,18 +27,18 @@ from pyleaves.train.metrics import METRICS
 # set_visible_gpus([7])
 
 
-def add_regularization(model, regularizer=tf.keras.regularizers.l2(0.0001)):
+def add_regularization(model, regularizer=tf.keras.regularizers.l2, strength: float=0.0001)):
 
-    if not isinstance(regularizer, tf.keras.regularizers.Regularizer):
-        print("Regularizer must be a subclass of tf.keras.regularizers.Regularizer")
-        return model
+    # if not isinstance(regularizer, tf.keras.regularizers.Regularizer):
+    #     print("Regularizer must be a subclass of tf.keras.regularizers.Regularizer")
+    #     return model
 
     for layer in model.layers:
         for attr in ['kernel_regularizer']:
             if hasattr(layer, attr):
-                setattr(layer, attr, regularizer)
+                setattr(layer, attr, regularizer(strength))
 
-    tmp_saved_model_path = os.path.join(tempfile.gettempdir(), 'tmp_saved_model')
+    tmp_saved_model_path = os.path.join(tempfile.gettempdir(), f'tmp_saved_model-{str(int(time()))}')
     model.save(tmp_saved_model_path)
 
     model = tf.keras.models.load_model(tmp_saved_model_path)
@@ -252,14 +253,19 @@ class BaseModel:
 
         """
 
-        if self.regularization is not None:
-            if 'l2' in self.regularization:
-                regularizer = tf.keras.regularizers.l2(self.regularization['l2'])
-            elif 'l1' in self.regularization:
-                regularizer = tf.keras.regularizers.l1(self.regularization['l1'])
+        if 'l1' in self.regularization:
+            regularizer = tf.keras.regularizers.l1
+            strength = l1
+        elif 'l2' in self.regularization:
+            regularizer = tf.keras.regularizers.l2
+            strength = l2
+        else:
+            return model
 
-            model = add_regularization(model, regularizer)
+        model = add_regularization(model, regularizer=regularizer, strength=strength)
+
         return model
+        
 
     def init_dirs(self):
 
@@ -299,12 +305,14 @@ class Model(BaseModel):
     def add_regularization(cls, model, l1: float=None, l2: float=None):
         
         if l1 is not None:
-            regularizer = tf.keras.regularizers.l1(l1)
+            regularizer = tf.keras.regularizers.l1
+            strength = l1
         elif l2 is not None:
-            regularizer = tf.keras.regularizers.l2(l2)
+            regularizer = tf.keras.regularizers.l2
+            strength = l2
         else:
             return model
 
-        model = add_regularization(model, regularizer)
+        model = add_regularization(model, regularizer=regularizer, strength=strength)
 
         return model
