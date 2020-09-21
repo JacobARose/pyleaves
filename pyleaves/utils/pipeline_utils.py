@@ -552,16 +552,15 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
     reduce_lr = ReduceLROnPlateau(monitor=config.callbacks.reduce_lr_on_plateau.monitor, factor=0.5,
                                   patience=config.callbacks.reduce_lr_on_plateau.patience, min_lr=model_config.lr*0.1)
     
-    backup_callback = BackupAndRestore(config.run_dirs.checkpoints_path)
-    backup_callback.set_model(model)
+    # backup_callback = BackupAndRestore(config.run_dirs.checkpoints_path)
+    # backup_callback.set_model(model)
 
     # log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     tensorboard_callback = TensorBoard(log_dir=config.run_dirs.log_dir)#, histogram_freq=1)
 
 
     print('building callbacks')
-    callbacks = [backup_callback,
-                 tensorboard_callback,
+    callbacks = [tensorboard_callback, #backup_callback,
                  reduce_lr,
                  NeptuneMonitor(),
                  CSVLogger(csv_path, separator=',', append=True),
