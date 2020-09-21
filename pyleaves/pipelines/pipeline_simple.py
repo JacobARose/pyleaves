@@ -78,7 +78,7 @@ def log_hydra_config(backup_dir: str=None, config: DictConfig=None):
 def main(config : DictConfig):
 
     import os
-    from pyleaves.train.paleoai_train import build_model
+    # from pyleaves.train.paleoai_train import build_model
     from pyleaves.utils import set_tf_config
     from pyleaves.utils.experiment_utils import initialize_experiment, print_config
 
@@ -161,11 +161,13 @@ def main(config : DictConfig):
 
 
         print('[BEGINNING TRAINING]')
-
+        if config.orchestration.debug:
+            import pdb;pdb.set_trace()
+            print_config(config)
         try:
             history = model.fit(train_data,
                                 epochs=data_config.training.num_epochs,
-                                callbacks=callbacks,
+                                callbacks=None,#callbacks,
                                 validation_data=val_data,
                                 validation_freq=1,
                                 shuffle=True,
