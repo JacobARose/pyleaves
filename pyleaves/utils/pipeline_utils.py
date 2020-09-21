@@ -492,9 +492,12 @@ def build_model(model_config):
         build_base = partial(model_builder.build_base, weights=model_config.weights, input_shape=model_config.input_shape)
 
     base = build_base()
+
+    base = base_model.Model.add_regularization(base, **model_config.regularization)
+
     model = build_head(base, num_classes=model_config.num_classes, head_layers=model_config.head_layers)
     
-    model = base_model.Model.add_regularization(model, **model_config.regularization)
+    # model = base_model.Model.add_regularization(model, **model_config.regularization)
 
     # initial_learning_rate = model_config['lr']
     # lr_schedule = model_config['lr'] #tf.keras.optimizers.schedules.ExponentialDecay(
