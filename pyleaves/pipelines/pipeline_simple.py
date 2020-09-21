@@ -175,6 +175,10 @@ def main(config : DictConfig):
                                 steps_per_epoch=data_config.training.steps_per_epoch,
                                 validation_steps=data_config.training.validation_steps,
                                 verbose=1)
+
+            if config.orchestration.debug:
+                import pdb;pdb.set_trace()
+                print_config(config)
         except Exception as e:
             model.save(config.run_dirs.saved_model_path)
             print('[Caught Exception, saving model first.\nSaved trained model located at:', config.run_dirs.saved_model_path)
