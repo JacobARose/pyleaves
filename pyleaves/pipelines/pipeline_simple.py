@@ -179,11 +179,12 @@ def main(config : DictConfig):
         except Exception as e:
             model.save(config.run_dirs.saved_model_path)
             print('[Caught Exception, saving model first.\nSaved trained model located at:', config.run_dirs.saved_model_path)
+            if config.orchestration.debug:
+                import pdb;pdb.set_trace()
+                print_config(config)
             raise e
 
-        if config.orchestration.debug:
-            import pdb;pdb.set_trace()
-            print_config(config)
+
 
         if os.path.exists(csv_path):
             neptune.log_artifact(csv_path)
