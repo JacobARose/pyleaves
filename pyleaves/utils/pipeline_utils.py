@@ -29,7 +29,8 @@ import os
 from pprint import pprint
 import pyleaves
 from pyleaves.models import resnet, vgg16
-from pyleaves.models import base_model
+# from pyleaves.models import base_model
+from pyleaves.base import base_model
 from pyleaves.utils import ensure_dir_exists, img_aug_utils as iau
 from paleoai_data.utils.kfold_cross_validation import DataFold
 

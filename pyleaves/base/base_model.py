@@ -37,12 +37,17 @@ def add_regularization(model, regularizer=tf.keras.regularizers.l2(0.0001)):
             if hasattr(layer, attr):
                 setattr(layer, attr, regularizer)
 
-    tmp_weights_path = os.path.join(tempfile.gettempdir(), 'tmp_weights.h5')
-    model.save_weights(tmp_weights_path)
+    tmp_saved_model_path = os.path.join(tempfile.gettempdir(), 'tmp_saved_model')
+    model.save(tmp_saved_model_path)
 
-    model_json = model.to_json()
-    model = tf.keras.models.model_from_json(model_json)
-    model.load_weights(tmp_weights_path, by_name=True)
+    model = tf.keras.models.load_model(tmp_saved_model_path)
+
+    # tmp_weights_path = os.path.join(tempfile.gettempdir(), 'tmp_weights.h5')
+    # model.save_weights(tmp_weights_path)
+
+    # model_json = model.to_json()
+    # model = tf.keras.models.model_from_json(model_json)
+    # model.load_weights(tmp_weights_path, by_name=True)
 
     return model
 
