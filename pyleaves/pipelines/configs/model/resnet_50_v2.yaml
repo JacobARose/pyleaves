@@ -9,7 +9,7 @@ params:
     lr: 4.0e-5 #Karpathy recommends 3e-4
     lr_decay: 1.0
     lr_decay_epochs: 10
-    lr_momentum: null
+    lr_momentum: 0.0
     regularization:
         l2: 4.0e-10
     METRICS: ['f1','accuracy']
