@@ -597,7 +597,7 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
             num_batches = 10
             print(f'invalid value for config.callbacks.confusion_matrix.num_batches={config.callbacks.confusion_matrix.num_batches}.\nContinuing with 10 batches')
         train_data_np = tf_data2np(data=train_data, num_batches=num_batches)
-        train_neptune_visualization_callback = NeptuneVisualizationCallback(train_data_np, num_classes=model_config.num_classes)
+        train_neptune_visualization_callback = NeptuneVisualizationCallback(train_data_np, num_classes=model_config.num_classes, subset_prefix='train')
         callbacks.append(train_neptune_visualization_callback)
 
     if config.callbacks.confusion_matrix.log_val and (val_data is not None):
@@ -609,7 +609,7 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
             num_batches = 10
             print(f'invalid value for config.callbacks.confusion_matrix.num_batches={config.callbacks.confusion_matrix.num_batches}.\nContinuing with 10 batches')
         validation_data_np = tf_data2np(data=val_data, num_batches=num_batches)
-        val_neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=model_config.num_classes)
+        val_neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=model_config.num_classes, subset_prefix='val')
         callbacks.append(val_neptune_visualization_callback)
 
         

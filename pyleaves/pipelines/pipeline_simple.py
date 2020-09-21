@@ -217,7 +217,7 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
     callbacks=[]
     if confusion_matrix:
         from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
-        callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=text_labels, steps=steps))
+        callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=text_labels, steps=steps, subset_prefix='test'))
 
     test_results = model.evaluate(test_data, callbacks=callbacks, steps=steps, verbose=1)
 
@@ -225,7 +225,6 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
     print('Results:')
     for m, result in zip(model.metrics_names, test_results):
         print(f'{m}: {result}')
-
         neptune.log_metric(f'test_{m}', result)
 
     return {m:result for m,result in zip(model.metrics_names, test_results)}

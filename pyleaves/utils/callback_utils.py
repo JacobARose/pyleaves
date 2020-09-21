@@ -236,7 +236,7 @@ class NeptuneVisualizationCallback(Callback):
 	validation_data
 
 	"""
-	def __init__(self, validation_data, num_classes: int=None, labels: List[int]=None, text_labels: List[str]=None, steps: int=None):
+	def __init__(self, validation_data, num_classes: int=None, labels: List[int]=None, text_labels: List[str]=None, steps: int=None, subset_prefix: str=None):
 		super().__init__()
 		print(f'Passed validation data of type {type(validation_data)}')
 		print('isinstance(validation_data, tf.data.Dataset):', isinstance(validation_data, tf.data.Dataset))
@@ -271,6 +271,11 @@ class NeptuneVisualizationCallback(Callback):
 		self.labels = labels
 		self.text_labels = text_labels
 
+		if subset_prefix is None:
+			self.prefix = ''
+		else:
+			self.prefix = subset_prefix+'_'
+
 		self.validation_data = (x_true, y_true)
 		print('Finished initializing NeptuneVisualizationCallback')
 
@@ -289,23 +294,23 @@ class NeptuneVisualizationCallback(Callback):
 
 	def on_batch_end(self, batch, logs={}):
 		for log_name, log_value in logs.items():
-			neptune.log_metric(f'batch_{log_name}', log_value)
+			neptune.log_metric(f'{self.prefix}batch_{log_name}', log_value)
 
 	def on_epoch_end(self, epoch, logs={}):
 		for log_name, log_value in logs.items():
-			neptune.log_metric(f'epoch_{log_name}', log_value)
+			neptune.log_metric(f'{self.prefix}{log_name}', log_value)
 
 		_, y_true, y_prob, y_pred, labels = self.get_predictions(epoch, logs={})
 
 		fig, ax = plt.subplots(figsize=(16, 12))
 		plot_confusion_matrix(y_true, y_pred, labels=labels, ax=ax)
-		neptune.log_image('confusion_matrix', fig)
+		neptune.log_image(f'{self.prefix}confusion_matrix', fig)
 		
 
 		if self.num_classes == 2:
 			fig, ax = plt.subplots(figsize=(16, 12))
 			plot_roc(y_true, y_prob, ax=ax)
-			neptune.log_image('roc_curve', fig)
+			neptune.log_image(f'{self.prefix}roc_curve', fig)
 
 		plt.close('all')
 
@@ -313,18 +318,18 @@ class NeptuneVisualizationCallback(Callback):
 
 	def on_test_end(self, epoch, logs={}):
 		for log_name, log_value in logs.items():
-			neptune.log_metric(f'epoch_{log_name}', log_value)
+			neptune.log_metric(f'{self.prefix}{log_name}', log_value)
 
 		_, y_true, y_prob, y_pred, labels = self.get_predictions(epoch, logs=logs)
 
 		fig, ax = plt.subplots(figsize=(16, 12))
 		plot_confusion_matrix(y_true, y_pred, labels=labels, ax=ax)
-		neptune.log_image('confusion_matrix', fig)
+		neptune.log_image(f'{self.prefix}confusion_matrix', fig)
 
 		if self.num_classes == 2:
 			fig, ax = plt.subplots(figsize=(16, 12))
 			plot_roc(y_true, y_prob, ax=ax)
-			neptune.log_image('roc_curve', fig)
+			neptune.log_image(f'{self.prefix}roc_curve', fig)
 		plt.close('all')
 
 # class NeptuneVisualizationCallback(Callback):
