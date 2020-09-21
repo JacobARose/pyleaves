@@ -145,7 +145,6 @@ def main(config : DictConfig):
     csv_path = str(Path(config.run_dirs.results_dir,f'results-fold_{extract_config.fold_id}.csv'))
     callbacks = get_callbacks(config, model_config, model, csv_path, train_data=train_data, val_data=val_data, encoder=encoder)
 
-    print('[BEGINNING TRAINING]')
     params=resolve_config_interpolations(config=config, log_nodes=False)
     
     #**OmegaConf.to_container(data_config),
@@ -165,6 +164,8 @@ def main(config : DictConfig):
             import pdb;pdb.set_trace()
             print_config(config)
 
+        print('[BEGINNING TRAINING]')
+        
         try:
             history = model.fit(train_data,
                                 epochs=data_config.training.num_epochs,

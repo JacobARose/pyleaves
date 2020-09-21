@@ -549,8 +549,8 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
     from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback,ReduceLROnPlateau,TensorBoard
     from pyleaves.utils.neptune_utils import ImageLoggerCallback
 
-    reduce_lr = ReduceLROnPlateau(monitor=config.callbacks.reduce_lr_on_plateau.monitor, factor=0.5,
-                                  patience=config.callbacks.reduce_lr_on_plateau.patience, min_lr=model_config.lr*0.1)
+    # reduce_lr = ReduceLROnPlateau(monitor=config.callbacks.reduce_lr_on_plateau.monitor, factor=0.5,
+    #                               patience=config.callbacks.reduce_lr_on_plateau.patience, min_lr=model_config.lr*0.1)
     
     # backup_callback = BackupAndRestore(config.run_dirs.checkpoints_path)
     # backup_callback.set_model(model)
@@ -560,9 +560,7 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
 
 
     print('building callbacks')
-    callbacks = [tensorboard_callback, #backup_callback,
-                 reduce_lr,
-                 NeptuneMonitor(),
+    callbacks = [tensorboard_callback, #backup_callback,               reduce_lr, #           NeptuneMonitor(),
                  CSVLogger(csv_path, separator=',', append=True),
                  EarlyStopping(monitor=config.callbacks.early_stopping.monitor, patience=config.callbacks.early_stopping.patience, min_delta=config.callbacks.early_stopping.min_delta, verbose=1, restore_best_weights=True)]
 

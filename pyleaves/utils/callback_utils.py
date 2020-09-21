@@ -298,7 +298,7 @@ class NeptuneVisualizationCallback(Callback):
 
 	def on_epoch_end(self, epoch, logs={}):
 		for log_name, log_value in logs.items():
-			neptune.log_metric(f'{self.prefix}{log_name}', log_value)
+			neptune.log_metric(log_name, log_value)
 
 		_, y_true, y_prob, y_pred, labels = self.get_predictions(epoch, logs={})
 
@@ -318,7 +318,7 @@ class NeptuneVisualizationCallback(Callback):
 
 	def on_test_end(self, epoch, logs={}):
 		for log_name, log_value in logs.items():
-			neptune.log_metric(f'{self.prefix}{log_name}', log_value)
+			neptune.log_metric(log_name, log_value)
 
 		_, y_true, y_prob, y_pred, labels = self.get_predictions(epoch, logs=logs)
 
