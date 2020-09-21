@@ -27,7 +27,7 @@ from pyleaves.train.metrics import METRICS
 # set_visible_gpus([7])
 
 
-def add_regularization(model, regularizer=tf.keras.regularizers.l2, strength: float=0.0001)):
+def add_regularization(model, regularizer=tf.keras.regularizers.l2, strength: float=0.0001):
 
     # if not isinstance(regularizer, tf.keras.regularizers.Regularizer):
     #     print("Regularizer must be a subclass of tf.keras.regularizers.Regularizer")
@@ -255,10 +255,10 @@ class BaseModel:
 
         if 'l1' in self.regularization:
             regularizer = tf.keras.regularizers.l1
-            strength = l1
+            strength = self.regularization['l1']
         elif 'l2' in self.regularization:
             regularizer = tf.keras.regularizers.l2
-            strength = l2
+            strength = self.regularization['l2']
         else:
             return model
 
