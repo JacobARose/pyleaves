@@ -504,9 +504,9 @@ def build_model(model_config):
                             # initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True
 
     if model_config.optimizer == "RMSprop":
-        optimizer = tf.keras.optimizers.RMSprop(learning_rate=model_config.lr, momentum=model_config['momentum'], decay=model_config['decay'])
+        optimizer = tf.keras.optimizers.RMSprop(learning_rate=model_config.lr, momentum=model_config.lr_momentum)#, decay=model_config.lr_decay)
     elif model_config.optimizer == "SGD":
-        optimizer = tf.keras.optimizers.SGD(learning_rate=model_config.lr, momentum=model_config['momentum'])
+        optimizer = tf.keras.optimizers.SGD(learning_rate=model_config.lr, momentum=model_config.lr_momentum)
     elif model_config.optimizer == "Adam":
         optimizer = tf.keras.optimizers.Adam(learning_rate=model_config.lr)
 
