@@ -11,7 +11,7 @@ defaults:
     
 #hydra/launcher.n_jobs: 2
 
-task: 1
+task: ${hydra:job.num}
 
 misc:
     experiment_start_time: null

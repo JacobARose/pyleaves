@@ -175,7 +175,7 @@ def main(config : DictConfig):
     # import pdb
     # pdb.set_trace()
     print('AFTER PDB')
-
+    print('hydra.job.num=task=',config.task)
     try:
         # TODO spawn 8 lock files for the GPUs
         # job_num = int(HydraConfig.get().job.num)
