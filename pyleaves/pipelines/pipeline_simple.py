@@ -140,7 +140,11 @@ def main(config : DictConfig):
     from pyleaves.utils.pipeline_utils import create_dataset, get_callbacks, build_model
     from paleoai_data.utils.kfold_cross_validation import DataFold, StructuredDataKFold
     # config.orchestration.gpu_num = 
-    set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus)
+    try:
+        gpu = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus, wait=int(hydra.job.id))
+        print(f'Job number {hydra.job.id} assigned to GPU {gpu}', dir(gpu))
+    except:
+        print('Failed to set tf_gpu config with hydra.job.id. Continuing anyway.')
     import tensorflow as tf
     from tensorflow.keras import backend as K
     K.clear_session()
