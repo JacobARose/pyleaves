@@ -7,6 +7,11 @@ python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_simple.py datas
 
 
 
+
+
+python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_simple.py dataset@dataset=PNAS_family_100 model@model=resnet_50_v2 restore_last=False dataset.params.extract.val_split=0.1 misc.run_description="" model.params.regularization.l2=4e-3 model.params.lr=1e-4 model.params.head_layers=[512,256] dataset.params.training.buffer_size=128 tags=["reference","PNAS_family_100"] dataset.params.training.batch_size=16 dataset.params.training.num_epochs=30, 'model.params.frozen_layers=null,(0,-4)' -m
+
+
 python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_simple.py misc.debug=True
 
 
@@ -134,7 +139,8 @@ def main(config : DictConfig):
     from pyleaves.utils.experiment_utils import initialize_experiment, print_config
     from pyleaves.utils.pipeline_utils import create_dataset, get_callbacks, build_model
     from paleoai_data.utils.kfold_cross_validation import DataFold, StructuredDataKFold
-    config.orchestration.gpu_num = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus)
+    # config.orchestration.gpu_num = 
+    set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus)
     import tensorflow as tf
     from tensorflow.keras import backend as K
     K.clear_session()
