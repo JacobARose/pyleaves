@@ -4,8 +4,11 @@ defaults:
     - model/base
     - dataset@dataset: Leaves-PNAS
     - model@model: resnet_50_v2
-    
     - db@db : sqlite
+
+    - hydra/launcher: joblib
+
+task: 1
 
 misc:
     experiment_start_time: null
