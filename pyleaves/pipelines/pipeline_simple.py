@@ -136,10 +136,11 @@ def validate_model_config(config):
     if model_config.frozen_layers is not None:
         if type(model_config.frozen_layers) not in [list,tuple]:
             model_config.frozen_layers = None
-        if len(model_config.frozen_layers)==0:
+        elif len(model_config.frozen_layers)==0:
             model_config.frozen_layers = None
-        for i, l in enumerate(model_config.frozen_layers):
-            model_config.frozen_layers[i] = int(l)
+        else:
+            for i, l in enumerate(model_config.frozen_layers):
+                model_config.frozen_layers[i] = int(l)
 
     config.model.params = model_config
 
