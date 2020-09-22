@@ -16,6 +16,28 @@ python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_simple.py misc.
 
 
 
+
+
+
+
+
+# TODO
+
+1. PNAS train/val/test -> evaluate on Fossil
+2. Leaves train/val -> evaluate on Fossil
+3. Leaves_in_PNAS train/val/test vs. PNAS_in_Leaves train/val/test
+        -For the above, should I shuffle catalog_numbers and assign the same pairs to train, val, or test, respectively? e.g. catalog_number=Wolfe_2837, then if the image w/ that catalog_number in Leaves gets assigned to the Leaves validation set, its match in PNAS will be in the corresponding PNAS validation set
+        -one-to-one sample-level correspondence
+    vs
+        -shuffling them separately, so many samples will exist in more than one subset, spanning different datasets
+
+python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_simple.py dataset@dataset=Fossil_family_100 
+
+
+
+
+
+
 freeze resnet50_v2 sweep [0,-x]
 
 -x layer[-x].name

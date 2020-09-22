@@ -33,15 +33,15 @@ def setGPU(gpu_num: List[int]=None, only_return: bool=False, num_gpus: int=None,
     pairs = list(zip(ids, ratios))
     random.shuffle(pairs)
         # bestGPU = min(pairs, key=lambda x: x[1])[0]
+    sorted_gpus = [x[0] for x in sorted(pairs, key=lambda x: x[1])]
     if gpu_num is None:
-        gpu_num = [x[0] for x in sorted(pairs, key=lambda x: x[1])][:num_gpus]
+        gpu_num = sorted_gpus[:num_gpus]
     elif type(gpu_num)==list:
-        gpus = [x[0] for x in sorted(pairs, key=lambda x: x[1])]#[:len(gpu_num)]
-        gpu_num = [int(gpus[num]) for num in gpu_num]
+        gpu_num = [int(sorted_gpus[num]) for num in gpu_num]
     elif type(gpu_num)==str:
-        gpu_num = [int(gpu_num)]
+        gpu_num = [sorted_gpus[int(gpu_num)]]
     elif type(gpu_num)==int:
-        gpu_num = [gpu_num]
+        gpu_num = [sorted_gpus[gpu_num]]
 
 
 
