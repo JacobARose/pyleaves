@@ -1,0 +1,64 @@
+defaults:
+
+    - dataset1@dataset/base
+    - dataset2@dataset/base
+
+    - model/base
+    - dataset1@dataset: Leaves-PNAS_family_100
+    - dataset2@dataset: PNAS-Leaves_family_100
+    - model@model: resnet_50_v2
+    - db@db : sqlite
+
+    - hydra/launcher: joblib
+    
+
+task: ${hydra:job.num}
+
+misc:
+    experiment_start_time: null
+    neptune_project_name: "jacobarose/2stage-simplified-baselines"
+    neptune_experiment_dir: "/media/data/jacob/2stage-simplified-baselines"
+    run_description: ""
+    experiment_name: ${dataset1.params.extract.dataset_name}_{dataset2.params.extract.dataset_name}_${model.params.model_name}_${dataset1.params.training.target_size}
+    experiment_dir: ${misc.neptune_experiment_dir}/${misc.experiment_name}/${misc.experiment_start_time}
+    restore_last: True
+    seed: 45
+
+run_dirs:
+    log_dir: '${misc.experiment_dir}/log_dir'
+    model_dir: '${misc.experiment_dir}/model_dir'
+    results_dir: '${misc.experiment_dir}/results_dir'
+    saved_model_path: '${run_dirs.model_dir}/saved_model'
+    checkpoints_path: '${run_dirs.model_dir}/checkpoints'
+    tfrecord_dir: '/media/data/jacob/experimental_data/tfrecords/${dataset1.params.extract.dataset_name}'
+    cache_dir: null #${misc.experiment_dir}/cache
+
+orchestration:
+    n_jobs: 1
+    num_gpus: 1
+    gpu_num: ${task}
+    debug: False
+    wait: 5
+
+callbacks:
+    confusion_matrix: 
+        log_train: False
+        log_val: True
+        num_batches: "all"
+    reduce_lr_on_plateau:
+        patience: 10
+        monitor: "val_weighted_f1"        
+    early_stopping:
+        patience: 15
+        monitor: "val_loss"
+        min_delta: 0.1
+        restore_best_weights: True
+    log_images: False
+    log_epochs: [5,10]
+
+debugging:
+    overfit_one_batch: False # set this to True to limit the training pipeline to just repeat a single batch
+    log_model_input_stats: False # Set this to True to log statistical means of the input images from the first batch for each subset
+
+tags:
+    - null
