@@ -37,6 +37,7 @@ orchestration:
     num_gpus: 1
     gpu_num: null
     debug: False
+    wait: 5
 
 callbacks:
     confusion_matrix: 

@@ -178,16 +178,17 @@ def main(config : DictConfig):
 
     try:
         # TODO spawn 8 lock files for the GPUs
-        job_num = int(HydraConfig.get().job.num)
-        
-        print(f'job_num = int(HydraConfig.get().job.num) = {job_num}')
+        # job_num = int(HydraConfig.get().job.num)
+        job_num = os.getpid()%8
+        print(f'job_num = os.getpid()%8 = {job_num}')
+        # print(f'job_num = int(HydraConfig.get().job.num) = {job_num}')
     except Exception as e:
         print(f'CAUGHT EXCEPTION {e}')
         # job_num = int(np.random.randint(0,8))
         job_num = os.getpid()%8
-        print(f'job_num = int(np.random.randint(0,8)) = {job_num}')
+        # print(f'job_num = int(np.random.randint(0,8)) = {job_num}')
     try:
-        gpu = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus, wait=job_num)
+        gpu = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus, wait=job_num*config.orchestration.wait)
         print(f'Job number {job_num} assigned to GPU {gpu}', dir(gpu))
     except:
         print('Failed to set tf_gpu config with hydra.job.id. Continuing anyway.')
