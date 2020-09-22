@@ -489,7 +489,7 @@ def build_model(model_config):
             model_builder = vgg16.VGG16GrayScale(model_config)
             build_base = model_builder.build_base
         else:
-            build_base = partial(build_base_vgg16_RGB, weights=model_config.weights, input_shape=model_config.input_shape)
+            build_base = partial(build_base_vgg16_RGB, weights=model_config.weights, input_shape=model_config.input_shape, frozen_layers=model_config.frozen_layers)
 
     elif model_config['model_name'].startswith('resnet'):
         model_builder = resnet.ResNet(model_config)
