@@ -19,7 +19,7 @@ import neptune
 
 def clean_experiment_tree(config: DictConfig):
     if not os.path.isdir(config.misc.experiment_dir):
-        print(f'Attempted to clean nonexistent experiment directory at {config.misc.experiment_dir}. Continuing without action.')
+        print(f'restore_last is set to False, but previous experiment not found at specified experiment_dir: {config.misc.experiment_dir}. Continuing without action.')
         return
     print('Cleaning experiment file tree from root:\n',config.misc.experiment_dir)
     shutil.rmtree(config.misc.experiment_dir)
