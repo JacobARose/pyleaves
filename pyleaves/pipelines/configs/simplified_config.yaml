@@ -9,7 +9,7 @@ defaults:
     - hydra/launcher: joblib
     
     
-hydra/launcher.n_jobs: 2
+#hydra/launcher.n_jobs: 2
 
 task: 1
 
