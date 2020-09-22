@@ -1,7 +1,7 @@
 defaults:
 
-    - dataset1@dataset/base
-    - dataset2@dataset/base
+    - dataset1: dataset/base
+    - dataset2: dataset/base
 
     - model/base
     - dataset1@dataset: Leaves-PNAS_family_100
