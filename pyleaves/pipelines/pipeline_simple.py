@@ -44,7 +44,7 @@ freeze resnet50_v2 sweep [0,-x]
 
 
 # from hydra.experimental import compose, initialize
-from omegaconf import OmegaConf, DictConfig
+from omegaconf import OmegaConf, DictConfig, ListConfig
 
 # with initialize(config_path="configs"):
 #     config = compose(config_name="config", overrides=['dataset@dataset=PNAS','use_tfrecords=False'])
@@ -136,16 +136,17 @@ def validate_model_config(config):
     print('model_config.frozen_layers: ', model_config.frozen_layers)
     print('type(model_config.frozen_layers): ', type(model_config.frozen_layers))
     if model_config.frozen_layers is not None:
-        if type(model_config.frozen_layers) not in [list,tuple]:
+        if type(model_config.frozen_layers) not in [list,tuple,ListConfig]:
             model_config.frozen_layers = None
         elif len(model_config.frozen_layers)==0:
             model_config.frozen_layers = None
         else:
             for i, l in enumerate(model_config.frozen_layers):
                 model_config.frozen_layers[i] = int(l)
+            model_config.frozen_layers = list(model_config.frozen_layers)
     print('model_config.frozen_layers: ', model_config.frozen_layers)
     print('type(model_config.frozen_layers): ', type(model_config.frozen_layers))
-    
+
     config.model.params = model_config
 
     return config
