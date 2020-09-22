@@ -90,7 +90,7 @@ def recursively_instantiate_dirs(config: DictConfig, dir_suffix: str='_dir', ver
 def initialize_experiment(config: DictConfig, restore_last: bool=True, restore_tfrecords: bool=True, verbose=True):
     date_format = '%Y-%m-%d_%H-%M-%S'
 
-    config.misc.experiment_start_time = datetime.now().strftime(date_format)
+    config.misc.experiment_start_time = f'task-{config.task}_{datetime.now().strftime(date_format)}'
 
     if not restore_last:
         clean_experiment_tree(config)
