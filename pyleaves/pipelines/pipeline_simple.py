@@ -155,6 +155,10 @@ def validate_model_config(config):
         if model_config.regularization[regularizer_L] is not None:
             model_config.regularization[regularizer_L] = float(model_config.regularization[regularizer_L])
 
+    if 'l1' in model_config.regularization:
+        if model_config.regularization.l1 is not None:
+            model_config.regularization.l2 = None
+
     print('model_config.frozen_layers: ', model_config.frozen_layers)
     print('type(model_config.frozen_layers): ', type(model_config.frozen_layers))
     if model_config.frozen_layers is not None:
