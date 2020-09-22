@@ -14,6 +14,7 @@ params:
     lr_momentum: 0.0
     regularization:
         l2: 1e-6
+        l1: null
     METRICS: ['f1','accuracy']
 
     head_layers: [256,128]

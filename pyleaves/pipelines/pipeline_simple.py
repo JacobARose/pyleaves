@@ -314,7 +314,23 @@ def main(config : DictConfig):
         # for k,v in test_results.items():
         #     neptune.log_metric(k, v)
         # predictions = model.predict(test_data, steps=split_datasets['test'].num_samples)
-        
+
+    # fold_path = DataFold.query_fold_dir(extract_config.fold_dir, extract_config.fold_id)
+    # fold = DataFold.from_artifact_path(fold_path)
+    # data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
+    #                                                                data_config=data_config,
+    #                                                                preprocess_config=preprocess_config,
+    #                                                                cache=True,
+    #                                                                cache_image_dir=config.run_dirs.cache_dir,
+    #                                                                seed=config.misc.seed)
+
+
+
+
+
+
+
+
     print(['[FINISHED TRAINING AND TESTING]'])
 
     return test_results
