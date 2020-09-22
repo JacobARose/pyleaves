@@ -34,7 +34,7 @@ def cleanup_tfrecords(config: DictConfig):
     assert not os.path.isdir(config.run_dirs.tfrecord_dir)
 
 
-def resolve_config_interpolations(config: DictConfig, log_nodes: bool=False, prefix: str=None) -> dict:
+def resolve_config_interpolations(config: DictConfig, log_nodes: bool=False, experiment=None, prefix: str=None) -> dict:
     """Recursively walk through a DictConfig object an convert any values that are also of type DictConfig to a regular dict.
 
     This is useful for displaying the true contents of a DictConfig that contains value interpolations, since by default they display the raw interpolation instead of its resolved value.
@@ -45,6 +45,7 @@ def resolve_config_interpolations(config: DictConfig, log_nodes: bool=False, pre
     Returns:
         dict: [description]
     """    
+    experiment = experiment or neptune
     
     pretty_config = {}
     for k,v in config.items():
@@ -53,13 +54,13 @@ def resolve_config_interpolations(config: DictConfig, log_nodes: bool=False, pre
         else:
             level_key = k
         if isinstance(v,DictConfig):
-            return resolve_config_interpolations(v, log_nodes=log_nodes, prefix = level_key)
+            pretty_config.update(**resolve_config_interpolations(v, log_nodes=log_nodes, experiment=experiment, prefix = level_key))
         elif isinstance(v, list):
             pretty_config[level_key] = str(v)
         else:
             pretty_config[level_key] = v
             if log_nodes:
-                neptune.set_property(level_key, v)
+                experiment.set_property(level_key, pretty_config[k])
     return pretty_config
 
 def print_config(config):

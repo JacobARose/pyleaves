@@ -23,7 +23,7 @@ class ImageLoggerCallback(Callback):
 
     Callback that keeps track of a tf.data.Dataset and logs the correct batch to neptune based on the current batch.
     '''
-    def __init__(self, data :tf.data.Dataset, freq=1, max_images=-1, name='', encoder=None, neptune_logger=None, include_predictions=False, log_epochs: List[int]=None):
+    def __init__(self, data :tf.data.Dataset, freq=1, max_images=-1, name='', encoder=None, experiment=None, include_predictions=False, log_epochs: List[int]=None):
 
         self.data = data
         self.freq = freq
@@ -31,7 +31,7 @@ class ImageLoggerCallback(Callback):
         self.name = name
         self.encoder=encoder
         self.init_iterator()
-        self.neptune_logger = neptune_logger or neptune
+        self.experiment = experiment or neptune
         self.include_predictions = include_predictions
         self.log_epochs = log_epochs or []
 
@@ -61,7 +61,7 @@ class ImageLoggerCallback(Callback):
         plt.title(plot_title)
         fig.set_facecolor(canvas_color)
 
-        self.neptune_logger.log_image(log_name= name or self.name,
+        self.experiment.log_image(log_name= name or self.name,
                           x=counter,
                           y=fig)
         plt.close('all')

@@ -30,42 +30,92 @@ from typing import List, Union
 import random
 import numpy as np
 from more_itertools import unzip
+from pprint import pprint
 import shutil
 import os
 import neptune
 from pathlib import Path
 import yaml
 
-def log_hydra_config(backup_dir: str=None, config: DictConfig=None):
-    
+def log_hydra_config(backup_dir: str=None, config: DictConfig=None, experiment=None):
+    experiment = experiment or neptune
     if config is not None:
         for k,v in config.dataset.params.extract.items():
-            neptune.set_property('dataset_extract_'+k,v)
+            experiment.set_property(k+'_dataext',v)
         for k,v in config.dataset.params.training.items():
-            neptune.set_property('dataset_training_'+k,v)
+            experiment.set_property(k+'_datatrain',v)
         for k,v in config.model.params.items():
-            neptune.set_property('model_'+k,v)
+            experiment.set_property(k+'_model',v)
         for k,v in config.run_dirs.items():
-            neptune.set_property('run_dirs_'+k,v)
+            experiment.set_property(k,v)
         # config_output_path = os.path.join(config.run_dirs.log_dir,'config.yaml')
         # with open(config_output_path, 'w') as f:
         #     yaml.dump(resolve_config_interpolations(config=config, log_nodes=False), f)
-        # neptune.log_artifact(config_output_path)
+        # experiment.log_artifact(config_output_path)
         # print(f'Logged resolved config to {config_output_path}')
 
     if type(config.tags)==list:
         for tag in config.tags:
-            neptune.append_tag(tag)
+            experiment.append_tag(tag)
 
     override_dir = os.path.join(os.getcwd(),'.hydra')
     config_files = ['config.yaml', 'overrides.yaml', 'hydra.yaml']
     for f in config_files:
         filepath = os.path.join(override_dir, f)
         if os.path.exists(filepath):
-            neptune.log_artifact(filepath)
+            experiment.log_artifact(filepath)
 
             if isinstance(backup_dir, str):
                 shutil.copy(filepath, backup_dir)
+
+
+
+
+def validate_model_config(config):
+    """
+     TODO  Add logging
+
+    Args:
+        config ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """    
+    assert 'params' in config.model
+    model_config = config.model.params
+
+    model_config.model_name = str(model_config.model_name)
+    assert model_config.weights in ['imagenet', None] 
+    assert len(model_config.input_shape) == 3 and \
+            model_config.input_shape[0]==model_config.input_shape[1] and \
+            model_config.input_shape[2] in [1,3]
+    assert isinstance(model_config.num_classes, (int, type(None)))
+    assert model_config.num_channels==model_config.input_shape[2]
+    assert model_config.optimizer in ['Adam', 'SGD', 'RMSprop']
+    assert model_config.loss in ['categorical_crossentropy']
+    model_config.lr = float(model_config.lr)
+    model_config.lr_decay = float(model_config.lr_decay)
+    model_config.lr_decay_epochs = int(model_config.lr_decay_epochs)
+    model_config.lr_momentum = float(model_config.lr_momentum)
+    
+    for regularizer_L in model_config.regularization.keys():
+        if model_config.regularization[regularizer_L] is not None:
+            model_config.regularization[regularizer_L] = float(model_config.regularization[regularizer_L])
+
+    if model_config.frozen_layers is not None:
+        assert isinstance(model_config.frozen_layers, tuple)
+        for i, l in enumerate(model_config.frozen_layers):
+            model_config.frozen_layers[i] = int(l)
+
+    config.model.params = model_config
+
+    return config
+
+
+
+
+
+
 
 
 
@@ -77,28 +127,23 @@ def log_hydra_config(backup_dir: str=None, config: DictConfig=None):
 @hydra.main(config_path='configs', config_name='simplified_config')
 def main(config : DictConfig):
 
-    import os
+    OmegaConf.set_struct(config, False)
+
     # from pyleaves.train.paleoai_train import build_model
     from pyleaves.utils import set_tf_config
     from pyleaves.utils.experiment_utils import initialize_experiment, print_config
-
     from pyleaves.utils.pipeline_utils import create_dataset, get_callbacks, build_model
     from paleoai_data.utils.kfold_cross_validation import DataFold, StructuredDataKFold
-    from pprint import pprint
-
-
-    gpu_num = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus)
+    config.orchestration.gpu_num = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus)
     import tensorflow as tf
     from tensorflow.keras import backend as K
     K.clear_session()
-    # preprocess_input(tf.zeros([4, 224, 224, 3]));
-
 
     config = initialize_experiment(config, restore_last=config.misc.restore_last, restore_tfrecords=True)
-
     if config.dataset.params.extract.fold_id is None:
         config.dataset.params.extract.fold_id = 0
 
+    config = validate_model_config(config) #ensure learning rate is passed as float, as well as some more checks
 
     data_config = config.dataset.params
     extract_config = config.dataset.params.extract
@@ -106,23 +151,15 @@ def main(config : DictConfig):
     model_config = config.model.params
     preprocess_config = config.model.params.preprocess_input
 
-
-
     fold_path = DataFold.query_fold_dir(extract_config.fold_dir, extract_config.fold_id)
     fold = DataFold.from_artifact_path(fold_path)
-
-
-    # data, split_datasets, encoder = create_dataset(data_fold=fold,
-    #                                                cfg=data_config)
-
     data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
                                                                    data_config=data_config,
                                                                    preprocess_config=preprocess_config,
                                                                    cache=True,
                                                                    cache_image_dir=config.run_dirs.cache_dir,
                                                                    seed=config.misc.seed)
- 
-
+    # TODO hash and log extracted_data
     if data_config.training.steps_per_epoch is None:
         data_config.training.steps_per_epoch = split_datasets['train'].num_samples//data_config.training.batch_size
 
@@ -131,34 +168,24 @@ def main(config : DictConfig):
 
     train_data, val_data, test_data = data['train'], data['val'], data['test']
     data_config.extract.num_classes=encoder.num_classes
-
     model_config.input_shape = (*training_config.target_size, extract_config.num_channels)
     model_config.num_classes = encoder.num_classes
-
     model = build_model(model_config)
 
     config.dataset.params = data_config
     config.model.params = model_config
 
+
     neptune.init(project_qualified_name=config.misc.neptune_project_name)
-
-    csv_path = str(Path(config.run_dirs.results_dir,f'results-fold_{extract_config.fold_id}.csv'))
-    # callbacks = get_callbacks(config, model_config, model, csv_path, train_data=train_data, val_data=val_data, encoder=encoder)
-
     params=resolve_config_interpolations(config=config, log_nodes=False)
-    
-    #**OmegaConf.to_container(data_config),
-    #         **OmegaConf.to_container(model_config),
-    #         **{k:v for k,v in OmegaConf.to_container(config).items() if ('_dir' in k) and (type(v) != dict)}}
 
-    # pprint(params)
+    # neptune_experiment_name = config.misc.experiment_name
+    with neptune.create_experiment(name=config.misc.experiment_name, params=params, upload_source_files=['*.py']) as experiment:
+        model.summary(print_fn=lambda x: experiment.log_text('model_summary', x))
+        log_hydra_config(backup_dir=config.run_dirs.log_dir, config=config, experiment=experiment)
 
-    neptune_experiment_name = config.misc.experiment_name
-    with neptune.create_experiment(name=neptune_experiment_name, params=params, upload_source_files=['*.py']):
-
-        model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-        log_hydra_config(backup_dir=config.run_dirs.log_dir, config=config)
-
+        csv_path = str(Path(config.run_dirs.results_dir,f'results-fold_{extract_config.fold_id}.csv'))
+        callbacks = get_callbacks(config, model_config, model, csv_path, train_data=train_data, val_data=val_data, encoder=encoder, experiment=experiment)
 
         print('[BEGINNING TRAINING]')
         if config.orchestration.debug:
@@ -167,7 +194,7 @@ def main(config : DictConfig):
         try:
             history = model.fit(train_data,
                                 epochs=data_config.training.num_epochs,
-                                callbacks=None,#callbacks,
+                                callbacks=callbacks,
                                 validation_data=val_data,
                                 validation_freq=1,
                                 shuffle=True,
@@ -189,7 +216,7 @@ def main(config : DictConfig):
 
 
         if os.path.exists(csv_path):
-            neptune.log_artifact(csv_path)
+            experiment.log_artifact(csv_path)
 
         model.save(config.run_dirs.saved_model_path)
         print('[STAGE COMPLETED]')
@@ -199,7 +226,7 @@ def main(config : DictConfig):
 
         steps = split_datasets['test'].num_samples//data_config.training.batch_size
 
-        test_results = evaluate(model, encoder, model_config, data_config, test_data=test_data, steps=steps, num_classes=encoder.num_classes, confusion_matrix=True)
+        test_results = evaluate(model, encoder, model_config, data_config, test_data=test_data, steps=steps, num_classes=encoder.num_classes, confusion_matrix=True, experiment=experiment)
 
         print('TEST RESULTS:')
         pprint(test_results)
@@ -212,8 +239,9 @@ def main(config : DictConfig):
 
     return test_results
 
-def evaluate(model, encoder, model_config, data_config, test_data=None, steps: int=None, num_classes: int=None, confusion_matrix=True):
+def evaluate(model, encoder, model_config, data_config, test_data=None, steps: int=None, num_classes: int=None, confusion_matrix=True, experiment=None):
 
+    experiment = experiment or neptune
     print('Preparing for model evaluation')
 
     test_data = test_data
@@ -225,7 +253,7 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
     callbacks=[]
     if confusion_matrix:
         from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
-        callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=text_labels, steps=steps, subset_prefix='test'))
+        callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=text_labels, steps=steps, subset_prefix='test', experiment=experiment))
 
     test_results = model.evaluate(test_data, callbacks=callbacks, steps=steps, verbose=1)
 
@@ -233,7 +261,7 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
     print('Results:')
     for m, result in zip(model.metrics_names, test_results):
         print(f'{m}: {result}')
-        neptune.log_metric(f'test_{m}', result)
+        experiment.log_metric(f'test_{m}', result)
 
     return {m:result for m,result in zip(model.metrics_names, test_results)}
 

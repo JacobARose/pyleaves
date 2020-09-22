@@ -13,7 +13,7 @@ Mostly refactored versions of functions originally defined in pyleaves.train.pal
 # from pyleaves.datasets import base_dataset
 from paleoai_data.dataset_drivers import base_dataset
 from paleoai_data.utils.kfold_cross_validation import DataFold
-from typing import List, Union
+from typing import List, Union, Tuple
 import random
 import numpy as np
 from more_itertools import unzip
@@ -430,11 +430,15 @@ def create_dataset(data_fold: DataFold,
 
 
 
-def build_base_vgg16_RGB(weights="imagenet", input_shape=(224,224,3)):
+def build_base_vgg16_RGB(weights="imagenet", input_shape=(224,224,3), frozen_layers: Tuple[int]=None):
 
     base = tf.keras.applications.vgg16.VGG16(weights=weights,
                                              include_top=False,
                                              input_tensor=Input(shape=input_shape))
+
+    if frozen_layers is not None:
+        for layer in base.layers[frozen_layers[0]:frozen_layers[1]]:
+            layer.trainable = False
 
     return base
 
@@ -492,16 +496,15 @@ def build_model(model_config):
         build_base = partial(model_builder.build_base, weights=model_config.weights, input_shape=model_config.input_shape)
 
     base = build_base()
-
-    base = base_model.Model.add_regularization(base, **model_config.regularization)
-
+    # base = base_model.Model.add_regularization(base, **model_config.regularization)
     model = build_head(base, num_classes=model_config.num_classes, head_layers=model_config.head_layers)
     
-    # model = base_model.Model.add_regularization(model, **model_config.regularization)
+    model = base_model.Model.add_regularization(model, **model_config.regularization)
 
     # initial_learning_rate = model_config['lr']
     # lr_schedule = model_config['lr'] #tf.keras.optimizers.schedules.ExponentialDecay(
                             # initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True
+    
 
     if model_config.optimizer == "RMSprop":
         optimizer = tf.keras.optimizers.RMSprop(learning_rate=model_config.lr, momentum=model_config.lr_momentum)#, decay=model_config.lr_decay)
@@ -548,12 +551,15 @@ def tf_data2np(data: tf.data.Dataset, num_batches: int=4):
 
 
 
-def get_callbacks(config, model_config, model, csv_path: str, train_data=None, val_data=None, encoder=None):
+def get_callbacks(config, model_config, model, csv_path: str, train_data=None, val_data=None, encoder=None, experiment=None):
     from neptunecontrib.monitoring.keras import NeptuneMonitor
     # from pyleaves.train.paleoai_train import EarlyStopping, CSVLogger
     from tensorflow.keras.callbacks import EarlyStopping, CSVLogger
     from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback,ReduceLROnPlateau,TensorBoard
     from pyleaves.utils.neptune_utils import ImageLoggerCallback
+
+
+    experiment = experiment or neptune
 
     # reduce_lr = ReduceLROnPlateau(monitor=config.callbacks.reduce_lr_on_plateau.monitor, factor=0.5,
     #                               patience=config.callbacks.reduce_lr_on_plateau.patience, min_lr=model_config.lr*0.1)
@@ -579,7 +585,7 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
                                              max_images=-1,
                                              name='train',
                                              encoder=encoder,
-                                             neptune_logger=neptune,
+                                             experiment=experiment,
                                              include_predictions=True,
                                              log_epochs=config.callbacks.log_epochs))
 
@@ -589,7 +595,7 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
                                              max_images=-1,
                                              name='val',
                                              encoder=encoder,
-                                             neptune_logger=neptune,
+                                             experiment=experiment,
                                              include_predictions=True,
                                              log_epochs=config.callbacks.log_epochs))
 
@@ -603,7 +609,7 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
             num_batches = 10
             print(f'invalid value for config.callbacks.confusion_matrix.num_batches={config.callbacks.confusion_matrix.num_batches}.\nContinuing with 10 batches')
         train_data_np = tf_data2np(data=train_data, num_batches=num_batches)
-        train_neptune_visualization_callback = NeptuneVisualizationCallback(train_data_np, num_classes=model_config.num_classes, subset_prefix='train')
+        train_neptune_visualization_callback = NeptuneVisualizationCallback(train_data_np, num_classes=model_config.num_classes, experiment=experiment)
         callbacks.append(train_neptune_visualization_callback)
 
     if config.callbacks.confusion_matrix.log_val and (val_data is not None):
@@ -615,7 +621,7 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
             num_batches = 10
             print(f'invalid value for config.callbacks.confusion_matrix.num_batches={config.callbacks.confusion_matrix.num_batches}.\nContinuing with 10 batches')
         validation_data_np = tf_data2np(data=val_data, num_batches=num_batches)
-        val_neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=model_config.num_classes, subset_prefix='val')
+        val_neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=model_config.num_classes, experiment=experiment)
         callbacks.append(val_neptune_visualization_callback)
 
     if config.orchestration.debug:

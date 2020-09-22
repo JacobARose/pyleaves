@@ -23,5 +23,5 @@ params:
     num_epochs: 150
     steps_per_epoch: null
     validation_steps: null
-    use_tfrecords: true
+    use_tfrecords: false
     samples_per_shard: 300
