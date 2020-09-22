@@ -132,8 +132,7 @@ def validate_model_config(config):
 @hydra.main(config_path='configs', config_name='simplified_config')
 def main(config : DictConfig):
 
-    import pdb;
-    pdb.set_trace()
+
     OmegaConf.set_struct(config, False)
 
     # from pyleaves.train.paleoai_train import build_model
@@ -142,6 +141,11 @@ def main(config : DictConfig):
     from pyleaves.utils.pipeline_utils import create_dataset, get_callbacks, build_model
     from paleoai_data.utils.kfold_cross_validation import DataFold, StructuredDataKFold
     # config.orchestration.gpu_num = 
+    print('BEFORE PDB')
+    import pdb
+    pdb.set_trace()
+    print('AFTER PDB')
+
     try:
 
         gpu = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus, wait=int(hydra.job.id))
