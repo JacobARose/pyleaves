@@ -149,10 +149,12 @@ def main(config : DictConfig):
 
     try:
         job_num = int(HydraConfig.get().job.num)
+        
         print(f'job_num = int(HydraConfig.get().job.num) = {job_num}')
     except Exception as e:
         print(f'CAUGHT EXCEPTION {e}')
-        job_num = int(np.random.randint(0,8))
+        # job_num = int(np.random.randint(0,8))
+        job_num = os.getpid()%8
         print(f'job_num = int(np.random.randint(0,8)) = {job_num}')
     try:
         gpu = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus, wait=job_num)
