@@ -134,7 +134,7 @@ def main(config : DictConfig):
 
 
     OmegaConf.set_struct(config, False)
-
+    from hydra.core.hydra_config import HydraConfig
     # from pyleaves.train.paleoai_train import build_model
     from pyleaves.utils import set_tf_config
     from pyleaves.utils.experiment_utils import initialize_experiment, print_config
@@ -147,9 +147,14 @@ def main(config : DictConfig):
     print('AFTER PDB')
 
     try:
-
-        gpu = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus, wait=int(hydra.job.id))
-        print(f'Job number {hydra.job.id} assigned to GPU {gpu}', dir(gpu))
+        job_num = int(HydraConfig.get().job.num)
+        print(f'job_num = int(HydraConfig.get().job.num) = {job_num}')
+    except:
+        job_num = int(np.random.randint(0,8))
+        print(f'job_num = int(np.random.randint(0,8)) = {job_num}')
+    try:
+        gpu = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus, wait=job_num)
+        print(f'Job number {job_num} assigned to GPU {gpu}', dir(gpu))
     except:
         print('Failed to set tf_gpu config with hydra.job.id. Continuing anyway.')
     import tensorflow as tf
