@@ -140,8 +140,9 @@ def main(config : DictConfig):
     from pyleaves.utils.pipeline_utils import create_dataset, get_callbacks, build_model
     from paleoai_data.utils.kfold_cross_validation import DataFold, StructuredDataKFold
     # config.orchestration.gpu_num = 
+    import pdb; pdb.set_trace()
     try:
-        import pdb; pdb.set_trace()
+
         gpu = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus, wait=int(hydra.job.id))
         print(f'Job number {hydra.job.id} assigned to GPU {gpu}', dir(gpu))
     except:
