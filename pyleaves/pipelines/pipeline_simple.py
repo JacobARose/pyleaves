@@ -72,9 +72,9 @@ def log_hydra_config(backup_dir: str=None, config: DictConfig=None, experiment=N
     experiment = experiment or neptune
     if config is not None:
         for k,v in config.dataset.params.extract.items():
-            experiment.set_property('dataextract'+k,v)
+            experiment.set_property('dataextract_'+k,v)
         for k,v in config.dataset.params.training.items():
-            experiment.set_property('datatrain'+k,v)
+            experiment.set_property('datatrain_'+k,v)
         for k,v in config.model.params.items():
             experiment.set_property('model_'+k,v)
         for k,v in config.run_dirs.items():

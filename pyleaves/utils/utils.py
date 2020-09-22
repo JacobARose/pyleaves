@@ -26,14 +26,18 @@ def setGPU(gpu_num: List[int]=None, only_return: bool=False, num_gpus: int=None,
     if wait:
         time.sleep(random.randint(0,wait))
 
-    if gpu_num is None:
-        stats = gpustat.GPUStatCollection.new_query()
-        ids = map(lambda gpu: int(gpu.entry['index']), stats)
-        ratios = map(lambda gpu: float(gpu.entry['memory.used'])/float(gpu.entry['memory.total']), stats)
-        pairs = list(zip(ids, ratios))
-        random.shuffle(pairs)
+
+    stats = gpustat.GPUStatCollection.new_query()
+    ids = map(lambda gpu: int(gpu.entry['index']), stats)
+    ratios = map(lambda gpu: float(gpu.entry['memory.used'])/float(gpu.entry['memory.total']), stats)
+    pairs = list(zip(ids, ratios))
+    random.shuffle(pairs)
         # bestGPU = min(pairs, key=lambda x: x[1])[0]
+    if gpu_num is None:
         gpu_num = [x[0] for x in sorted(pairs, key=lambda x: x[1])][:num_gpus]
+    elif type(gpu_num)==list:
+        gpus = [x[0] for x in sorted(pairs, key=lambda x: x[1])]#[:len(gpu_num)]
+        gpu_num = [int(gpus[num]) for num in gpu_num]
     elif type(gpu_num)==str:
         gpu_num = [int(gpu_num)]
     elif type(gpu_num)==int:
