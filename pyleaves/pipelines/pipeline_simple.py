@@ -141,6 +141,7 @@ def main(config : DictConfig):
     from paleoai_data.utils.kfold_cross_validation import DataFold, StructuredDataKFold
     # config.orchestration.gpu_num = 
     try:
+        import pdb; pdb.set_trace()
         gpu = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus, wait=int(hydra.job.id))
         print(f'Job number {hydra.job.id} assigned to GPU {gpu}', dir(gpu))
     except:

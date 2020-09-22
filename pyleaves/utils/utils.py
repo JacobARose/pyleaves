@@ -49,7 +49,7 @@ def setGPU(gpu_num: List[int]=None, only_return: bool=False, num_gpus: int=None,
     return gpu_num
 
 
-def set_tf_config(gpu_num: List[int]=None, num_gpus: int=None, set_cuda_devices_first=True, seed: int=None, wait: bool=1):
+def set_tf_config(gpu_num: List[int]=None, num_gpus: int=None, set_cuda_devices_first=True, seed: int=None, wait: int=1):
     
     only_return = not set_cuda_devices_first
     gpu_num = setGPU(gpu_num=gpu_num, only_return=only_return, num_gpus=num_gpus, wait=wait)
