@@ -142,14 +142,15 @@ def main(config : DictConfig):
     from paleoai_data.utils.kfold_cross_validation import DataFold, StructuredDataKFold
     # config.orchestration.gpu_num = 
     print('BEFORE PDB')
-    import pdb
-    pdb.set_trace()
+    # import pdb
+    # pdb.set_trace()
     print('AFTER PDB')
 
     try:
         job_num = int(HydraConfig.get().job.num)
         print(f'job_num = int(HydraConfig.get().job.num) = {job_num}')
-    except:
+    except Exception as e:
+        print(f'CAUGHT EXCEPTION {e}')
         job_num = int(np.random.randint(0,8))
         print(f'job_num = int(np.random.randint(0,8)) = {job_num}')
     try:
