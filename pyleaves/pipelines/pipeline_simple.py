@@ -171,22 +171,16 @@ def main(config : DictConfig):
     from pyleaves.utils.pipeline_utils import create_dataset, get_callbacks, build_model
     from paleoai_data.utils.kfold_cross_validation import DataFold, StructuredDataKFold
     # config.orchestration.gpu_num = 
-    print('BEFORE PDB')
+    # print('BEFORE PDB')
     # import pdb
     # pdb.set_trace()
-    print('AFTER PDB')
+    # print('AFTER PDB')
     print('hydra.job.num=task=',config.task)
-    try:
-        # TODO spawn 8 lock files for the GPUs
-        # job_num = int(HydraConfig.get().job.num)
-        job_num = os.getpid()%8
-        print(f'job_num = os.getpid()%8 = {job_num}')
-        # print(f'job_num = int(HydraConfig.get().job.num) = {job_num}')
-    except Exception as e:
-        print(f'CAUGHT EXCEPTION {e}')
-        # job_num = int(np.random.randint(0,8))
-        job_num = os.getpid()%8
-        # print(f'job_num = int(np.random.randint(0,8)) = {job_num}')
+
+    # TODO spawn 8 lock files for the GPUs
+    # job_num = int(HydraConfig.get().job.num)
+    job_num = config.task #os.getpid()%8
+    # print(f'job_num = int(HydraConfig.get().job.num) = {job_num}')
     try:
         print(f'Waiting job_num*config.orchestration.wait = {job_num*config.orchestration.wait}')
         gpu = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus, wait=job_num*config.orchestration.wait)
