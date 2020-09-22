@@ -134,6 +134,7 @@ def validate_model_config(config):
             model_config.regularization[regularizer_L] = float(model_config.regularization[regularizer_L])
 
     print('model_config.frozen_layers: ', model_config.frozen_layers)
+    print('type(model_config.frozen_layers): ', type(model_config.frozen_layers))
     if model_config.frozen_layers is not None:
         if type(model_config.frozen_layers) not in [list,tuple]:
             model_config.frozen_layers = None
@@ -142,7 +143,9 @@ def validate_model_config(config):
         else:
             for i, l in enumerate(model_config.frozen_layers):
                 model_config.frozen_layers[i] = int(l)
-
+    print('model_config.frozen_layers: ', model_config.frozen_layers)
+    print('type(model_config.frozen_layers): ', type(model_config.frozen_layers))
+    
     config.model.params = model_config
 
     return config
