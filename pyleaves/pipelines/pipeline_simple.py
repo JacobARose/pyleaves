@@ -188,7 +188,9 @@ def main(config : DictConfig):
         job_num = os.getpid()%8
         # print(f'job_num = int(np.random.randint(0,8)) = {job_num}')
     try:
+        print(f'Waiting job_num*config.orchestration.wait = {job_num*config.orchestration.wait}')
         gpu = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus, wait=job_num*config.orchestration.wait)
+
         print(f'Job number {job_num} assigned to GPU {gpu}', dir(gpu))
     except:
         print('Failed to set tf_gpu config with hydra.job.id. Continuing anyway.')
