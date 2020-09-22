@@ -15,6 +15,31 @@ python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_simple.py datas
 python /home/jacob/projects/pyleaves/pyleaves/pipelines/pipeline_simple.py misc.debug=True
 
 
+
+freeze resnet50_v2 sweep [0,-x]
+
+-x layer[-x].name
+
+-4 conv5_block3_3_conv
+-7 conv5_block3_2_conv
+-11 conv5_block3_1_conv
+-15 conv5_block2_3_conv
+-18 conv5_block2_2_conv
+-22 conv5_block2_1_conv
+-26 conv5_block1_3_conv
+-27 conv5_block1_0_conv
+-30 conv5_block1_2_conv
+-34 conv5_block1_1_conv
+-38 conv4_block6_3_conv
+-42 conv4_block6_2_conv
+-46 conv4_block6_1_conv
+-50 conv4_block5_3_conv
+-53 conv4_block5_2_conv
+-57 conv4_block5_1_conv
+
+
+
+
 '''
 
 
@@ -47,13 +72,13 @@ def log_hydra_config(backup_dir: str=None, config: DictConfig=None, experiment=N
     experiment = experiment or neptune
     if config is not None:
         for k,v in config.dataset.params.extract.items():
-            experiment.set_property(k+'_dataext',v)
+            experiment.set_property('dataextract'+k,v)
         for k,v in config.dataset.params.training.items():
-            experiment.set_property(k+'_datatrain',v)
+            experiment.set_property('datatrain'+k,v)
         for k,v in config.model.params.items():
-            experiment.set_property(k+'_model',v)
+            experiment.set_property('model_'+k,v)
         for k,v in config.run_dirs.items():
-            experiment.set_property(k,v)
+            experiment.set_property('rundirs_'+k,v)
         # config_output_path = os.path.join(config.run_dirs.log_dir,'config.yaml')
         # with open(config_output_path, 'w') as f:
         #     yaml.dump(resolve_config_interpolations(config=config, log_nodes=False), f)
@@ -148,6 +173,7 @@ def main(config : DictConfig):
     print('AFTER PDB')
 
     try:
+        # TODO spawn 8 lock files for the GPUs
         job_num = int(HydraConfig.get().job.num)
         
         print(f'job_num = int(HydraConfig.get().job.num) = {job_num}')
