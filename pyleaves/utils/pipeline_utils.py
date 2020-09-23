@@ -501,11 +501,6 @@ def build_model(model_config):
     
     model = base_model.Model.add_regularization(model, **model_config.regularization)
 
-    # initial_learning_rate = model_config['lr']
-    # lr_schedule = model_config['lr'] #tf.keras.optimizers.schedules.ExponentialDecay(
-                            # initial_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True
-    
-
     if model_config.optimizer == "RMSprop":
         optimizer = tf.keras.optimizers.RMSprop(learning_rate=model_config.lr, momentum=model_config.lr_momentum)#, decay=model_config.lr_decay)
     elif model_config.optimizer == "SGD":
@@ -558,7 +553,6 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
     from pyleaves.utils.callback_utils import BackupAndRestore, NeptuneVisualizationCallback,ReduceLROnPlateau,TensorBoard
     from pyleaves.utils.neptune_utils import ImageLoggerCallback
 
-
     experiment = experiment or neptune
 
     # reduce_lr = ReduceLROnPlateau(monitor=config.callbacks.reduce_lr_on_plateau.monitor, factor=0.5,
@@ -567,9 +561,7 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
     # backup_callback = BackupAndRestore(config.run_dirs.checkpoints_path)
     # backup_callback.set_model(model)
 
-    # log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    tensorboard_callback = TensorBoard(log_dir=config.run_dirs.log_dir)#, histogram_freq=1)
-
+    tensorboard_callback = TensorBoard(log_dir=config.run_dirs.log_dir)
 
     print('building callbacks')
     callbacks = [tensorboard_callback, #backup_callback,               reduce_lr, #           NeptuneMonitor(),
@@ -631,3 +623,26 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
         pprint(dict(config.callbacks))
         
     return callbacks
+
+
+################################################################################################
+################################################################################################
+## MODELS
+################################################################################################
+################################################################################################
+
+
+from sklearn.metrics import classification_report#, confusion_matrix
+# from sklearn.utils.class_weight import compute_class_weight
+
+
+def evaluate_performance(model, features, labels):
+    probas = model.predict(features)
+    print(probas.shape)
+    preds = probas.argmax(axis=1)
+    report = classification_report(labels, preds)
+
+    return report
+
+
+
