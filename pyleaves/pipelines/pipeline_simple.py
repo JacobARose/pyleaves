@@ -376,17 +376,16 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
     text_labels = encoder.classes
     steps = steps
 
-    callbacks=[]
-    if confusion_matrix:
-        from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
-        callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=text_labels, steps=steps, subset_prefix=subset_prefix, experiment=experiment))
 
     if data_config.testing.eval_performance_w_sklearn:
         report = evaluate_performance(model, x=test_data, text_labels=text_labels)
         experiment.log_text(f'{subset_prefix}_classification_report', report)
 
 
-
+    callbacks=[]
+    if confusion_matrix:
+        from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
+        callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=text_labels, steps=steps, subset_prefix=subset_prefix, experiment=experiment))
 
 
     test_results = model.evaluate(test_data, callbacks=callbacks, steps=steps, verbose=1)

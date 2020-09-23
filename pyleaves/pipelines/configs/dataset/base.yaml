@@ -30,4 +30,4 @@ params:
 
   testing:
     include_subsets: [] # include ['train','test'] to concatenate them for testing
-    eval_performance_w_sklearn: False
+    eval_performance_w_sklearn: True
