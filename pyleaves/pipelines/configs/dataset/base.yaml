@@ -28,6 +28,6 @@ params:
     samples_per_shard: 300
 
 
-    testing:
-      include_subsets: [] # include ['train','test'] to concatenate them for testing
-      eval_performance_w_sklearn: False
+  testing:
+    include_subsets: [] # include ['train','test'] to concatenate them for testing
+    eval_performance_w_sklearn: False
