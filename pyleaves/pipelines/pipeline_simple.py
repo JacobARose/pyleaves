@@ -330,26 +330,27 @@ def main(config : DictConfig):
 
         # TODO walk throug below section and test
 
-        # test_dataset_config = OmegaConf.load('configs/dataset/Fossil_family_100_test.yaml')
-        # test_dataset_config = OmegaConf.merge(data_config, test_dataset_config.params)
-        # test_dataset_config.extract.num_classes = encoder.num_classes
+        test_dataset_config = OmegaConf.load('configs/dataset/Fossil_family_100_test.yaml')
+        test_dataset_config = OmegaConf.merge(data_config, test_dataset_config.params)
+        test_dataset_config.extract.num_classes = encoder.num_classes
 
         # fold_dir = f"/media/data/jacob/Fossil_Project/data/csv_data/paleoai_data_disk_cache_dir/staged_data/{test_dataset_config.dataset_name}/ksplit_2/" 
-        # #test_dataset_config.params.extract.fold_dir
-        # fold_id = test_dataset_config.params.extract.fold_id
+        fold_dir = test_dataset_config.extract.fold_dir
+        fold_id = test_dataset_config.extract.fold_id
 
-        # fold_path = DataFold.query_fold_dir(fold_dir, fold_id)
-        # fold = DataFold.from_artifact_path(fold_path)
-        # data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
-        #                                                             data_config=data_config,
-        #                                                             preprocess_config=preprocess_config,
-        #                                                             cache=True,
-        #                                                             cache_image_dir=config.run_dirs.cache_dir,
-        #                                                             seed=config.misc.seed)
+        fold_path = DataFold.query_fold_dir(fold_dir, fold_id)
+        fold = DataFold.from_artifact_path(fold_path)
+        data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
+                                                                    data_config=test_dataset_config,
+                                                                    preprocess_config=preprocess_config,
+                                                                    class_names=encoder.classes,
+                                                                    cache=True,
+                                                                    cache_image_dir=config.run_dirs.cache_dir,
+                                                                    seed=config.misc.seed)
 
-        # steps = split_datasets['test'].num_samples//data_config.training.batch_size
+        steps = split_datasets['test'].num_samples//data_config.training.batch_size
 
-        # test_results = evaluate(model, encoder, model_config, test_dataset_config, test_data=data['test'], steps=steps, num_classes=encoder.num_classes, confusion_matrix=True, experiment=experiment)
+        test_results = evaluate(model, encoder, model_config, test_dataset_config, test_data=data['test'], steps=steps, num_classes=encoder.num_classes, confusion_matrix=True, experiment=experiment)
 
 
 
