@@ -330,6 +330,9 @@ def main(config : DictConfig):
         # predictions = model.predict(test_data, steps=split_datasets['test'].num_samples)
 
         # TODO walk throug below section and test
+        if data_config.extract.dataset_name == 'Fossil_family_100':
+            print('Returning test results without performing additional evaluation, since main testing dataset is already Fossil_family_100')
+            return test_results
         print(f'INITIATING ZERO-SHOT TEST ON Fossil_family_100')
         test_dataset_config = OmegaConf.load('configs/dataset/Fossil_family_100_test.yaml')
         test_dataset_config = OmegaConf.merge(data_config, test_dataset_config.params)
