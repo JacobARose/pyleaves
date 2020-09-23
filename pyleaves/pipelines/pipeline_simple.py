@@ -281,9 +281,9 @@ def main(config : DictConfig):
         callbacks = get_callbacks(config, model_config, model, csv_path, train_data=train_data, val_data=val_data, encoder=encoder, experiment=experiment)
 
         print('[BEGINNING TRAINING]')
-        if config.orchestration.debug:
-            import pdb;pdb.set_trace()
-            print_config(config)
+        # if config.orchestration.debug:
+        #     import pdb;pdb.set_trace()
+        #     print_config(config)
         try:
             history = model.fit(train_data,
                                 epochs=data_config.training.num_epochs,
@@ -315,9 +315,13 @@ def main(config : DictConfig):
         print('[STAGE COMPLETED]')
         print(f'Saved trained model to {config.run_dirs.saved_model_path}')
 
-        print('history.history.keys() =',history.history.keys())
+        # print('history.history.keys() =',history.history.keys())
 
         steps = split_datasets['test'].num_samples//data_config.training.batch_size
+
+        if config.orchestration.debug:
+            import pdb;pdb.set_trace()
+            print_config(config)
 
         test_results = evaluate(model, encoder, model_config, data_config, test_data=test_data, steps=steps, num_classes=encoder.num_classes, confusion_matrix=True, experiment=experiment)
 
@@ -369,7 +373,7 @@ def main(config : DictConfig):
 def evaluate(model, encoder, model_config, data_config, test_data=None, steps: int=None, num_classes: int=None, confusion_matrix=True, experiment=None, subset_prefix='test'):
     from pyleaves.utils.pipeline_utils import evaluate_performance
     experiment = experiment or neptune
-    print('Preparing for model evaluation')
+    print('Preparing for model evaluation with subset_prefix =', subset_prefix)
     # test_data = test_data
     # num_classes = num_classes
 

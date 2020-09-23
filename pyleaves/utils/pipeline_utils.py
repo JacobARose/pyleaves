@@ -226,6 +226,10 @@ def prep_dataset(dataset,
     # dataset = dataset.map(lambda x,y: preprocess_input(x,y),
     #                       num_parallel_calls=-1)
 
+    if cache_dir:
+        dataset = dataset.cache(cache_dir)
+
+
     if shuffle:
         dataset = dataset.shuffle(buffer_size, seed=seed, reshuffle_each_iteration=True)
     dataset = dataset.repeat()
@@ -252,8 +256,6 @@ def prep_dataset(dataset,
         elif num_channels==1:
             dataset = dataset.map(lambda x,y: rgb2gray_1channel(x, y), num_parallel_calls=-1)
 
-    if cache_dir:
-        dataset = dataset.cache(cache_dir)
 
     dataset = dataset.prefetch(1)
     return dataset
