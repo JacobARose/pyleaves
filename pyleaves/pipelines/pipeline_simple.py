@@ -324,12 +324,13 @@ def main(config : DictConfig):
         print('TEST RESULTS:')
         pprint(test_results)
 
+        print(['[FINISHED TRAINING AND TESTING]'])
         # for k,v in test_results.items():
         #     neptune.log_metric(k, v)
         # predictions = model.predict(test_data, steps=split_datasets['test'].num_samples)
 
         # TODO walk throug below section and test
-
+        print(f'INITIATING ZERO-SHOT TEST ON Fossil_family_100')
         test_dataset_config = OmegaConf.load('configs/dataset/Fossil_family_100_test.yaml')
         test_dataset_config = OmegaConf.merge(data_config, test_dataset_config.params)
         test_dataset_config.extract.num_classes = encoder.num_classes
@@ -350,7 +351,7 @@ def main(config : DictConfig):
 
         steps = split_datasets['test'].num_samples//data_config.training.batch_size
 
-        test_results = evaluate(model, encoder, model_config, test_dataset_config, test_data=data['test'], steps=steps, num_classes=encoder.num_classes, confusion_matrix=True, experiment=experiment)
+        test_results = evaluate(model, encoder, model_config, test_dataset_config, test_data=data['test'], steps=steps, num_classes=encoder.num_classes, confusion_matrix=True, experiment=experiment, subset_prefix='Fossil_family_100_test')
 
 
 
@@ -358,11 +359,11 @@ def main(config : DictConfig):
 
 
 
-    print(['[FINISHED TRAINING AND TESTING]'])
+    # print(['[FINISHED TRAINING AND TESTING]'])
 
     return test_results
 
-def evaluate(model, encoder, model_config, data_config, test_data=None, steps: int=None, num_classes: int=None, confusion_matrix=True, experiment=None):
+def evaluate(model, encoder, model_config, data_config, test_data=None, steps: int=None, num_classes: int=None, confusion_matrix=True, experiment=None, subset_prefix='test'):
     from pyleaves.utils.pipeline_utils import evaluate_performance
     experiment = experiment or neptune
     print('Preparing for model evaluation')
@@ -375,11 +376,11 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
     callbacks=[]
     if confusion_matrix:
         from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
-        callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=text_labels, steps=steps, subset_prefix='test', experiment=experiment))
+        callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=text_labels, steps=steps, subset_prefix=subset_prefix, experiment=experiment))
 
     if data_config.testing.eval_performance_w_sklearn:
         report = evaluate_performance(model, x=test_data, text_labels=text_labels)
-        experiment.log_text('test_classification_report', report)
+        experiment.log_text(f'{subset_prefix}_classification_report', report)
 
 
 
@@ -391,7 +392,7 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
     print('Results:')
     for m, result in zip(model.metrics_names, test_results):
         print(f'{m}: {result}')
-        experiment.log_metric(f'test_{m}', result)
+        experiment.log_metric(f'{subset_prefix_{m}', result)
 
     return {m:result for m,result in zip(model.metrics_names, test_results)}
 
