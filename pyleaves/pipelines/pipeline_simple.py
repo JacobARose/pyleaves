@@ -216,7 +216,7 @@ def main(config : DictConfig):
 
     # TODO spawn 8 lock files for the GPUs
     # job_num = int(HydraConfig.get().job.num)
-    job_num = config.task #os.getpid()%8
+    job_num = config.task or 1 #os.getpid()%8
     # print(f'job_num = int(HydraConfig.get().job.num) = {job_num}')
     try:
         print(f'Waiting job_num*config.orchestration.wait = {job_num*config.orchestration.wait}')
