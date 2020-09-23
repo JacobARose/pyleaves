@@ -11,9 +11,9 @@ defaults:
     
 # #hydra/launcher.n_jobs: 2
 
-dataset.params.extract.fold_dir:
-#     "/media/data/jacob/Fossil_Project/data/csv_data/paleoai_data_disk_cache_dir/v0_2/data/staged_data/${dataset.params.dataset_name}_family_100/ksplit_2"
-        "/media/data/jacob/Fossil_Project/data/csv_data/paleoai_data_disk_cache_dir/staged_data/${dataset.dataset_name}/ksplit_2/"
+# dataset.params.extract.fold_dir:
+# #     "/media/data/jacob/Fossil_Project/data/csv_data/paleoai_data_disk_cache_dir/v0_2/data/staged_data/${dataset.params.dataset_name}_family_100/ksplit_2"
+#         "/media/data/jacob/Fossil_Project/data/csv_data/paleoai_data_disk_cache_dir/staged_data/${dataset.dataset_name}/ksplit_2/"
 task: ${hydra:job.num}
 
 misc:

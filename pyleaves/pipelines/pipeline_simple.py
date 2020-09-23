@@ -233,7 +233,7 @@ def main(config : DictConfig):
     if config.dataset.params.extract.fold_id is None:
         config.dataset.params.extract.fold_id = 0
 
-    config.dataset.params.extract.fold_dir = f"/media/data/jacob/Fossil_Project/data/csv_data/paleoai_data_disk_cache_dir/staged_data/{config.dataset.params.extract.dataset_name}/ksplit_2/" 
+    # config.dataset.params.extract.fold_dir = f"/media/data/jacob/Fossil_Project/data/csv_data/paleoai_data_disk_cache_dir/staged_data/{config.dataset.params.extract.dataset_name}/ksplit_2/" 
 
 
     config = validate_model_config(config) #ensure learning rate is passed as float, as well as some more checks
