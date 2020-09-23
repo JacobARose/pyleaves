@@ -2,11 +2,10 @@
 
 params:
   extract:
-    fold_id: 'master'
-    fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Fossil/master'
+    fold_id: 0
+    fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Fossil/ksplit_10'
     dataset_name: 'Fossil'
-    num_classes: null
-    num_samples: null
-    threshold: 0
+    num_classes: ???
+    threshold: 10
     include_classes: []
     exclude_classes: ['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified']

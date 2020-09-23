@@ -14,6 +14,10 @@ defaults:
 
 task: ${hydra:job.num}
 
+
+dataset1: 
+
+
 misc:
     experiment_start_time: null
     neptune_project_name: "jacobarose/2stage-simplified-baselines"

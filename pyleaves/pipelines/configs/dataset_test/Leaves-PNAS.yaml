@@ -1,0 +1,11 @@
+# @package _group_
+
+params:
+  extract:
+    fold_id: 0
+    fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Leaves-PNAS/ksplit_2'
+    dataset_name: 'Leaves-PNAS'
+    num_classes: null
+    threshold: 10
+    include_classes: []
+    exclude_classes: ['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified']

@@ -5,7 +5,8 @@ params:
     fold_id: 0
     fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Fossil_family_100/ksplit_2'
     dataset_name: 'Fossil_family_100'
-    num_classes: null
+    num_classes: 9
+    num_samples: 3559
     threshold: 100
     include_classes: []
     exclude_classes: ['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified']

@@ -636,13 +636,39 @@ from sklearn.metrics import classification_report#, confusion_matrix
 # from sklearn.utils.class_weight import compute_class_weight
 
 
-def evaluate_performance(model, features, labels):
-    probas = model.predict(features)
-    print(probas.shape)
-    preds = probas.argmax(axis=1)
-    report = classification_report(labels, preds)
+def evaluate_performance(model, x, y=None, text_labels=None):
+    if y is None:
+        y = x.map(lambda x,y: y)
+
+    probs = model.predict(x)
+    print(probs.shape)
+    y_hat = probs.argmax(axis=1)
+    report = classification_report(y, y_hat, target_names=text_labels)
+    # report = classification_report(labels, preds)
+    return report
+
+
+
+def load_and_eval_model(x, y=None, text_labels=None):
+    
+    model_path = "/media/data/jacob/simplified-baselines/Leaves_in_PNAS_family_100_resnet_50_v2_[512, 512]/task-9_2020-09-22_23-25-32/model_dir/saved_model"
+    model = tf.keras.models.load_model(model_path)
+
+    if y is None:
+        y = x.map(lambda x,y: y)
+
+    probs = model.predict(x)
+    print(probs.shape)
+    y_hat = probs.argmax(axis=1)
+    report = classification_report(y, y_hat, target_names=text_labels)
+    # report = classification_report(labels, preds)
 
     return report
+
+
+
+
+
 
 
 

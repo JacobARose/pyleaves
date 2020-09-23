@@ -86,6 +86,12 @@ from pprint import pprint
 import shutil
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import warnings                        # To ignore any warnings
+warnings.filterwarnings("ignore")
+
+
+
+
 import neptune
 from pathlib import Path
 import yaml
@@ -216,7 +222,7 @@ def main(config : DictConfig):
         print(f'Waiting job_num*config.orchestration.wait = {job_num*config.orchestration.wait}')
         gpu = set_tf_config(gpu_num=config.orchestration.gpu_num, num_gpus=config.orchestration.num_gpus, wait=job_num*config.orchestration.wait)
 
-        print(f'Job number {job_num} assigned to GPU {gpu}', dir(gpu))
+        print(f'Job number {job_num} assigned to GPU {gpu}', dir(gpu[0]))
     except:
         print('Failed to set tf_gpu config with hydra.job.id. Continuing anyway.')
     import tensorflow as tf
@@ -226,6 +232,9 @@ def main(config : DictConfig):
     config = initialize_experiment(config, restore_last=config.misc.restore_last, restore_tfrecords=True)
     if config.dataset.params.extract.fold_id is None:
         config.dataset.params.extract.fold_id = 0
+
+    config.dataset.params.extract.fold_dir = f"/media/data/jacob/Fossil_Project/data/csv_data/paleoai_data_disk_cache_dir/staged_data/{config.dataset.params.extract.dataset_name}/ksplit_2/" 
+
 
     config = validate_model_config(config) #ensure learning rate is passed as float, as well as some more checks
 
@@ -319,25 +328,28 @@ def main(config : DictConfig):
         #     neptune.log_metric(k, v)
         # predictions = model.predict(test_data, steps=split_datasets['test'].num_samples)
 
-    # TODO walk throug below section and test
+        # TODO walk throug below section and test
 
-    test_dataset_config = OmegaConf.load('configs/dataset/Fossil_family_100_test.yaml')
-    test_dataset_config = OmegaConf.merge(data_config, test_dataset_config.params)
-    test_dataset_config.extract.num_classes = encoder.num_classes
+        # test_dataset_config = OmegaConf.load('configs/dataset/Fossil_family_100_test.yaml')
+        # test_dataset_config = OmegaConf.merge(data_config, test_dataset_config.params)
+        # test_dataset_config.extract.num_classes = encoder.num_classes
 
-    fold_dir = test_dataset_config.params.extract.fold_dir
-    fold_id = test_dataset_config.params.extract.fold_id
+        # fold_dir = f"/media/data/jacob/Fossil_Project/data/csv_data/paleoai_data_disk_cache_dir/staged_data/{test_dataset_config.dataset_name}/ksplit_2/" 
+        # #test_dataset_config.params.extract.fold_dir
+        # fold_id = test_dataset_config.params.extract.fold_id
 
-    fold_path = DataFold.query_fold_dir(fold_dir, fold_id)
-    fold = DataFold.from_artifact_path(fold_path)
-    data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
-                                                                   data_config=data_config,
-                                                                   preprocess_config=preprocess_config,
-                                                                   cache=True,
-                                                                   cache_image_dir=config.run_dirs.cache_dir,
-                                                                   seed=config.misc.seed)
+        # fold_path = DataFold.query_fold_dir(fold_dir, fold_id)
+        # fold = DataFold.from_artifact_path(fold_path)
+        # data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
+        #                                                             data_config=data_config,
+        #                                                             preprocess_config=preprocess_config,
+        #                                                             cache=True,
+        #                                                             cache_image_dir=config.run_dirs.cache_dir,
+        #                                                             seed=config.misc.seed)
 
-    test_results = evaluate(model, encoder, model_config, data_config, test_data=data['test'], steps=steps, num_classes=encoder.num_classes, confusion_matrix=True, experiment=experiment)
+        # steps = split_datasets['test'].num_samples//data_config.training.batch_size
+
+        # test_results = evaluate(model, encoder, model_config, test_dataset_config, test_data=data['test'], steps=steps, num_classes=encoder.num_classes, confusion_matrix=True, experiment=experiment)
 
 
 
@@ -350,12 +362,11 @@ def main(config : DictConfig):
     return test_results
 
 def evaluate(model, encoder, model_config, data_config, test_data=None, steps: int=None, num_classes: int=None, confusion_matrix=True, experiment=None):
-
+    from pyleaves.utils.pipeline_utils import evaluate_performance
     experiment = experiment or neptune
     print('Preparing for model evaluation')
-
-    test_data = test_data
-    num_classes = num_classes
+    # test_data = test_data
+    # num_classes = num_classes
 
     text_labels = encoder.classes
     steps = steps
@@ -364,6 +375,14 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
     if confusion_matrix:
         from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
         callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=text_labels, steps=steps, subset_prefix='test', experiment=experiment))
+
+    if data_config.testing.eval_performance_w_sklearn:
+        report = evaluate_performance(model, x=test_data, text_labels=text_labels)
+        experiment.log_text('test_classification_report', report)
+
+
+
+
 
     test_results = model.evaluate(test_data, callbacks=callbacks, steps=steps, verbose=1)
 
@@ -374,6 +393,8 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
         experiment.log_metric(f'test_{m}', result)
 
     return {m:result for m,result in zip(model.metrics_names, test_results)}
+
+
 
 
 

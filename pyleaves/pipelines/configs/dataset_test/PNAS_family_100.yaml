@@ -5,8 +5,7 @@ params:
     fold_id: 0
     fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/PNAS_family_100/ksplit_2'
     dataset_name: 'PNAS_family_100'
-    num_classes: 19
-    num_samples: 5311
+    num_classes: null
     threshold: 100
     include_classes: []
     exclude_classes: ['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified']

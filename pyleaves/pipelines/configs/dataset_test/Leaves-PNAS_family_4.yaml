@@ -3,10 +3,9 @@
 params:
   extract:
     fold_id: 0
-    fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Leaves_family_4/ksplit_2'
-    dataset_name: 'Leaves_family_4'
-    num_classes: 253
-    num_samples: 25903
+    fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/Leaves-PNAS_family_4/ksplit_2'
+    dataset_name: 'Leaves-PNAS_family_4'
+    num_classes: null
     threshold: 4
     include_classes: []
     exclude_classes: ['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified']

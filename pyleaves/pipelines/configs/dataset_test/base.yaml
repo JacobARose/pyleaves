@@ -7,27 +7,20 @@ params:
     fold_dir: null
     dataset_name: null
     num_classes: null
-    num_samples: null # Total for train+test (+any other subsets)
     threshold: 0
     color_mode: 'grayscale'
     num_channels: 3
-    val_split: 0.1
+    val_split: 0.0
     include_classes: []
     exclude_classes: ['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified']
 
   training:
-    augmentations:
-      - flip: 1.0
     target_size: [512,512]
     batch_size: 16
     buffer_size: 200
-    num_epochs: 150
-    steps_per_epoch: null
-    validation_steps: null
     use_tfrecords: false
     samples_per_shard: 300
 
-
-    testing:
-    include_subsets: [] # include ['train','test'] to concatenate them for testing
-    eval_performance_w_sklearn: False
+  testing:
+    include_subsets: ['test'] # include ['train','test'] to concatenate them for testing
+    eval_performance_w_sklearn: true
