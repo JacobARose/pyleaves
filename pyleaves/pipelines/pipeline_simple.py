@@ -392,7 +392,7 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
     print('Results:')
     for m, result in zip(model.metrics_names, test_results):
         print(f'{m}: {result}')
-        experiment.log_metric(f'{subset_prefix_{m}', result)
+        experiment.log_metric(f'{subset_prefix}_{m}', result)
 
     return {m:result for m,result in zip(model.metrics_names, test_results)}
 
