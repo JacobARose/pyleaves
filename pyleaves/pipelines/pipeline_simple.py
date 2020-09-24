@@ -74,7 +74,8 @@ from omegaconf import OmegaConf, DictConfig, ListConfig
 import hydra
 # from pyleaves.pipelines.pipeline_1 import *
 
-from pyleaves.datasets import base_dataset
+# from pyleaves.datasets import base_dataset
+from paleoai_data.dataset_drivers import base_dataset
 from pyleaves.utils.config_utils import init_Fossil_family_100_test_config
 from pyleaves.utils.experiment_utils import resolve_config_interpolations
 from paleoai_data.utils.dataset_utils import create_dataset_by_name
@@ -276,8 +277,9 @@ def main(config : DictConfig):
 
     ##############################################
     test_stage_config = init_Fossil_family_100_test_config(main_config=config)
-    test_fold_dir = test_stage_config.extract.fold_dir
-    test_fold_id = test_stage_config.extract.fold_id
+    test_data_config = test_stage_config.dataset.params
+    test_fold_dir = test_data_config.extract.fold_dir
+    test_fold_id = test_data_config.extract.fold_id
     test_fold_path = DataFold.query_fold_dir(test_fold_dir, test_fold_id)
     fossil_test_fold = DataFold.from_artifact_path(test_fold_path)
     ##############################################
@@ -382,7 +384,7 @@ def main(config : DictConfig):
                 return test_results
             print(f'INITIATING ZERO-SHOT TEST ON Fossil_family_100')
 
-            test_data_config = test_stage_config.dataset.params
+            # test_data_config = test_stage_config.dataset.params
             test_data_config.extract.num_classes = len(fossil_test_fold.metadata.metadata_view_at_threshold(100).class_names)
 
             data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fossil_test_fold,
@@ -428,7 +430,7 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
 
 
     if data_config.testing.eval_performance_w_sklearn:
-        report = evaluate_performance(model, x=test_data, text_labels=text_labels)
+        report = evaluate_performance(model, x=test_data, steps=steps, text_labels=text_labels)
         experiment.log_text(f'{subset_prefix}_classification_report', report)
 
 
