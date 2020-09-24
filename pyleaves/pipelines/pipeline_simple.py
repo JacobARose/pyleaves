@@ -375,11 +375,10 @@ def main(config : DictConfig):
                 print('Returning test results without performing additional evaluation, since main testing dataset is already Fossil_family_100')
                 return test_results
             print(f'INITIATING ZERO-SHOT TEST ON Fossil_family_100')
-            # test_dataset_config = OmegaConf.load('configs/dataset/Fossil_family_100_test.yaml')
-            # test_dataset_config = OmegaConf.merge(data_config, test_dataset_config.params)
-            # test_dataset_config.extract.num_classes = encoder.num_classes
 
             test_data_config = test_stage_config.dataset.params
+            test_data_config.extract.num_classes = len(fossil_test_fold.metadata.metadata_view_at_threshold(100).class_names)
+
             data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fossil_test_fold,
                                                                         data_config=test_data_config,
                                                                         preprocess_config=preprocess_config,
@@ -388,7 +387,7 @@ def main(config : DictConfig):
                                                                         cache_image_dir=test_stage_config.run_dirs.cache_dir,
                                                                         seed=test_stage_config.misc.seed)
 
-            steps = split_datasets['test'].num_samples//data_config.training.batch_size
+            steps = split_datasets['test'].num_samples//test_data_config.training.batch_size
             test_results = evaluate(model,
                                     encoder,
                                     model_config,
@@ -398,6 +397,8 @@ def main(config : DictConfig):
                                     confusion_matrix=True,
                                     experiment=experiment, 
                                     subset_prefix='Fossil_family_100_test')
+
+            experiment.log_text('Fossil_family_100_dataset_config', OmegaConf.to_container(test_data_config, resolve=True))
 
 
 
