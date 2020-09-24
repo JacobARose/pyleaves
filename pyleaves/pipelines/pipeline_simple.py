@@ -282,10 +282,12 @@ def main(config : DictConfig):
     test_fold_id = test_data_config.extract.fold_id
     test_fold_path = DataFold.query_fold_dir(test_fold_dir, test_fold_id)
     fossil_test_fold = DataFold.from_artifact_path(test_fold_path)
+    fossil_test_fold.name = test_data_config.extract.dataset_name
     ##############################################
 
     fold_path = DataFold.query_fold_dir(extract_config.fold_dir, extract_config.fold_id)
     fold = DataFold.from_artifact_path(fold_path)
+    fold.name = data_config.extract.dataset_name
     ##############################################
 
     encoder = init_pipeline_encoder_scheme(fold, test_fold=fossil_test_fold, scheme = config.pipeline.encoding_scheme, threshold=100, verbose=True)
