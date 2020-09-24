@@ -301,10 +301,10 @@ class NeptuneVisualizationCallback(Callback):
 		self.labels = labels
 		self.text_labels = text_labels
 
-		if subset_prefix is None:
-			self.prefix = ''
-		else:
-			self.prefix = subset_prefix+'_'
+		# if subset_prefix is None:
+		# 	self.prefix = ''
+		# else:
+		self.prefix = subset_prefix or ''
 
 		self.validation_data = (x_true, y_true)
 		print('Finished initializing NeptuneVisualizationCallback')

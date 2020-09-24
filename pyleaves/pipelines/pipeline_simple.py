@@ -339,7 +339,15 @@ def main(config : DictConfig):
         val_data = data['val']
     if 'test' in data:
         test_data = data['test']
-    data_config.extract.num_classes=encoder.num_classes
+
+    # data_config.extract.num_classes=encoder.num_classes
+    try:
+        data_config.extract.num_classes = fold.metadata.metadata_view_at_threshold(data_config.extract.threshold).num_classes
+    except:
+        print('WARNING: Jacob remove this stupid block and simplify it. line 347 of pipeline_simple.py')
+        print('Failed to perform:\ndata_config.extract.num_classes = fold.metadata.metadata_view_at_threshold(data_config.extract.threshold).num_classes')
+
+        print('proceeding anyway with previous method:\ndata_config.extract.num_classes=encoder.num_classes')
     # model_config.input_shape = (*training_config.target_size, extract_config.num_channels)
     model_config.num_classes = encoder.num_classes
     model = build_model(model_config)
