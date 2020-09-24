@@ -192,7 +192,7 @@ def get_Fossil_classes_at_thresh(thresh=100):
     return fossil.metadata.metadata_view_at_threshold(thresh).class_names
 
 
-def init_pipeline_encoder_scheme(train_fold, test_fold, scheme: str = "{train}", threshold=100):
+def init_pipeline_encoder_scheme(train_fold, test_fold, scheme: str = "{train}", threshold=100, verbose: bool=False):
     """
 
     schemes:
@@ -223,6 +223,12 @@ def init_pipeline_encoder_scheme(train_fold, test_fold, scheme: str = "{train}",
         class_names = list(test_class_names)
 
     encoder = base_dataset.LabelEncoder(class_names)
+
+    if verbose:
+        print(f'Using encoding scheme: {scheme} for datasets:')
+        print(f'train: {train_fold.name}, num_classes={len(train_class_names)}')
+        print(f'\ntest: {test_fold.name}, num_classes={len(test_class_names)}')
+        print(f'One-Hot Encoding labels with encoder containing {encoder.num_classes} classes')
 
     return encoder
 
