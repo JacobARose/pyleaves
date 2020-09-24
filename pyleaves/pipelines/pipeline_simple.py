@@ -215,6 +215,7 @@ def init_pipeline_encoder_scheme(train_fold, test_fold=None, scheme: str = "{tra
     if test_fold is not None:
         test_class_names = test_fold.metadata.metadata_view_at_threshold(threshold).class_names
     else:
+        scheme = "{train}"
         test_class_names = []
 
     if scheme == "{train}":
@@ -312,7 +313,6 @@ def main(config : DictConfig):
                                                                    seed=config.misc.seed)
     class_weight=None
     if config.pipeline.stage_1.params.fit_class_weights:
-
         class_weight = split_datasets['train'].metadata.calc_class_weights(class_distribution=split_datasets['train'].class_distribution,
                                                                            num_samples=split_datasets['train'].num_samples,
                                                                            encoder=encoder,
@@ -346,7 +346,7 @@ def main(config : DictConfig):
     params=resolve_config_interpolations(config=config, log_nodes=False)
 
     # neptune_experiment_name = config.misc.experiment_name
-    with neptune.create_experiment(name=config.misc.experiment_name, params=params, upload_source_files=[os.path.join(hydra.utils.get_original_cwd(),'*.py')]) as experiment:
+    with neptune.create_experiment(name=config.misc.experiment_name, params=params, upload_source_files=[os.path.join(os.path.dirname(__file__),'*.py')]) as experiment:
         model.summary(print_fn=lambda x: experiment.log_text('model_summary', x))
         log_hydra_config(backup_dir=config.run_dirs.log_dir, config=config, experiment=experiment)
 
@@ -397,7 +397,7 @@ def main(config : DictConfig):
                                     encoder,
                                     model_config,
                                     data_config,
-                                    test_data=test_data.unbatch(),
+                                    test_data=test_data, #.unbatch(),
                                     num_samples=num_test_samples,
                                     batch_size=32,
                                     confusion_matrix=True,
@@ -436,7 +436,7 @@ def main(config : DictConfig):
                                                                            seed=test_stage_config.misc.seed)
 
 
-            experiment.log_text(f'{test_data_config.extract.dataset_name}_dataset_config', OmegaConf.to_container(test_data_config, resolve=True))
+            experiment.log_text(f'{test_data_config.extract.dataset_name}_dataset_config', str(OmegaConf.to_container(test_data_config, resolve=True)))
 
             try:
                 test_subset_key = test_stage_config.pipeline.stage_3.subsets[0]
@@ -448,7 +448,7 @@ def main(config : DictConfig):
                                     encoder,
                                     model_config,
                                     test_data_config,
-                                    test_data=data[test_subset_key].unbatch(),
+                                    test_data=data[test_subset_key], #.unbatch(),
                                     num_samples=num_test_samples,
                                     batch_size=32,
                                     confusion_matrix=True,
@@ -483,7 +483,7 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, num_samp
 
     if data_config.testing.eval_performance_w_sklearn:
 
-        report = evaluate_performance(model, x=test_data, num_samples=num_samples, batch_size=batch_size, text_labels=text_labels, output_dict=True)
+        report = evaluate_performance(model, x=test_data.unbatch(), num_samples=num_samples, batch_size=batch_size, text_labels=text_labels, output_dict=True)
         log_table(f'{subset_prefix}_classification_report', report, experiment=experiment)
 
     callbacks=[]
