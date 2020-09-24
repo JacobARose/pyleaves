@@ -299,6 +299,11 @@ def main(config : DictConfig):
                                                                    cache=True,
                                                                    cache_image_dir=config.run_dirs.cache_dir,
                                                                    seed=config.misc.seed)
+    class_weight=None
+    if config.pipeline.stage_1.params.fit_class_weights:
+        class_weight = split_datasets['train'].metadata.calc_class_weights()
+    
+    
     # TODO hash and log extracted_data
     if data_config.training.steps_per_epoch is None:
         data_config.training.steps_per_epoch = split_datasets['train'].num_samples//data_config.training.batch_size
@@ -338,6 +343,7 @@ def main(config : DictConfig):
                                 validation_data=val_data,
                                 validation_freq=1,
                                 shuffle=True,
+                                class_weight=class_weight,
                                 steps_per_epoch=data_config.training.steps_per_epoch,
                                 validation_steps=data_config.training.validation_steps,
                                 verbose=1)
@@ -364,13 +370,13 @@ def main(config : DictConfig):
                     print_config(config)
 
         if config.pipeline.stage_2 == "test":
-            steps = split_datasets['test'].num_samples#//data_config.training.batch_size
+            num_test_samples = split_datasets['test'].num_samples#//data_config.training.batch_size
             test_results = evaluate(model,
                                     encoder,
                                     model_config,
                                     data_config,
                                     test_data=test_data.unbatch(),
-                                    steps=steps,
+                                    num_samples=num_test_samples,
                                     batch_size=32,
                                     confusion_matrix=True,
                                     experiment=experiment)
@@ -398,20 +404,25 @@ def main(config : DictConfig):
                                                                         cache_image_dir=test_stage_config.run_dirs.cache_dir,
                                                                         seed=test_stage_config.misc.seed)
 
-            steps = split_datasets['test'].num_samples#//test_data_config.training.batch_size
+
+            experiment.log_text('Fossil_family_100_dataset_config', OmegaConf.to_container(test_data_config, resolve=True))
+
+            num_test_samples = split_datasets['test'].num_samples#//test_data_config.training.batch_size
             test_results = evaluate(model,
                                     encoder,
                                     model_config,
                                     test_data_config,
                                     test_data=data['test'].unbatch(),
-                                    steps=steps,
+                                    num_samples=num_test_samples,
                                     batch_size=32,
                                     confusion_matrix=True,
                                     experiment=experiment, 
                                     subset_prefix='Fossil_family_100_test')
 
-            experiment.log_text('Fossil_family_100_dataset_config', OmegaConf.to_container(test_data_config, resolve=True))
+            
 
+
+            
 
 
 
@@ -422,19 +433,22 @@ def main(config : DictConfig):
 
     return test_results
 
-def evaluate(model, encoder, model_config, data_config, test_data=None, steps: int=None, batch_size: int=32, confusion_matrix=True, experiment=None, subset_prefix='test'):
+def evaluate(model, encoder, model_config, data_config, test_data=None, num_samples: int=None, batch_size: int=32, confusion_matrix=True, experiment=None, subset_prefix='test'):
     from pyleaves.utils.pipeline_utils import evaluate_performance
+    import pandas as pd
+    from neptunecontrib.api.tabl import log_table
     experiment = experiment or neptune
     print('Preparing for model evaluation with subset_prefix =', subset_prefix)
     # test_data = test_data
     # num_classes = num_classes
 
     text_labels = encoder.classes
+    steps = num_samples//batch_size
 
     if data_config.testing.eval_performance_w_sklearn:
-        report = evaluate_performance(model, x=test_data, steps=steps, batch_size=batch_size, text_labels=text_labels)
-        experiment.log_text(f'{subset_prefix}_classification_report', report)
 
+        report = evaluate_performance(model, x=test_data, num_samples=num_samples, batch_size=batch_size, text_labels=text_labels, output_dict=True)
+        log_table(f'{subset_prefix}_classification_report', report, experiment=experiment)
 
     callbacks=[]
     if confusion_matrix:

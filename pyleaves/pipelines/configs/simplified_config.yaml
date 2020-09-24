@@ -29,6 +29,8 @@ pipeline:
     stage_1:
         task: "fit+validate"
         subsets: ["train","val"]
+        params:
+            fit_class_weights: false #Include class_weights in args input to model.fit()
     stage_2: 
         task: "evaluate"
         subsets: ["test"]

@@ -650,23 +650,34 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
 ################################################################################################
 
 
+
+
+
 from sklearn.metrics import classification_report#, confusion_matrix
 # from sklearn.utils.class_weight import compute_class_weight
+import pandas as pd
 
-
-def evaluate_performance(model, x, y=None, steps=None, batch_size=32, text_labels=None):
+def evaluate_performance(model, x, y=None, num_samples=None, batch_size=None, text_labels=None, output_dict: bool=True):
+    steps = num_samples//batch_size
     if y is None:
-        y = x.map(lambda x,y: y).take(steps).batch(steps)
+        y = x.map(lambda x,y: y).batch(num_samples).take(1)
         y = np.vstack([i for i in y])
 
-    steps = steps//batch_size
-    x = x.take(steps).batch(batch_size)
-    probs = model.predict(x, steps=steps)
-    print(probs.shape)
+    x = x.take(num_samples).batch(batch_size)
+    probs = model.predict(x, steps=steps, verbose=1)
+    # print(probs.shape)
     y_hat = probs.argmax(axis=1)
-    report = classification_report(y, y_hat, target_names=text_labels)
+    # print(y_hat.shape)
+    y = y.argmax(axis=1)
+    report = classification_report(y, y_hat, target_names=text_labels, output_dict=output_dict)
     # report = classification_report(labels, preds)
+    if type(report)==dict:
+        report = pd.DataFrame(report)
     return report
+
+
+
+
 
 
 
