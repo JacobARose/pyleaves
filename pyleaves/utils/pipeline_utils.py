@@ -284,9 +284,9 @@ def extract_data(fold: DataFold,
                                     exclude_classes=exclude_classes,
                                     reset_encodings=reset_encodings,
                                     alphabetize_classes=alphabetize_classes)
-    classes = list((set(encoder.classes)-set(exclude_classes)).union(set(include_classes)))
-    train_dataset, _ = fold.train_dataset.enforce_class_whitelist(class_names=classes)
-    test_dataset, _ = fold.test_dataset.enforce_class_whitelist(class_names=classes)
+    # classes = list((set(encoder.classes)-set(exclude_classes)).union(set(include_classes)))
+    train_dataset, _ = fold.train_dataset.enforce_class_whitelist(class_names=encoder.classes)
+    test_dataset, _ = fold.test_dataset.enforce_class_whitelist(class_names=encoder.classes)
 
 
     split_data = {}
@@ -350,6 +350,7 @@ def load_data_from_tensor_slices(data: List[List], cache: Union[bool,str], train
 
 
 def extract_and_load_data(data_fold: DataFold,
+                          encoder: base_dataset.LabelEncoder=None,
                           class_names: List[str]=None,
                           exclude_classes=[],
                           include_classes=[],
@@ -358,11 +359,12 @@ def extract_and_load_data(data_fold: DataFold,
                           seed=None):
 
     extracted_data, split_datasets, encoder = extract_data(fold=data_fold,
-                                                       class_names=class_names,
-                                                       exclude_classes=exclude_classes,
-                                                       include_classes=include_classes,
-                                                       val_split=val_split,
-                                                       seed=seed)
+                                                           encoder=encoder,
+                                                           class_names=class_names,
+                                                           exclude_classes=exclude_classes,
+                                                           include_classes=include_classes,
+                                                           val_split=val_split,
+                                                           seed=seed)
                                                        
     # subset_keys = [k for k in split_data if split_data[k] is not None]
     loaded_data = {}
@@ -376,6 +378,7 @@ def extract_and_load_data(data_fold: DataFold,
 def create_dataset(data_fold: DataFold,
                    data_config: DictConfig,
                    preprocess_config: DictConfig,
+                   encoder: base_dataset.LabelEncoder=None,
                    class_names: List[str]=None,
                    cache: Union[bool,str]=True,
                    cache_image_dir: str=None,
@@ -383,6 +386,7 @@ def create_dataset(data_fold: DataFold,
 
     # dataset, split_datasets, encoder
     loaded_data, extracted_data, split_datasets, encoder = extract_and_load_data(data_fold=data_fold,
+                                                             encoder=encoder,
                                                              class_names=class_names,
                                                              exclude_classes=data_config.extract.exclude_classes,
                                                              include_classes=data_config.extract.include_classes,
