@@ -417,11 +417,12 @@ def create_dataset(data_fold: DataFold,
         # data_subs = {'train': [0,2,3], 'test':[4,5,6], 'train+test':[7,8,9]}
         keys = np.array(list(loaded_data.keys()))
         keys = keys[['train' in subset for subset in keys]]
+        print('keys = ', keys)
 
-        if 'train+test' in keys:
+        if 'train+test' in subsets:
             subset_key = 'train+test'
             print(f"Proceeding to train on subset concatenation '{subset_key}'")
-        elif 'train' in keys:
+        elif 'train' in subsets:
             subset_key = 'train'
             print(f"Proceeding to train on subset {subset_key}")
 
