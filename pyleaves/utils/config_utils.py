@@ -92,6 +92,21 @@ def init_Fossil_family_100_test_config(main_config):
     return init_test_config(main_config, config_name="simplified_config", overrides=overrides, config_dir=DEFAULT_CONFIG_DIR)
 
 
+def init_any_dataset_test_config(main_config, dataset_name: str="Fossil_family_100_test"):
+    """
+    Run this function to initialize all requisite values for a data config to load Fossil_family_100 for testing, while automatically passing key parameters to make sure it is prepared for the model specified in main_config. e.g. target_size comes from main_config, while fold_dir comes from the test_config.
+    Args:
+        main_config ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    overrides=[f'dataset@dataset={dataset_name}',
+                '~dataset.params.training.target_size',
+                'dataset.params.training.augmentations=[]']
+
+    return init_test_config(main_config, config_name="simplified_config", overrides=overrides, config_dir=DEFAULT_CONFIG_DIR)
+
 
     # for p in overrides:
     #     if not p.startswith('dataset@dataset'):

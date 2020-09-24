@@ -76,7 +76,7 @@ import hydra
 
 # from pyleaves.datasets import base_dataset
 from paleoai_data.dataset_drivers import base_dataset
-from pyleaves.utils.config_utils import init_Fossil_family_100_test_config
+from pyleaves.utils.config_utils import init_Fossil_family_100_test_config, init_any_dataset_test_config
 from pyleaves.utils.experiment_utils import resolve_config_interpolations
 from paleoai_data.utils.dataset_utils import create_dataset_by_name
 from paleoai_data.utils.kfold_cross_validation import DataFold
@@ -275,22 +275,27 @@ def main(config : DictConfig):
     model_config.input_shape = (*training_config.target_size, extract_config.num_channels)
     config.model.params = model_config
 
-    ##############################################
-    test_stage_config = init_Fossil_family_100_test_config(main_config=config)
-    test_data_config = test_stage_config.dataset.params
-    test_fold_dir = test_data_config.extract.fold_dir
-    test_fold_id = test_data_config.extract.fold_id
-    test_fold_path = DataFold.query_fold_dir(test_fold_dir, test_fold_id)
-    fossil_test_fold = DataFold.from_artifact_path(test_fold_path)
-    fossil_test_fold.name = test_data_config.extract.dataset_name
-    ##############################################
+
 
     fold_path = DataFold.query_fold_dir(extract_config.fold_dir, extract_config.fold_id)
     fold = DataFold.from_artifact_path(fold_path)
     fold.name = data_config.extract.dataset_name
     ##############################################
 
-    encoder = init_pipeline_encoder_scheme(fold, test_fold=fossil_test_fold, scheme = config.pipeline.encoding_scheme, threshold=100, verbose=True)
+    ##############################################
+    # test_stage_config = init_Fossil_family_100_test_config(main_config=config)
+
+    if 'stage_3' in config.pipeline:
+        test_stage_config = init_any_dataset_test_config(config, dataset_name=config.pipeline.stage_3.dataset_name)
+        test_data_config = test_stage_config.dataset.params
+        test_fold_dir = test_data_config.extract.fold_dir
+        test_fold_id = test_data_config.extract.fold_id
+        test_fold_path = DataFold.query_fold_dir(test_fold_dir, test_fold_id)
+        test_fold = DataFold.from_artifact_path(test_fold_path)
+        test_fold.name = test_data_config.extract.dataset_name
+    ##############################################
+
+    encoder = init_pipeline_encoder_scheme(fold, test_fold=test_fold, scheme = config.pipeline.encoding_scheme, threshold=data_config.extract.threshold, verbose=True)
 
     data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
                                                                    data_config=data_config,
@@ -315,7 +320,13 @@ def main(config : DictConfig):
     if (data_config.training.validation_steps is None) and ('val' in split_datasets):
         data_config.training.validation_steps = split_datasets['val'].num_samples//data_config.training.batch_size
 
-    train_data, val_data, test_data = data['train'], data['val'], data['test']
+    train_data=None;val_data=None;test_data=None
+    if 'train' in data:
+        train_data = data['train']
+    if 'val' in data:
+        val_data = data['val']
+    if 'test' in data:
+        test_data = data['test']
     data_config.extract.num_classes=encoder.num_classes
     # model_config.input_shape = (*training_config.target_size, extract_config.num_channels)
     model_config.num_classes = encoder.num_classes
@@ -390,39 +401,39 @@ def main(config : DictConfig):
 
             print(['[FINISHED TRAINING AND TESTING]'])
 
-            if data_config.extract.dataset_name == 'Fossil_family_100':
-                print('Returning test results without performing additional evaluation, since main testing dataset is already Fossil_family_100')
+            if data_config.extract.dataset_name == test_data_config.extract.dataset_name:
+                print(f'Returning test results without performing additional evaluation, since main testing dataset is already {test_data_config.extract.dataset_name}')
                 return test_results
 
 
 
-        if config.pipeline.stage_3.test_on_Fossil_family_100==True:
-            # TODO walk throug below section and test
+        if 'stage_3' in config.pipeline:
+
             # if data_config.extract.dataset_name == 'Fossil_family_100':
             #     print('Returning test results without performing additional evaluation, since main testing dataset is already Fossil_family_100')
             #     return test_results
-            print(f'INITIATING ZERO-SHOT TEST ON Fossil_family_100')
+            print(f'INITIATING ZERO-SHOT TEST ON {test_data_config.extract.dataset_name}')
 
-            # test_data_config = test_stage_config.dataset.params
-            test_data_config.extract.num_classes = len(fossil_test_fold.metadata.metadata_view_at_threshold(100).class_names)
+            test_data_config.extract.num_classes = len(test_fold.metadata.metadata_view_at_threshold(test_data_config.extract.threshold).class_names)
 
-            data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fossil_test_fold,
-                                                                        data_config=test_data_config,
-                                                                        preprocess_config=preprocess_config,
-                                                                        encoder=encoder,
-                                                                        cache=True,
-                                                                        cache_image_dir=test_stage_config.run_dirs.cache_dir,
-                                                                        seed=test_stage_config.misc.seed)
+            data, extracted_data, split_datasets, encoder = create_dataset(data_fold=test_fold,
+                                                                           data_config=test_data_config,
+                                                                           preprocess_config=preprocess_config,
+                                                                           encoder=encoder,
+                                                                           subsets=test_stage_config.pipeline.stage_3.subsets,
+                                                                           cache=True,
+                                                                           cache_image_dir=test_stage_config.run_dirs.cache_dir,
+                                                                           seed=test_stage_config.misc.seed)
 
 
-            experiment.log_text('Fossil_family_100_dataset_config', OmegaConf.to_container(test_data_config, resolve=True))
+            experiment.log_text(f'Fossil_family_100_dataset_config', OmegaConf.to_container(test_data_config, resolve=True))
 
             try:
                 test_subset_key = test_stage_config.pipeline.stage_3.subsets[0]
             except:
                 test_subset_key = 'test'
 
-            num_test_samples = split_datasets[test_subset_key].num_samples#//test_data_config.training.batch_size
+            num_test_samples = split_datasets[test_subset_key].num_samples
             test_results = evaluate(model,
                                     encoder,
                                     model_config,
@@ -432,7 +443,7 @@ def main(config : DictConfig):
                                     batch_size=32,
                                     confusion_matrix=True,
                                     experiment=experiment, 
-                                    subset_prefix=f'Fossil_family_100_{test_subset_key}')
+                                    subset_prefix=f'{test_data_config.extract.dataset_name}_{test_subset_key}')
 
             
 

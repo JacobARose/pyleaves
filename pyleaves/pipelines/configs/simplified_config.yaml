@@ -37,7 +37,7 @@ pipeline:
     stage_3: 
         task: "evaluate"
         subsets: ["test"]
-        test_on_Fossil_family_100: true
+        dataset_name: "Fossil_family_100"
 
 
 misc:
