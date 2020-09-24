@@ -246,6 +246,8 @@ def main(config : DictConfig):
 
     fold_path = DataFold.query_fold_dir(extract_config.fold_dir, extract_config.fold_id)
     fold = DataFold.from_artifact_path(fold_path)
+
+
     data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
                                                                    data_config=data_config,
                                                                    preprocess_config=preprocess_config,
@@ -340,6 +342,7 @@ def main(config : DictConfig):
         print(f'INITIATING ZERO-SHOT TEST ON Fossil_family_100')
         test_dataset_config = OmegaConf.load('configs/dataset/Fossil_family_100_test.yaml')
         test_dataset_config = OmegaConf.merge(data_config, test_dataset_config.params)
+        
         test_dataset_config.extract.num_classes = encoder.num_classes
 
         # fold_dir = f"/media/data/jacob/Fossil_Project/data/csv_data/paleoai_data_disk_cache_dir/staged_data/{test_dataset_config.dataset_name}/ksplit_2/" 
