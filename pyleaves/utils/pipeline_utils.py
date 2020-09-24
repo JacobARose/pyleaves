@@ -269,7 +269,7 @@ def extract_data(fold: DataFold,
                  exclude_classes=[],
                  include_classes=[],
                  val_split: float=0.0,
-                 subsets=['train','val','test']
+                 subsets=['train','val','test'],
                  seed: int=None):
 
 
