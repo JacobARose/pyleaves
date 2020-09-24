@@ -286,13 +286,14 @@ def main(config : DictConfig):
     # test_stage_config = init_Fossil_family_100_test_config(main_config=config)
 
     if 'stage_3' in config.pipeline:
-        test_stage_config = init_any_dataset_test_config(config, dataset_name=config.pipeline.stage_3.dataset_name)
-        test_data_config = test_stage_config.dataset.params
-        test_fold_dir = test_data_config.extract.fold_dir
-        test_fold_id = test_data_config.extract.fold_id
-        test_fold_path = DataFold.query_fold_dir(test_fold_dir, test_fold_id)
-        test_fold = DataFold.from_artifact_path(test_fold_path)
-        test_fold.name = test_data_config.extract.dataset_name
+        if config.pipeline.stage_3 is not None:
+            test_stage_config = init_any_dataset_test_config(config, dataset_name=config.pipeline.stage_3.dataset_name)
+            test_data_config = test_stage_config.dataset.params
+            test_fold_dir = test_data_config.extract.fold_dir
+            test_fold_id = test_data_config.extract.fold_id
+            test_fold_path = DataFold.query_fold_dir(test_fold_dir, test_fold_id)
+            test_fold = DataFold.from_artifact_path(test_fold_path)
+            test_fold.name = test_data_config.extract.dataset_name
     ##############################################
 
     encoder = init_pipeline_encoder_scheme(fold, test_fold=test_fold, scheme = config.pipeline.encoding_scheme, threshold=data_config.extract.threshold, verbose=True)
