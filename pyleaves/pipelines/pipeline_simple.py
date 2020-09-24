@@ -301,8 +301,12 @@ def main(config : DictConfig):
                                                                    seed=config.misc.seed)
     class_weight=None
     if config.pipeline.stage_1.params.fit_class_weights:
-        class_weight = split_datasets['train'].metadata.calc_class_weights()
-    
+
+        class_weight = split_datasets['train'].metadata.calc_class_weights(class_distribution=split_datasets['train'].class_distribution,
+                                                                           num_samples=split_datasets['train'].num_samples,
+                                                                           encoder=encoder,
+                                                                           use_int_keys=True)
+
     
     # TODO hash and log extracted_data
     if data_config.training.steps_per_epoch is None:
