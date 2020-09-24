@@ -193,7 +193,7 @@ def get_Fossil_classes_at_thresh(thresh=100):
     return fossil.metadata.metadata_view_at_threshold(thresh).class_names
 
 
-def init_pipeline_encoder_scheme(train_fold, test_fold, scheme: str = "{train}", threshold=100, verbose: bool=False):
+def init_pipeline_encoder_scheme(train_fold, test_fold=None, scheme: str = "{train}", threshold=100, verbose: bool=False):
     """
 
     schemes:
@@ -212,7 +212,10 @@ def init_pipeline_encoder_scheme(train_fold, test_fold, scheme: str = "{train}",
         threshold (int, optional): [description]. Defaults to 100.
     """    
     train_class_names = train_fold.metadata.metadata_view_at_threshold(threshold).class_names
-    test_class_names = test_fold.metadata.metadata_view_at_threshold(threshold).class_names
+    if test_fold is not None:
+        test_class_names = test_fold.metadata.metadata_view_at_threshold(threshold).class_names
+    else:
+        test_class_names = []
 
     if scheme == "{train}":
         class_names = list(train_class_names)
@@ -285,6 +288,7 @@ def main(config : DictConfig):
     ##############################################
     # test_stage_config = init_Fossil_family_100_test_config(main_config=config)
 
+    test_fold=None
     if 'stage_3' in config.pipeline:
         if config.pipeline.stage_3 is not None:
             test_stage_config = init_any_dataset_test_config(config, dataset_name=config.pipeline.stage_3.dataset_name)
@@ -385,6 +389,7 @@ def main(config : DictConfig):
                     import pdb;pdb.set_trace()
                     print_config(config)
 
+        test_results=None
         if "test" in config.pipeline.stage_2.subsets:
             num_test_samples = split_datasets['test'].num_samples
             test_results = evaluate(model,
@@ -409,6 +414,9 @@ def main(config : DictConfig):
 
 
         if 'stage_3' in config.pipeline:
+            if config.pipeline.stage_3 is None:
+                return test_results
+
 
             # if data_config.extract.dataset_name == 'Fossil_family_100':
             #     print('Returning test results without performing additional evaluation, since main testing dataset is already Fossil_family_100')
@@ -427,7 +435,7 @@ def main(config : DictConfig):
                                                                            seed=test_stage_config.misc.seed)
 
 
-            experiment.log_text(f'Fossil_family_100_dataset_config', OmegaConf.to_container(test_data_config, resolve=True))
+            experiment.log_text(f'{test_data_config.extract.dataset_name}_dataset_config', OmegaConf.to_container(test_data_config, resolve=True))
 
             try:
                 test_subset_key = test_stage_config.pipeline.stage_3.subsets[0]
