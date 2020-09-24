@@ -30,7 +30,10 @@ def init_hydra_config(config_name: str="simplified_config", overrides: list=None
     overrides = overrides or []
     config_dir = config_dir or DEFAULT_CONFIG_DIR
 
-    with initialize_config_dir(config_dir=config_dir):
+    try:
+        with initialize_config_dir(config_dir=config_dir):
+            config = compose(config_name=config_name, overrides=overrides)
+    except ValueError:
         config = compose(config_name=config_name, overrides=overrides)
 
     return config
