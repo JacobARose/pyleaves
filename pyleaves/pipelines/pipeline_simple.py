@@ -413,11 +413,15 @@ def main(config : DictConfig):
             pprint(test_results)
 
             print(['[FINISHED TRAINING AND TESTING]'])
-
-            if data_config.extract.dataset_name == test_data_config.extract.dataset_name:
+            if 'stage_3' not in config.pipeline:
+                return test_results
+            elif config.pipeline.stage_3 is None:
+                return test_results
+            elif 'test_data_config' not in locals():
+                    return test_results
+            elif data_config.extract.dataset_name == test_data_config.extract.dataset_name:
                 print(f'Returning test results without performing additional evaluation, since main testing dataset is already {test_data_config.extract.dataset_name}')
                 return test_results
-
 
 
         if 'stage_3' in config.pipeline:
