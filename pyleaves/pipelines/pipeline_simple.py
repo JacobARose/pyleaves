@@ -316,6 +316,7 @@ def main(config : DictConfig):
                                                                    cache=True,
                                                                    cache_image_dir=config.run_dirs.cache_dir,
                                                                    seed=config.misc.seed)
+    import pdb;pdb.set_trace()
     class_weight=None
     if config.pipeline.stage_1.params.fit_class_weights:
         class_weight = split_datasets['train'].metadata.calc_class_weights(class_distribution=split_datasets['train'].class_distribution,
@@ -332,8 +333,8 @@ def main(config : DictConfig):
         data_config.training.validation_steps = split_datasets['val'].num_samples//data_config.training.batch_size
 
     train_data=None;val_data=None;test_data=None
-    if 'train+test' in data:
-        train_data = data['train+test']
+    if 'train+test' in subsets:
+        train_data = data['train']
     elif 'train' in data:
         train_data = data['train']
     if 'val' in data:
