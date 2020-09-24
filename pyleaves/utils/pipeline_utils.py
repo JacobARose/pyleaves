@@ -299,8 +299,6 @@ def extract_data(fold: DataFold,
     split_datasets = {}
 
     if val_split > 0.0:
-        
-        import pdb; pdb.set_trace()
 
         train_dataset, val_dataset = train_dataset.split(val_split, seed=seed)
         # val_x = [str(p) for p in list(val_dataset.data['path'].values)]
