@@ -362,12 +362,12 @@ def main(config : DictConfig):
                     print_config(config)
 
         if config.pipeline.stage_2 == "test":
-            steps = split_datasets['test'].num_samples//data_config.training.batch_size
+            steps = split_datasets['test'].num_samples#//data_config.training.batch_size
             test_results = evaluate(model,
                                     encoder,
                                     model_config,
                                     data_config,
-                                    test_data=test_data,
+                                    test_data=test_data.unbatch(),
                                     steps=steps,
                                     confusion_matrix=True,
                                     experiment=experiment)
@@ -395,12 +395,12 @@ def main(config : DictConfig):
                                                                         cache_image_dir=test_stage_config.run_dirs.cache_dir,
                                                                         seed=test_stage_config.misc.seed)
 
-            steps = split_datasets['test'].num_samples//test_data_config.training.batch_size
+            steps = split_datasets['test'].num_samples#//test_data_config.training.batch_size
             test_results = evaluate(model,
                                     encoder,
                                     model_config,
                                     test_data_config,
-                                    test_data=data['test'],
+                                    test_data=data['test'].unbatch(),
                                     steps=steps,
                                     confusion_matrix=True,
                                     experiment=experiment, 
@@ -426,8 +426,6 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
     # num_classes = num_classes
 
     text_labels = encoder.classes
-    steps = steps
-
 
     if data_config.testing.eval_performance_w_sklearn:
         report = evaluate_performance(model, x=test_data, steps=steps, text_labels=text_labels)

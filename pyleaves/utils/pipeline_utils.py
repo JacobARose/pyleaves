@@ -656,7 +656,8 @@ from sklearn.metrics import classification_report#, confusion_matrix
 
 def evaluate_performance(model, x, y=None, steps=None, text_labels=None):
     if y is None:
-        y = x.map(lambda x,y: y).take(steps).unbatch()
+        y = x.map(lambda x,y: y).take(steps).batch(steps)
+        y = np.vstack([i for i in y])
 
     probs = model.predict(x, steps=steps)
     print(probs.shape)
