@@ -269,7 +269,10 @@ def extract_data(fold: DataFold,
                  exclude_classes=[],
                  include_classes=[],
                  val_split: float=0.0,
+                 subsets=['train','val','test']
                  seed: int=None):
+
+
 
     train_data, test_data = fold.train_data, fold.test_data
     if encoder is None:
@@ -285,9 +288,12 @@ def extract_data(fold: DataFold,
                                     reset_encodings=reset_encodings,
                                     alphabetize_classes=alphabetize_classes)
     # classes = list((set(encoder.classes)-set(exclude_classes)).union(set(include_classes)))
+
     train_dataset, _ = fold.train_dataset.enforce_class_whitelist(class_names=encoder.classes)
     test_dataset, _ = fold.test_dataset.enforce_class_whitelist(class_names=encoder.classes)
 
+    if 'train+test' in subsets:
+        train_dataset = train_dataset + test_dataset
 
     split_data = {}
     split_datasets = {}
@@ -307,17 +313,22 @@ def extract_data(fold: DataFold,
     # shuffle_idx = random.sample(range(len(train_x)), len(train_x))
     # train_data = [train_data[k] for k in shuffle_idx]
     # train_data = [list(i) for i in unzip(train_data)]
-    train_data = train_dataset.get_encoded_data(encoder=encoder, shuffle=True)
-    split_data['train'] = train_data
-    split_datasets['train'] = train_dataset
+
+    # np.any(['train' in subset for subset in ['train+test','val','test']])
+
+    if np.any(['train' in subset for subset in subsets]):
+        train_data = train_dataset.get_encoded_data(encoder=encoder, shuffle=True)
+        split_data['train'] = train_data
+        split_datasets['train'] = train_dataset
 
 
     # test_x = [str(p) for p in list(test_dataset.data['path'].values)]
     # test_y = np.array(encoder.encode(test_dataset.data['family']))
     # test_data = (test_x, test_y)
-    test_data = test_dataset.get_encoded_data(encoder=encoder, shuffle=False)
-    split_data['test'] = test_data
-    split_datasets['test'] = test_dataset
+    if 'test' in subsets:
+        test_data = test_dataset.get_encoded_data(encoder=encoder, shuffle=False)
+        split_data['test'] = test_data
+        split_datasets['test'] = test_dataset
 
     return split_data, split_datasets, encoder
 
@@ -355,6 +366,7 @@ def extract_and_load_data(data_fold: DataFold,
                           exclude_classes=[],
                           include_classes=[],
                           val_split=0.0,
+                          subsets=['train','val','test'],
                           cache: Union[bool,str]=True,
                           seed=None):
 
@@ -364,6 +376,7 @@ def extract_and_load_data(data_fold: DataFold,
                                                            exclude_classes=exclude_classes,
                                                            include_classes=include_classes,
                                                            val_split=val_split,
+                                                           subsets=subsets,
                                                            seed=seed)
                                                        
     # subset_keys = [k for k in split_data if split_data[k] is not None]
@@ -380,6 +393,7 @@ def create_dataset(data_fold: DataFold,
                    preprocess_config: DictConfig,
                    encoder: base_dataset.LabelEncoder=None,
                    class_names: List[str]=None,
+                   subsets=['train','val','test'],
                    cache: Union[bool,str]=True,
                    cache_image_dir: str=None,
                    seed: int=None):
@@ -391,11 +405,23 @@ def create_dataset(data_fold: DataFold,
                                                              exclude_classes=data_config.extract.exclude_classes,
                                                              include_classes=data_config.extract.include_classes,
                                                              val_split=data_config.extract.val_split,
+                                                             subsets=subsets,
                                                              cache=cache,
                                                              seed=seed)
     num_classes = encoder.num_classes
     split_data = {}
-    if 'train' in loaded_data.keys():
+    if np.any(['train' in subset for subset in loaded_data.keys()]):
+    # if 'train' in loaded_data.keys():
+        subset = loaded_data[['train' in subset for subset in loaded_data.keys()]]
+
+        # np.any(['train' in subset for subset in ['train+test','val','test']])
+        # data_subs = {'train': [0,2,3], 'test':[4,5,6], 'train+test':[7,8,9]}
+        keys = np.array(list(loaded_data.keys()))
+        keys = keys[['train' in subset for subset in keys]]
+        if len(keys)>1:
+            print(f"Multiple subsets with 'train' included: {keys}. M")
+
+
         split_data['train'] = prep_dataset(loaded_data['train'],
                                            preprocess_module=preprocess_config._target_,
                                            batch_size=data_config.training.batch_size,

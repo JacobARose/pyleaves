@@ -373,8 +373,8 @@ def main(config : DictConfig):
                     import pdb;pdb.set_trace()
                     print_config(config)
 
-        if config.pipeline.stage_2 == "test":
-            num_test_samples = split_datasets['test'].num_samples#//data_config.training.batch_size
+        if "test" in config.pipeline.stage_2.subsets:
+            num_test_samples = split_datasets['test'].num_samples
             test_results = evaluate(model,
                                     encoder,
                                     model_config,
@@ -390,11 +390,17 @@ def main(config : DictConfig):
 
             print(['[FINISHED TRAINING AND TESTING]'])
 
-        if config.pipeline.stage_3.test_on_Fossil_family_100==True:
-            # TODO walk throug below section and test
             if data_config.extract.dataset_name == 'Fossil_family_100':
                 print('Returning test results without performing additional evaluation, since main testing dataset is already Fossil_family_100')
                 return test_results
+
+
+
+        if config.pipeline.stage_3.test_on_Fossil_family_100==True:
+            # TODO walk throug below section and test
+            # if data_config.extract.dataset_name == 'Fossil_family_100':
+            #     print('Returning test results without performing additional evaluation, since main testing dataset is already Fossil_family_100')
+            #     return test_results
             print(f'INITIATING ZERO-SHOT TEST ON Fossil_family_100')
 
             # test_data_config = test_stage_config.dataset.params
@@ -411,17 +417,22 @@ def main(config : DictConfig):
 
             experiment.log_text('Fossil_family_100_dataset_config', OmegaConf.to_container(test_data_config, resolve=True))
 
-            num_test_samples = split_datasets['test'].num_samples#//test_data_config.training.batch_size
+            try:
+                test_subset_key = test_stage_config.pipeline.stage_3.subsets[0]
+            except:
+                test_subset_key = 'test'
+
+            num_test_samples = split_datasets[test_subset_key].num_samples#//test_data_config.training.batch_size
             test_results = evaluate(model,
                                     encoder,
                                     model_config,
                                     test_data_config,
-                                    test_data=data['test'].unbatch(),
+                                    test_data=data[test_subset_key].unbatch(),
                                     num_samples=num_test_samples,
                                     batch_size=32,
                                     confusion_matrix=True,
                                     experiment=experiment, 
-                                    subset_prefix='Fossil_family_100_test')
+                                    subset_prefix=f'Fossil_family_100_{test_subset_key}')
 
             
 
