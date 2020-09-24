@@ -264,6 +264,7 @@ def prep_dataset(dataset,
 
 
 def extract_data(fold: DataFold,
+                 encoder: base_dataset.LabelEncoder=None,
                  class_names: List[str]=None,
                  exclude_classes=[],
                  include_classes=[],
@@ -271,9 +272,18 @@ def extract_data(fold: DataFold,
                  seed: int=None):
 
     train_data, test_data = fold.train_data, fold.test_data
-    class_names = class_names or fold.metadata.class_names
-
-    encoder = base_dataset.LabelEncoder(class_names)
+    if encoder is None:
+        class_names = class_names or fold.metadata.class_names
+        encoder = base_dataset.LabelEncoder(class_names)
+        reset_encodings = True
+        alphabetize_classes = True
+    else:
+        reset_encodings = False
+        alphabetize_classes = False
+    encoder.update_with_new_classes(include_classes=include_classes,
+                                    exclude_classes=exclude_classes,
+                                    reset_encodings=reset_encodings,
+                                    alphabetize_classes=alphabetize_classes)
     classes = list((set(encoder.classes)-set(exclude_classes)).union(set(include_classes)))
     train_dataset, _ = fold.train_dataset.enforce_class_whitelist(class_names=classes)
     test_dataset, _ = fold.test_dataset.enforce_class_whitelist(class_names=classes)
@@ -284,26 +294,28 @@ def extract_data(fold: DataFold,
 
     if val_split > 0.0:
         train_dataset, val_dataset = train_dataset.split(val_split, seed=seed)
-        val_x = [str(p) for p in list(val_dataset.data['path'].values)]
-        val_y = np.array(encoder.encode(val_dataset.data['family']))
-        val_data = (val_x, val_y)
+        # val_x = [str(p) for p in list(val_dataset.data['path'].values)]
+        # val_y = np.array(encoder.encode(val_dataset.data['family']))
+        # val_data = (val_x, val_y)
+        val_data = val_dataset.get_encoded_data(encoder=encoder, shuffle=False)
         split_data['val'] = val_data
         split_datasets['val'] = val_dataset
 
-    train_x = [str(p) for p in list(train_dataset.data['path'].values)]
-    train_y = np.array(encoder.encode(train_dataset.data['family']))
-    train_data = list(zip(train_x,train_y))
-    shuffle_idx = random.sample(range(len(train_x)), len(train_x))
-    train_data = [train_data[k] for k in shuffle_idx]
-    # random.shuffle(train_data) # TODO replace random.shuffle w/ more robust shuffle
-    train_data = [list(i) for i in unzip(train_data)]
+    # train_x = [str(p) for p in list(train_dataset.data['path'].values)]
+    # train_y = np.array(encoder.encode(train_dataset.data['family']))
+    # train_data = list(zip(train_x,train_y))
+    # shuffle_idx = random.sample(range(len(train_x)), len(train_x))
+    # train_data = [train_data[k] for k in shuffle_idx]
+    # train_data = [list(i) for i in unzip(train_data)]
+    train_data = train_dataset.get_encoded_data(encoder=encoder, shuffle=True)
     split_data['train'] = train_data
     split_datasets['train'] = train_dataset
 
 
-    test_x = [str(p) for p in list(test_dataset.data['path'].values)]
-    test_y = np.array(encoder.encode(test_dataset.data['family']))
-    test_data = (test_x, test_y)
+    # test_x = [str(p) for p in list(test_dataset.data['path'].values)]
+    # test_y = np.array(encoder.encode(test_dataset.data['family']))
+    # test_data = (test_x, test_y)
+    test_data = test_dataset.get_encoded_data(encoder=encoder, shuffle=False)
     split_data['test'] = test_data
     split_datasets['test'] = test_dataset
 
