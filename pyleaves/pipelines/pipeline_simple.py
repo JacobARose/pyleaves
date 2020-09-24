@@ -170,8 +170,8 @@ def validate_model_config(config):
         if model_config.regularization.l1 is not None:
             model_config.regularization.l2 = None
 
-    print('model_config.frozen_layers: ', model_config.frozen_layers)
-    print('type(model_config.frozen_layers): ', type(model_config.frozen_layers))
+    # print('model_config.frozen_layers: ', model_config.frozen_layers)
+    # print('type(model_config.frozen_layers): ', type(model_config.frozen_layers))
     if model_config.frozen_layers is not None:
         if type(model_config.frozen_layers) not in [list,tuple,ListConfig]:
             model_config.frozen_layers = None
@@ -307,10 +307,12 @@ def main(config : DictConfig):
 
     encoder = init_pipeline_encoder_scheme(fold, test_fold=test_fold, scheme = config.pipeline.encoding_scheme, threshold=data_config.extract.threshold, verbose=True)
 
+    subsets = [*config.pipeline.stage_1.subsets, *config.pipeline.stage_2.subsets]
     data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
                                                                    data_config=data_config,
                                                                    preprocess_config=preprocess_config,
                                                                    encoder=encoder,
+                                                                   subsets=subsets,
                                                                    cache=True,
                                                                    cache_image_dir=config.run_dirs.cache_dir,
                                                                    seed=config.misc.seed)
@@ -332,8 +334,7 @@ def main(config : DictConfig):
     train_data=None;val_data=None;test_data=None
     if 'train+test' in data:
         train_data = data['train+test']
-
-    if 'train' in data:
+    elif 'train' in data:
         train_data = data['train']
     if 'val' in data:
         val_data = data['val']
@@ -346,9 +347,9 @@ def main(config : DictConfig):
     except:
         print('WARNING: Jacob remove this stupid block and simplify it. line 347 of pipeline_simple.py')
         print('Failed to perform:\ndata_config.extract.num_classes = fold.metadata.metadata_view_at_threshold(data_config.extract.threshold).num_classes')
-
         print('proceeding anyway with previous method:\ndata_config.extract.num_classes=encoder.num_classes')
-    # model_config.input_shape = (*training_config.target_size, extract_config.num_channels)
+        data_config.extract.num_classes=encoder.num_classes
+
     model_config.num_classes = encoder.num_classes
     model = build_model(model_config)
 
@@ -372,9 +373,6 @@ def main(config : DictConfig):
         callbacks = get_callbacks(config, model_config, model, csv_path, train_data=train_data, val_data=val_data, encoder=encoder, experiment=experiment)
 
         print('[BEGINNING TRAINING]')
-        # if config.orchestration.debug:
-        #     import pdb;pdb.set_trace()
-        #     print_config(config)
         try:
             history = model.fit(train_data,
                                 epochs=data_config.training.num_epochs,
@@ -402,11 +400,11 @@ def main(config : DictConfig):
             experiment.log_artifact(csv_path)
 
         model.save(config.run_dirs.saved_model_path)
-        print('[STAGE COMPLETED]')
+        print('[STAGE 1 COMPLETED]')
         print(f'Saved trained model to {config.run_dirs.saved_model_path}')
         if config.orchestration.debug:
-                    import pdb;pdb.set_trace()
-                    print_config(config)
+            import pdb;pdb.set_trace()
+            print_config(config)
 
         test_results=None
         if "test" in config.pipeline.stage_2.subsets:
@@ -424,13 +422,13 @@ def main(config : DictConfig):
             print('TEST RESULTS:')
             pprint(test_results)
 
-            print(['[FINISHED TRAINING AND TESTING]'])
+            print('[FINISHED TRAINING (STAGE_1) AND TESTING (STAGE_2)]')
             if 'stage_3' not in config.pipeline:
                 return test_results
             elif config.pipeline.stage_3 is None:
                 return test_results
             elif 'test_data_config' not in locals():
-                    return test_results
+                return test_results
             elif data_config.extract.dataset_name == test_data_config.extract.dataset_name:
                 print(f'Returning test results without performing additional evaluation, since main testing dataset is already {test_data_config.extract.dataset_name}')
                 return test_results

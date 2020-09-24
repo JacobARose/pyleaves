@@ -383,7 +383,7 @@ def extract_and_load_data(data_fold: DataFold,
     # subset_keys = [k for k in split_data if split_data[k] is not None]
     loaded_data = {}
     for k, data in extracted_data.items():
-        training = bool(k=='train')
+        training = bool('train' in k)
         loaded_data[k] = load_data_from_tensor_slices(data, cache=cache, training=training, seed=seed)
 
     return loaded_data, extracted_data, split_datasets, encoder
@@ -413,17 +413,20 @@ def create_dataset(data_fold: DataFold,
     split_data = {}
     if np.any(['train' in subset for subset in loaded_data.keys()]):
     # if 'train' in loaded_data.keys():
-        # subset = loaded_data[['train' in subset for subset in loaded_data.keys()]]
-
         # np.any(['train' in subset for subset in ['train+test','val','test']])
         # data_subs = {'train': [0,2,3], 'test':[4,5,6], 'train+test':[7,8,9]}
         keys = np.array(list(loaded_data.keys()))
         keys = keys[['train' in subset for subset in keys]]
-        if len(keys)>1:
-            print(f"Multiple subsets with 'train' included: {keys}.\nMultiple subsets is not currently implemented. Proceeding with the first item: {keys[0]}")
+
+        if 'train+test' in keys:
+            subset_key = 'train+test'
+            print(f"Proceeding to train on subset concatenation '{subset_key}'")
+        elif 'train' in keys:
+            subset_key = 'train'
+            print(f"Proceeding to train on subset {subset_key}")
 
 
-        split_data['train'] = prep_dataset(loaded_data['train'],
+        split_data['train'] = prep_dataset(loaded_data[subset_key],
                                            preprocess_module=preprocess_config._target_,
                                            batch_size=data_config.training.batch_size,
                                            buffer_size=data_config.training.buffer_size,
@@ -437,6 +440,7 @@ def create_dataset(data_fold: DataFold,
                                            cache_dir=cache_image_dir,
                                            seed=seed)
     if 'val' in loaded_data.keys():
+        print(f"Proceeding to validate with subset 'val', val_split={data_config.extract.val_split}")
         split_data['val'] = prep_dataset(loaded_data['val'],
                                          preprocess_module=preprocess_config._target_,
                                          batch_size=data_config.training.batch_size,
@@ -449,6 +453,7 @@ def create_dataset(data_fold: DataFold,
                                          seed=seed)
 
     if 'test' in loaded_data.keys():
+        print("Proceeding to test with subset 'test'")
         split_data['test'] = prep_dataset(loaded_data['test'],
                                           preprocess_module=preprocess_config._target_,
                                           batch_size=data_config.training.batch_size,
