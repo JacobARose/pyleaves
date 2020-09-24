@@ -276,7 +276,7 @@ def main(config : DictConfig):
     config.model.params = model_config
 
     ##############################################
-    test_stage_config = init_Fossil_family_100_test_config(main_config=config, verbose=True)
+    test_stage_config = init_Fossil_family_100_test_config(main_config=config)
     test_data_config = test_stage_config.dataset.params
     test_fold_dir = test_data_config.extract.fold_dir
     test_fold_id = test_data_config.extract.fold_id
@@ -288,7 +288,7 @@ def main(config : DictConfig):
     fold = DataFold.from_artifact_path(fold_path)
     ##############################################
 
-    encoder = init_pipeline_encoder_scheme(fold, test_fold=fossil_test_fold, scheme = config.pipeline.encoding_scheme, threshold=100)
+    encoder = init_pipeline_encoder_scheme(fold, test_fold=fossil_test_fold, scheme = config.pipeline.encoding_scheme, threshold=100, verbose=True)
 
     data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
                                                                    data_config=data_config,
