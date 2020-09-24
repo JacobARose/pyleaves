@@ -427,7 +427,7 @@ def create_dataset(data_fold: DataFold,
             print(f"Proceeding to train on subset {subset_key}")
 
 
-        split_data['train'] = prep_dataset(loaded_data[subset_key],
+        split_data['train'] = prep_dataset(loaded_data['train'],
                                            preprocess_module=preprocess_config._target_,
                                            batch_size=data_config.training.batch_size,
                                            buffer_size=data_config.training.buffer_size,
