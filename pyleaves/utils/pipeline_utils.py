@@ -687,7 +687,8 @@ import pandas as pd
 def evaluate_performance(model, x, y=None, num_samples=None, batch_size=None, labels: List[int]=None, target_names: List[str]=None, output_dict: bool=True):
     steps = num_samples//batch_size
     if y is None:
-        y = x.map(lambda x,y: y).batch(num_samples).take(1)
+        # y = x.map(lambda x,y: y).batch(num_samples).take(1)
+        y = x.map(lambda x,y: y).take(num_samples).batch(batch_size)
         y = np.vstack([i for i in y])
 
     x = x.take(num_samples).batch(batch_size)
@@ -709,9 +710,15 @@ def evaluate_performance(model, x, y=None, num_samples=None, batch_size=None, la
 
     return report
 
+# y = x.map(lambda x,y: y).batch(num_samples).take(1)
+# x = x.take(num_samples).batch(batch_size)
 
+# The above resulted in y.shape == 2078
+# while
+# x.shape == 2048
 
-
+# Clearly, the batch operation is truncating to multiples of batch_size
+# Likely the best option is for both x and y to utilize the same order of operations
 
 
 
