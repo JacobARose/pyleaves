@@ -42,13 +42,13 @@ def add_regularization(model, regularizer=tf.keras.regularizers.l2, strength: fl
     # model.save(tmp_saved_model_path)
 
     # model = tf.keras.models.load_model(tmp_saved_model_path)
+    with tempfile.TemporaryDirectory() as dir_name:
+        tmp_weights_path = os.path.join(dir_name, f'tmp_saved_model-{str(int(time()))}.h5')
+        model.save_weights(tmp_weights_path)
 
-    tmp_weights_path = os.path.join(tempfile.gettempdir(), f'tmp_saved_model-{str(int(time()))}.h5')
-    model.save_weights(tmp_weights_path)
-
-    model_json = model.to_json()
-    model = tf.keras.models.model_from_json(model_json)
-    model.load_weights(tmp_weights_path, by_name=True)
+        model_json = model.to_json()
+        model = tf.keras.models.model_from_json(model_json)
+        model.load_weights(tmp_weights_path, by_name=True)
 
     return model
 
