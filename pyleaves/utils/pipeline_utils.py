@@ -412,14 +412,14 @@ def create_dataset(data_fold: DataFold,
     split_data = {}
     if np.any(['train' in subset for subset in loaded_data.keys()]):
     # if 'train' in loaded_data.keys():
-        subset = loaded_data[['train' in subset for subset in loaded_data.keys()]]
+        # subset = loaded_data[['train' in subset for subset in loaded_data.keys()]]
 
         # np.any(['train' in subset for subset in ['train+test','val','test']])
         # data_subs = {'train': [0,2,3], 'test':[4,5,6], 'train+test':[7,8,9]}
         keys = np.array(list(loaded_data.keys()))
         keys = keys[['train' in subset for subset in keys]]
         if len(keys)>1:
-            print(f"Multiple subsets with 'train' included: {keys}. M")
+            print(f"Multiple subsets with 'train' included: {keys}.\nMultiple subsets is not currently implemented. Proceeding with the first item: {keys[0]}")
 
 
         split_data['train'] = prep_dataset(loaded_data['train'],
