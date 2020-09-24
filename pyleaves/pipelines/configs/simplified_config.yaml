@@ -16,6 +16,28 @@ defaults:
 #         "/media/data/jacob/Fossil_Project/data/csv_data/paleoai_data_disk_cache_dir/staged_data/${dataset.dataset_name}/ksplit_2/"
 task: ${hydra:job.num}
 
+pipeline:
+    encoding_scheme: "{train}"
+    # Specify which classes will be used to construct the label encoder
+    # Possible schemes:
+    #     1. "{train}"
+    #     2. "{train}U{test}"
+    #     3. "{train}n{test}"
+    #     4. "{test}"
+
+
+    stage_1:
+        task: "fit+validate"
+        subsets: ["train","val"]
+    stage_2: 
+        task: "evaluate"
+        subsets: ["test"]
+    stage_3: 
+        task: "evaluate"
+        subsets: ["test"]
+        test_on_Fossil_family_100: true
+
+
 misc:
     experiment_start_time: null
     neptune_project_name: "jacobarose/simplified-baselines"

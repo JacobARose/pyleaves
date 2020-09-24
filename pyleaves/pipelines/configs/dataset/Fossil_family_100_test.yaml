@@ -11,6 +11,7 @@ params:
     val_split: 0.0
     include_classes: []
     exclude_classes: ['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified']
+    description: "Fossil dataset, formatted for testing and limited to families with >=100 images/class."
 
   training:
     augmentations:

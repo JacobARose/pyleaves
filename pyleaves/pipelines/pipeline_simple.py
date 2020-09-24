@@ -75,8 +75,9 @@ import hydra
 # from pyleaves.pipelines.pipeline_1 import *
 
 from pyleaves.datasets import base_dataset
-
+from pyleaves.utils.config_utils import init_Fossil_family_100_test_config
 from pyleaves.utils.experiment_utils import resolve_config_interpolations
+from paleoai_data.utils.dataset_utils import create_dataset_by_name
 from paleoai_data.utils.kfold_cross_validation import DataFold
 from typing import List, Union
 import random
@@ -186,13 +187,44 @@ def validate_model_config(config):
 
 
 
+def get_Fossil_classes_at_thresh(thresh=100):
+    fossil = create_dataset_by_name(name='Fossil', version='v0.2')
+    return fossil.metadata.metadata_view_at_threshold(thresh).class_names
 
 
+def init_pipeline_encoder_scheme(train_fold, test_fold, scheme: str = "{train}", threshold=100):
+    """
 
+    schemes:
 
+        1. "{train}"
+        2. "{train}U{test}"
+        3. "{train}n{test}"
+        4. "{test}"
 
+    
 
+    Args:
+        train_fold ([type]): [description]
+        test_fold ([type]): [description]
+        scheme (str, optional): [description]. Defaults to "{train}".
+        threshold (int, optional): [description]. Defaults to 100.
+    """    
+    train_class_names = train_fold.metadata.metadata_view_at_threshold(threshold).class_names
+    test_class_names = test_fold.metadata.metadata_view_at_threshold(threshold).class_names
 
+    if scheme == "{train}":
+        class_names = list(train_class_names)
+    elif scheme == "{train}U{test}":
+        class_names = list(set(train_class_names).union(set(test_class_names)))
+    elif scheme == "{train}n{test}":
+        class_names = list(set(train_class_names).intersection(set(test_class_names)))
+    elif scheme == "{test}":
+        class_names = list(test_class_names)
+
+    encoder = base_dataset.LabelEncoder(class_names)
+
+    return encoder
 
 
 
@@ -202,16 +234,10 @@ def main(config : DictConfig):
 
     OmegaConf.set_struct(config, False)
     from hydra.core.hydra_config import HydraConfig
-    # from pyleaves.train.paleoai_train import build_model
     from pyleaves.utils import set_tf_config
     from pyleaves.utils.experiment_utils import initialize_experiment, print_config
     from pyleaves.utils.pipeline_utils import create_dataset, get_callbacks, build_model
     from paleoai_data.utils.kfold_cross_validation import DataFold, StructuredDataKFold
-    # config.orchestration.gpu_num = 
-    # print('BEFORE PDB')
-    # import pdb
-    # pdb.set_trace()
-    # print('AFTER PDB')
     print('hydra.job.num=task=',config.task)
 
     # TODO spawn 8 lock files for the GPUs
@@ -232,10 +258,6 @@ def main(config : DictConfig):
     config = initialize_experiment(config, restore_last=config.misc.restore_last, restore_tfrecords=True)
     if config.dataset.params.extract.fold_id is None:
         config.dataset.params.extract.fold_id = 0
-
-    # config.dataset.params.extract.fold_dir = f"/media/data/jacob/Fossil_Project/data/csv_data/paleoai_data_disk_cache_dir/staged_data/{config.dataset.params.extract.dataset_name}/ksplit_2/" 
-
-
     config = validate_model_config(config) #ensure learning rate is passed as float, as well as some more checks
 
     data_config = config.dataset.params
@@ -243,14 +265,27 @@ def main(config : DictConfig):
     training_config = config.dataset.params.training
     model_config = config.model.params
     preprocess_config = config.model.params.preprocess_input
+    model_config.input_shape = (*training_config.target_size, extract_config.num_channels)
+    config.model.params = model_config
+
+    ##############################################
+    test_stage_config = init_Fossil_family_100_test_config(main_config=config)
+    test_fold_dir = test_stage_config.extract.fold_dir
+    test_fold_id = test_stage_config.extract.fold_id
+    test_fold_path = DataFold.query_fold_dir(test_fold_dir, test_fold_id)
+    fossil_test_fold = DataFold.from_artifact_path(test_fold_path)
+    ##############################################
 
     fold_path = DataFold.query_fold_dir(extract_config.fold_dir, extract_config.fold_id)
     fold = DataFold.from_artifact_path(fold_path)
+    ##############################################
 
+    encoder = init_pipeline_encoder_scheme(fold, test_fold=fossil_test_fold, scheme = config.pipeline.encoding_scheme, threshold=100)
 
     data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
                                                                    data_config=data_config,
                                                                    preprocess_config=preprocess_config,
+                                                                   encoder=encoder,
                                                                    cache=True,
                                                                    cache_image_dir=config.run_dirs.cache_dir,
                                                                    seed=config.misc.seed)
@@ -263,7 +298,7 @@ def main(config : DictConfig):
 
     train_data, val_data, test_data = data['train'], data['val'], data['test']
     data_config.extract.num_classes=encoder.num_classes
-    model_config.input_shape = (*training_config.target_size, extract_config.num_channels)
+    # model_config.input_shape = (*training_config.target_size, extract_config.num_channels)
     model_config.num_classes = encoder.num_classes
     model = build_model(model_config)
 
@@ -308,60 +343,61 @@ def main(config : DictConfig):
                 print_config(config)
             raise e
 
-
-
         if os.path.exists(csv_path):
             experiment.log_artifact(csv_path)
 
         model.save(config.run_dirs.saved_model_path)
         print('[STAGE COMPLETED]')
         print(f'Saved trained model to {config.run_dirs.saved_model_path}')
-
-        # print('history.history.keys() =',history.history.keys())
-
-        steps = split_datasets['test'].num_samples//data_config.training.batch_size
-
         if config.orchestration.debug:
-            import pdb;pdb.set_trace()
-            print_config(config)
+                    import pdb;pdb.set_trace()
+                    print_config(config)
 
-        test_results = evaluate(model, encoder, model_config, data_config, test_data=test_data, steps=steps, num_classes=encoder.num_classes, confusion_matrix=True, experiment=experiment)
+        if config.pipeline.stage_2 == "test":
+            steps = split_datasets['test'].num_samples//data_config.training.batch_size
+            test_results = evaluate(model,
+                                    encoder,
+                                    model_config,
+                                    data_config,
+                                    test_data=test_data,
+                                    steps=steps,
+                                    confusion_matrix=True,
+                                    experiment=experiment)
 
-        print('TEST RESULTS:')
-        pprint(test_results)
+            print('TEST RESULTS:')
+            pprint(test_results)
 
-        print(['[FINISHED TRAINING AND TESTING]'])
-        # for k,v in test_results.items():
-        #     neptune.log_metric(k, v)
-        # predictions = model.predict(test_data, steps=split_datasets['test'].num_samples)
+            print(['[FINISHED TRAINING AND TESTING]'])
 
-        # TODO walk throug below section and test
-        if data_config.extract.dataset_name == 'Fossil_family_100':
-            print('Returning test results without performing additional evaluation, since main testing dataset is already Fossil_family_100')
-            return test_results
-        print(f'INITIATING ZERO-SHOT TEST ON Fossil_family_100')
-        test_dataset_config = OmegaConf.load('configs/dataset/Fossil_family_100_test.yaml')
-        test_dataset_config = OmegaConf.merge(data_config, test_dataset_config.params)
-        
-        test_dataset_config.extract.num_classes = encoder.num_classes
+        if config.pipeline.stage_3.test_on_Fossil_family_100==True:
+            # TODO walk throug below section and test
+            if data_config.extract.dataset_name == 'Fossil_family_100':
+                print('Returning test results without performing additional evaluation, since main testing dataset is already Fossil_family_100')
+                return test_results
+            print(f'INITIATING ZERO-SHOT TEST ON Fossil_family_100')
+            # test_dataset_config = OmegaConf.load('configs/dataset/Fossil_family_100_test.yaml')
+            # test_dataset_config = OmegaConf.merge(data_config, test_dataset_config.params)
+            # test_dataset_config.extract.num_classes = encoder.num_classes
 
-        # fold_dir = f"/media/data/jacob/Fossil_Project/data/csv_data/paleoai_data_disk_cache_dir/staged_data/{test_dataset_config.dataset_name}/ksplit_2/" 
-        fold_dir = test_dataset_config.extract.fold_dir
-        fold_id = test_dataset_config.extract.fold_id
+            test_data_config = test_stage_config.dataset.params
+            data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fossil_test_fold,
+                                                                        data_config=test_data_config,
+                                                                        preprocess_config=preprocess_config,
+                                                                        encoder=encoder,
+                                                                        cache=True,
+                                                                        cache_image_dir=test_stage_config.run_dirs.cache_dir,
+                                                                        seed=test_stage_config.misc.seed)
 
-        fold_path = DataFold.query_fold_dir(fold_dir, fold_id)
-        fold = DataFold.from_artifact_path(fold_path)
-        data, extracted_data, split_datasets, encoder = create_dataset(data_fold=fold,
-                                                                    data_config=test_dataset_config,
-                                                                    preprocess_config=preprocess_config,
-                                                                    class_names=encoder.classes,
-                                                                    cache=True,
-                                                                    cache_image_dir=config.run_dirs.cache_dir,
-                                                                    seed=config.misc.seed)
-
-        steps = split_datasets['test'].num_samples//data_config.training.batch_size
-
-        test_results = evaluate(model, encoder, model_config, test_dataset_config, test_data=data['test'], steps=steps, num_classes=encoder.num_classes, confusion_matrix=True, experiment=experiment, subset_prefix='Fossil_family_100_test')
+            steps = split_datasets['test'].num_samples//data_config.training.batch_size
+            test_results = evaluate(model,
+                                    encoder,
+                                    model_config,
+                                    test_data_config,
+                                    test_data=data['test'],
+                                    steps=steps,
+                                    confusion_matrix=True,
+                                    experiment=experiment, 
+                                    subset_prefix='Fossil_family_100_test')
 
 
 
@@ -373,7 +409,7 @@ def main(config : DictConfig):
 
     return test_results
 
-def evaluate(model, encoder, model_config, data_config, test_data=None, steps: int=None, num_classes: int=None, confusion_matrix=True, experiment=None, subset_prefix='test'):
+def evaluate(model, encoder, model_config, data_config, test_data=None, steps: int=None, confusion_matrix=True, experiment=None, subset_prefix='test'):
     from pyleaves.utils.pipeline_utils import evaluate_performance
     experiment = experiment or neptune
     print('Preparing for model evaluation with subset_prefix =', subset_prefix)
@@ -392,7 +428,7 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
     callbacks=[]
     if confusion_matrix:
         from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
-        callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=text_labels, steps=steps, subset_prefix=subset_prefix, experiment=experiment))
+        callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=encoder.num_classes, text_labels=text_labels, steps=steps, subset_prefix=subset_prefix, experiment=experiment))
 
 
     test_results = model.evaluate(test_data, callbacks=callbacks, steps=steps, verbose=1)
