@@ -209,6 +209,28 @@ class BaseCallback(Callback):
 
 
 
+
+from tqdm import trange
+
+def tf_data2np(data: tf.data.Dataset, num_batches: int=None):
+    
+	num_batches = num_batches or 4
+
+	x_val, y_val = [], []
+	data_iter = iter(data)
+	print(f'Loading {num_batches} batches into memory for confusion matrix callback')
+	for _ in trange(num_batches):
+		x, y = next(data_iter)
+		x_val.append(x)
+		y_val.append(y)
+	return np.vstack(x_val), np.vstack(y_val)
+
+
+
+
+
+
+
 class NeptuneVisualizationCallback(Callback):
 	"""Callback for logging to Neptune.
 
@@ -247,24 +269,23 @@ class NeptuneVisualizationCallback(Callback):
 		super().__init__()
 
 		self.experiment = experiment or neptune
-		print(f'Passed validation data of type {type(validation_data)}')
-		# print('isinstance(validation_data, tf.data.Dataset):', isinstance(validation_data, tf.data.Dataset))
-		if isinstance(validation_data, tf.data.Dataset): #type(validation_data)==tf.data.Dataset:
-			if steps:
-				x_true,y_true=[],[]
-				print(f'Instantiating {steps} batches into memory for use in NeptuneVisualizationcallback')
-				for i, (x,y) in enumerate(validation_data):
-					x_true.append(x.numpy())
-					y_true.append(y.numpy())
-					print('Finished batch',i)
-					if i >= steps:
-						break
-				x_true = np.vstack(x_true)
-				y_true = np.vstack(y_true)
-			else:
-				x_true, y_true = next(iter(validation_data))
-				x_true = x_true.numpy()
-				y_true = y_true.numpy()
+		if isinstance(validation_data, tf.data.Dataset):
+			x_true, y_true = tf_data2np(data=validation_data, num_batches=steps)
+			# if steps:
+			# 	x_true,y_true=[],[]
+			# 	print(f'Instantiating {steps} batches into memory for use in NeptuneVisualizationcallback')
+			# 	for i, (x,y) in enumerate(validation_data):
+			# 		x_true.append(x.numpy())
+			# 		y_true.append(y.numpy())
+			# 		print('Finished batch',i)
+			# 		if i >= steps:
+			# 			break
+			# 	x_true = np.vstack(x_true)
+			# 	y_true = np.vstack(y_true)
+			# else:
+			# 	x_true, y_true = next(iter(validation_data))
+			# 	x_true = x_true.numpy()
+			# 	y_true = y_true.numpy()
 		elif type(validation_data)==tuple:
 			x_true, y_true = validation_data
 		else:
@@ -303,7 +324,7 @@ class NeptuneVisualizationCallback(Callback):
 
 	def on_batch_end(self, batch, logs={}):
 		for log_name, log_value in logs.items():
-			self.experiment.log_metric(f'{self.prefix}batch_{log_name}', log_value)
+			self.experiment.log_metric(f'{self.prefix}_batch_{log_name}', log_value)
 
 	def on_epoch_end(self, epoch, logs={}):
 		for log_name, log_value in logs.items():
@@ -313,13 +334,13 @@ class NeptuneVisualizationCallback(Callback):
 
 		fig, ax = plt.subplots(figsize=(16, 12))
 		plot_confusion_matrix(y_true, y_pred, labels=labels, ax=ax)
-		self.experiment.log_image(f'{self.prefix}confusion_matrix', fig)
+		self.experiment.log_image(f'{self.prefix}_confusion_matrix', fig)
 		
 
 		if self.num_classes == 2:
 			fig, ax = plt.subplots(figsize=(16, 12))
 			plot_roc(y_true, y_prob, ax=ax)
-			self.experiment.log_image(f'{self.prefix}roc_curve', fig)
+			self.experiment.log_image(f'{self.prefix}_roc_curve', fig)
 
 		plt.close('all')
 
@@ -333,12 +354,12 @@ class NeptuneVisualizationCallback(Callback):
 
 		fig, ax = plt.subplots(figsize=(16, 12))
 		plot_confusion_matrix(y_true, y_pred, labels=labels, ax=ax)
-		self.experiment.log_image(f'{self.prefix}confusion_matrix', fig)
+		self.experiment.log_image(f'{self.prefix}_confusion_matrix', fig)
 
 		if self.num_classes == 2:
 			fig, ax = plt.subplots(figsize=(16, 12))
 			plot_roc(y_true, y_prob, ax=ax)
-			self.experiment.log_image(f'{self.prefix}roc_curve', fig)
+			self.experiment.log_image(f'{self.prefix}_roc_curve', fig)
 		plt.close('all')
 
 # class NeptuneVisualizationCallback(Callback):

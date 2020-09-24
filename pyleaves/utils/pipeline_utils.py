@@ -645,8 +645,14 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
         else:
             num_batches = 10
             print(f'invalid value for config.callbacks.confusion_matrix.num_batches={config.callbacks.confusion_matrix.num_batches}.\nContinuing with 10 batches')
-        train_data_np = tf_data2np(data=train_data, num_batches=num_batches)
-        train_neptune_visualization_callback = NeptuneVisualizationCallback(train_data_np, num_classes=model_config.num_classes, experiment=experiment)
+        # train_data_np = tf_data2np(data=train_data, num_batches=num_batches)
+				 
+        train_neptune_visualization_callback = NeptuneVisualizationCallback(train_data, #train_data_np,
+                                                                            num_classes=model_config.num_classes,
+                                                                            text_labels = encoder.classes,
+                                                                            steps=num_batches,
+                                                                            subset_prefix='train',
+                                                                            experiment=experiment)
         callbacks.append(train_neptune_visualization_callback)
 
     if config.callbacks.confusion_matrix.log_val and (val_data is not None):
@@ -657,8 +663,14 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
         else:
             num_batches = 10
             print(f'invalid value for config.callbacks.confusion_matrix.num_batches={config.callbacks.confusion_matrix.num_batches}.\nContinuing with 10 batches')
-        validation_data_np = tf_data2np(data=val_data, num_batches=num_batches)
-        val_neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=model_config.num_classes, experiment=experiment)
+        # validation_data_np = tf_data2np(data=val_data, num_batches=num_batches)
+        val_neptune_visualization_callback = NeptuneVisualizationCallback(val_data,
+                                                                    num_classes=model_config.num_classes,
+                                                                    text_labels = encoder.classes,
+                                                                    steps=num_batches,
+                                                                    subset_prefix='val',
+                                                                    experiment=experiment)
+        # val_neptune_visualization_callback = NeptuneVisualizationCallback(validation_data_np, num_classes=model_config.num_classes, experiment=experiment)
         callbacks.append(val_neptune_visualization_callback)
 
     if config.orchestration.debug:
@@ -685,7 +697,7 @@ from sklearn.metrics import classification_report#, confusion_matrix
 import pandas as pd
 
 def evaluate_performance(model, x, y=None, num_samples=None, batch_size=None, labels: List[int]=None, target_names: List[str]=None, output_dict: bool=True):
-    steps = num_samples//batch_size
+    steps = int(np.ceil(num_samples/batch_size))
     if y is None:
         # y = x.map(lambda x,y: y).batch(num_samples).take(1)
         y = x.map(lambda x,y: y).take(num_samples).batch(batch_size)
