@@ -327,6 +327,9 @@ def main(config : DictConfig):
         data_config.training.validation_steps = split_datasets['val'].num_samples//data_config.training.batch_size
 
     train_data=None;val_data=None;test_data=None
+    if 'train+test' in data:
+        train_data = data['train+test']
+
     if 'train' in data:
         train_data = data['train']
     if 'val' in data:
