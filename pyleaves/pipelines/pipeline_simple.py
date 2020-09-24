@@ -462,7 +462,7 @@ def main(config : DictConfig):
 def evaluate(model, encoder, model_config, data_config, test_data=None, num_samples: int=None, batch_size: int=32, confusion_matrix=True, experiment=None, subset_prefix='test'):
     from pyleaves.utils.pipeline_utils import evaluate_performance
     import pandas as pd
-    from neptunecontrib.api.tabl import log_table
+    from neptunecontrib.api.table import log_table
     experiment = experiment or neptune
     print('Preparing for model evaluation with subset_prefix =', subset_prefix)
     # test_data = test_data
