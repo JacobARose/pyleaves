@@ -276,7 +276,7 @@ def main(config : DictConfig):
     config.model.params = model_config
 
     ##############################################
-    test_stage_config = init_Fossil_family_100_test_config(main_config=config)
+    test_stage_config = init_Fossil_family_100_test_config(main_config=config, verbose=True)
     test_data_config = test_stage_config.dataset.params
     test_fold_dir = test_data_config.extract.fold_dir
     test_fold_id = test_data_config.extract.fold_id
