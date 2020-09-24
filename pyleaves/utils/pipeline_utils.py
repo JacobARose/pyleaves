@@ -685,17 +685,18 @@ from sklearn.metrics import classification_report#, confusion_matrix
 import pandas as pd
 
 def evaluate_performance(model, x, y=None, num_samples=None, batch_size=None, text_labels=None, output_dict: bool=True):
-    steps = num_samples//batch_size
+    # steps = num_samples//batch_size
     if y is None:
         y = x.map(lambda x,y: y).batch(num_samples).take(1)
         y = np.vstack([i for i in y])
 
     x = x.take(num_samples).batch(batch_size)
-    probs = model.predict(x, steps=steps, verbose=1)
-    # print(probs.shape)
+    probs = model.predict(x, verbose=1)# steps=steps, verbose=1)
+    print('probs.shape = ', probs.shape)
     y_hat = probs.argmax(axis=1)
-    # print(y_hat.shape)
+    print('y_hat.shape = ', y_hat.shape)
     y = y.argmax(axis=1)
+    print('y.shape = ', y.shape)
     report = classification_report(y, y_hat, target_names=text_labels, output_dict=output_dict)
     # report = classification_report(labels, preds)
     if type(report)==dict:
