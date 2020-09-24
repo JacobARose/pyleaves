@@ -231,7 +231,8 @@ def init_pipeline_encoder_scheme(train_fold, test_fold=None, scheme: str = "{tra
     if verbose:
         print(f'Using encoding scheme: {scheme} for datasets:')
         print(f'train: {train_fold.name}, num_classes={len(train_class_names)}')
-        print(f'test: {test_fold.name}, num_classes={len(test_class_names)}')
+        if test_fold is not None:
+            print(f'test: {test_fold.name}, num_classes={len(test_class_names)}')
         print(f'One-Hot Encoding labels with encoder containing {encoder.num_classes} classes')
 
     return encoder
