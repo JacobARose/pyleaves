@@ -109,6 +109,9 @@ def log_hydra_config(backup_dir: str=None, config: DictConfig=None, experiment=N
             experiment.set_property('model_'+k,v)
         for k,v in config.run_dirs.items():
             experiment.set_property('rundirs_'+k,v)
+        for k,v in config.pipeline.items():
+            experiment.set_property('pipeline.'+k,str(v))
+        
         # config_output_path = os.path.join(config.run_dirs.log_dir,'config.yaml')
         # with open(config_output_path, 'w') as f:
         #     yaml.dump(resolve_config_interpolations(config=config, log_nodes=False), f)
@@ -481,18 +484,25 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, num_samp
     # test_data = test_data
     # num_classes = num_classes
 
-    text_labels = encoder.classes
+    labels = list(encoder.encoder.inv)
+    target_names = encoder.classes
     steps = num_samples//batch_size
 
     if data_config.testing.eval_performance_w_sklearn:
 
-        report = evaluate_performance(model, x=test_data.unbatch(), num_samples=num_samples, batch_size=batch_size, text_labels=text_labels, output_dict=True)
+        report = evaluate_performance(model,
+                                      x=test_data.unbatch(), 
+                                      num_samples=num_samples,
+                                      batch_size=batch_size,
+                                      labels=labels,
+                                      target_names=target_names, 
+                                      output_dict=True)
         log_table(f'{subset_prefix}_classification_report', report, experiment=experiment)
 
     callbacks=[]
     if confusion_matrix:
         from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
-        callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=encoder.num_classes, text_labels=text_labels, steps=steps, subset_prefix=subset_prefix, experiment=experiment))
+        callbacks.append(NeptuneVisualizationCallback(test_data, num_classes=encoder.num_classes, text_labels=target_names, steps=steps, subset_prefix=subset_prefix, experiment=experiment))
 
 
     test_results = model.evaluate(test_data, callbacks=callbacks, steps=steps, verbose=1)

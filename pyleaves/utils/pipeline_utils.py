@@ -684,7 +684,7 @@ from sklearn.metrics import classification_report#, confusion_matrix
 # from sklearn.utils.class_weight import compute_class_weight
 import pandas as pd
 
-def evaluate_performance(model, x, y=None, num_samples=None, batch_size=None, text_labels=None, output_dict: bool=True):
+def evaluate_performance(model, x, y=None, num_samples=None, batch_size=None, labels: List[int]=None, target_names: List[str]=None, output_dict: bool=True):
     # steps = num_samples//batch_size
     if y is None:
         y = x.map(lambda x,y: y).batch(num_samples).take(1)
@@ -697,10 +697,16 @@ def evaluate_performance(model, x, y=None, num_samples=None, batch_size=None, te
     print('y_hat.shape = ', y_hat.shape)
     y = y.argmax(axis=1)
     print('y.shape = ', y.shape)
-    report = classification_report(y, y_hat, target_names=text_labels, output_dict=output_dict)
-    # report = classification_report(labels, preds)
-    if type(report)==dict:
-        report = pd.DataFrame(report)
+    print(f'labels.shape = {labels.shape}, target_names.shape = {target_names.shape}')
+    try:
+        report = classification_report(y, y_hat, labels=labels, target_names=target_names, output_dict=output_dict)
+        # report = classification_report(labels, preds)
+        if type(report)==dict:
+            report = pd.DataFrame(report)
+    except Exception as e:
+        import pdb; pdb.set_trace()
+
+
     return report
 
 
