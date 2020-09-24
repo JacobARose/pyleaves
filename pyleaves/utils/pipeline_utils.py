@@ -654,11 +654,13 @@ from sklearn.metrics import classification_report#, confusion_matrix
 # from sklearn.utils.class_weight import compute_class_weight
 
 
-def evaluate_performance(model, x, y=None, steps=None, text_labels=None):
+def evaluate_performance(model, x, y=None, steps=None, batch_size=32, text_labels=None):
     if y is None:
         y = x.map(lambda x,y: y).take(steps).batch(steps)
         y = np.vstack([i for i in y])
 
+    steps = steps//batch_size
+    x = x.take(steps).batch(batch_size)
     probs = model.predict(x, steps=steps)
     print(probs.shape)
     y_hat = probs.argmax(axis=1)

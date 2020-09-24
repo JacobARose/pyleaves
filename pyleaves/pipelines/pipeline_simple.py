@@ -371,6 +371,7 @@ def main(config : DictConfig):
                                     data_config,
                                     test_data=test_data.unbatch(),
                                     steps=steps,
+                                    batch_size=32,
                                     confusion_matrix=True,
                                     experiment=experiment)
 
@@ -404,6 +405,7 @@ def main(config : DictConfig):
                                     test_data_config,
                                     test_data=data['test'].unbatch(),
                                     steps=steps,
+                                    batch_size=32,
                                     confusion_matrix=True,
                                     experiment=experiment, 
                                     subset_prefix='Fossil_family_100_test')
@@ -420,7 +422,7 @@ def main(config : DictConfig):
 
     return test_results
 
-def evaluate(model, encoder, model_config, data_config, test_data=None, steps: int=None, confusion_matrix=True, experiment=None, subset_prefix='test'):
+def evaluate(model, encoder, model_config, data_config, test_data=None, steps: int=None, batch_size: int=32, confusion_matrix=True, experiment=None, subset_prefix='test'):
     from pyleaves.utils.pipeline_utils import evaluate_performance
     experiment = experiment or neptune
     print('Preparing for model evaluation with subset_prefix =', subset_prefix)
@@ -430,7 +432,7 @@ def evaluate(model, encoder, model_config, data_config, test_data=None, steps: i
     text_labels = encoder.classes
 
     if data_config.testing.eval_performance_w_sklearn:
-        report = evaluate_performance(model, x=test_data, steps=steps, text_labels=text_labels)
+        report = evaluate_performance(model, x=test_data, steps=steps, batch_size=batch_size, text_labels=text_labels)
         experiment.log_text(f'{subset_prefix}_classification_report', report)
 
 
