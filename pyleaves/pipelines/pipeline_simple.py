@@ -358,9 +358,13 @@ def main(config : DictConfig):
 
     neptune.init(project_qualified_name=config.misc.neptune_project_name)
     params=resolve_config_interpolations(config=config, log_nodes=False)
+    upload_source_files=[os.path.join(os.path.dirname(__file__),'*.py')]
 
     # neptune_experiment_name = config.misc.experiment_name
-    with neptune.create_experiment(name=config.misc.experiment_name, params=params, upload_source_files=[os.path.join(os.path.dirname(__file__),'*.py')]) as experiment:
+    with neptune.create_experiment(name=config.misc.experiment_name, 
+                                   params=params,
+                                   upload_source_files=upload_source_files,
+                                   tags=config.tags) as experiment:
         model.summary(print_fn=lambda x: experiment.log_text('model_summary', x))
         log_hydra_config(backup_dir=config.run_dirs.log_dir, config=config, experiment=experiment)
 
