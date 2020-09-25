@@ -315,7 +315,11 @@ def main(config : DictConfig):
                                                                    subsets=subsets,
                                                                    cache=True,
                                                                    cache_image_dir=config.run_dirs.cache_dir,
+                                                                   use_tfrecords=data_config.training.use_tfrecords,
+                                                                   tfrecord_dir=config.run_dirs.tfrecord_dir,
+                                                                   samples_per_shard=data_config.training.samples_per_shard,
                                                                    seed=config.misc.seed)
+
     import pdb;pdb.set_trace()
     class_weight=None
     if config.pipeline.stage_1.params.fit_class_weights:
@@ -454,6 +458,9 @@ def main(config : DictConfig):
                                                                            subsets=test_stage_config.pipeline.stage_3.subsets,
                                                                            cache=True,
                                                                            cache_image_dir=test_stage_config.run_dirs.cache_dir,
+                                                                           use_tfrecords=data_config.training.use_tfrecords,
+                                                                           tfrecord_dir=test_stage_config.pipeline.stage_3.tfrecord_dir,
+                                                                           samples_per_shard=data_config.training.samples_per_shard,
                                                                            seed=test_stage_config.misc.seed)
 
 

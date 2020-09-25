@@ -38,6 +38,7 @@ pipeline:
         task: "evaluate"
         subsets: ["test"]
         dataset_name: "Fossil_family_100"
+        tfrecord_dir: "/media/data/jacob/experimental_data/tfrecords/${pipeline.stage_3.dataset_name}"
 
 
 misc:
@@ -70,12 +71,12 @@ orchestration:
 
 callbacks:
     confusion_matrix: 
-        log_train: False
+        log_train: True
         log_val: True
         num_batches: "all"
-    reduce_lr_on_plateau:
-        patience: 10
-        monitor: "val_weighted_f1"        
+    # reduce_lr_on_plateau:
+    #     patience: 10
+    #     monitor: "val_weighted_f1"        
     early_stopping:
         patience: 15
         monitor: "val_loss"
@@ -89,4 +90,4 @@ debugging:
     log_model_input_stats: False # Set this to True to log statistical means of the input images from the first batch for each subset
 
 tags:
-    - null
+    - ${pipeline.encoding_scheme}

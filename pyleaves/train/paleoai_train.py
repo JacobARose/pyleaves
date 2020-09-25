@@ -495,7 +495,8 @@ def create_dataset(data_fold: DataFold,
     val_split=cfg.dataset.val_split
     samples_per_shard=cfg.misc.samples_per_shard
 
-    dataset, train_dataset, test_dataset, encoder = load_data(data_fold=data_fold,
+    # dataset, train_dataset, test_dataset, encoder 
+    split_data, split_datasets, encoder = load_data(data_fold=data_fold,
                                                               exclude_classes=exclude_classes,
                                                               include_classes=include_classes,
                                                               use_tfrecords=use_tfrecords,
@@ -503,9 +504,9 @@ def create_dataset(data_fold: DataFold,
                                                               val_split=val_split,
                                                               samples_per_shard=samples_per_shard,
                                                               seed=seed)
-    num_classes = train_dataset.num_classes
+    num_classes = split_data['train'].num_classes
 
-    train_data = prep_dataset(dataset['train'],
+    train_data = prep_dataset(split_data['train'],
                               batch_size=batch_size,
                               buffer_size=buffer_size,
                               shuffle=True,
@@ -516,8 +517,8 @@ def create_dataset(data_fold: DataFold,
                               augmentations=augmentations,
                               training=True,
                               seed=seed)
-    if dataset['val'] is not None:
-        val_data = prep_dataset(dataset['val'],
+    if split_data['val'] is not None:
+        val_data = prep_dataset(split_data['val'],
                                 batch_size=batch_size,
                                 target_size=target_size,
                                 num_channels=num_channels,
@@ -528,7 +529,7 @@ def create_dataset(data_fold: DataFold,
     else:
         val_data=None
 
-    test_data = prep_dataset(dataset['test'],
+    test_data = prep_dataset(split_data['test'],
                             batch_size=batch_size,
                             target_size=target_size,
                             num_channels=num_channels,
@@ -539,7 +540,7 @@ def create_dataset(data_fold: DataFold,
 
     return {'train':train_data,
             'val':val_data,
-            'test':test_data}, train_dataset, test_dataset, encoder
+            'test':test_data}, split_datasets, encoder
 
 ##########################################################################
 ##########################################################################

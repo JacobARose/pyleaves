@@ -659,30 +659,30 @@ class VisualizeActivationsCallback(BaseCallback):
 #         self.write_image_summary(input_images, input_labels, titles)
 
 
-def get_callbacks(weights_best=r'./model_ckpt.h5',
-				  logs_dir=r'/media/data/jacob',
-				  restore_best_weights=False,
-				  val_data=None,
-				  batches_per_epoch=20,
-				  histogram_freq=10,
-				  freq=10,
-				  seed=None,
-				  patience=25,
-				  sess=None):
+# def get_callbacks(weights_best=r'./model_ckpt.h5',
+# 				  logs_dir=r'/media/data/jacob',
+# 				  restore_best_weights=False,
+# 				  val_data=None,
+# 				  batches_per_epoch=20,
+# 				  histogram_freq=10,
+# 				  freq=10,
+# 				  seed=None,
+# 				  patience=25,
+# 				  sess=None):
 
 
-	checkpoint = ModelCheckpoint(weights_best, monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='min',restore_best_weights=restore_best_weights)
+# 	checkpoint = ModelCheckpoint(weights_best, monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='min',restore_best_weights=restore_best_weights)
 
-	tfboard = TensorBoard(log_dir=logs_dir, histogram_freq=histogram_freq)#, write_images=True)
-	csv = CSVLogger(os.path.join(logs_dir,'training_log.csv'))
-	early = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
+# 	tfboard = TensorBoard(log_dir=logs_dir, histogram_freq=histogram_freq)#, write_images=True)
+# 	csv = CSVLogger(os.path.join(logs_dir,'training_log.csv'))
+# 	early = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
 
-	callback_list = [checkpoint,tfboard,early,csv]
+# 	callback_list = [checkpoint,tfboard,early,csv]
 
-	if val_data is not None:
-		# callback_list.append(VisualizeActivationsCallback(val_data, logs_dir, freq=freq, seed=seed, sess=sess))
-		callback_list.append(ConfusionMatrixCallback(val_data, batches_per_epoch, logs_dir, freq=freq, sess=sess))
-		# callback_list.append(TensorflowImageLogger(val_data, log_dir = logs_dir, freq=freq))
-		if sess is not None:
-			sess.run(tf.initialize_all_variables())
-	return callback_list
+# 	if val_data is not None:
+# 		# callback_list.append(VisualizeActivationsCallback(val_data, logs_dir, freq=freq, seed=seed, sess=sess))
+# 		callback_list.append(ConfusionMatrixCallback(val_data, batches_per_epoch, logs_dir, freq=freq, sess=sess))
+# 		# callback_list.append(TensorflowImageLogger(val_data, log_dir = logs_dir, freq=freq))
+# 		if sess is not None:
+# 			sess.run(tf.initialize_all_variables())
+# 	return callback_list

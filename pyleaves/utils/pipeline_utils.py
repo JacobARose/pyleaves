@@ -33,7 +33,7 @@ from pyleaves.models import resnet, vgg16
 from pyleaves.base import base_model
 from pyleaves.utils import ensure_dir_exists, img_aug_utils as iau
 from paleoai_data.utils.kfold_cross_validation import DataFold
-
+from tfrecord_utils.encoders import TFRecordCoder
 
 ##########################################################################
 ##########################################################################
@@ -334,6 +334,56 @@ def extract_data(fold: DataFold,
     return split_data, split_datasets, encoder
 
 
+
+
+
+
+
+def load_data_from_tfrecords(tfrecord_dir,
+                             data=None,
+                             target_shape=(768,768,3),
+                             samples_per_shard=800,
+                             subset_keys=['train','val'],
+                             num_classes=None):
+
+    if data:
+        for k,v in data.items():
+            if v is not None and k in subset_keys:
+                data[k] = pd.DataFrame({'source_path':v[0],'label':v[1]})
+        coders = {}; files = {}
+        for subset in subset_keys:
+            coders[subset] = TFRecordCoder(data = data[subset],
+                                           output_dir = tfrecord_dir,
+                                           columns={'source_path':'source_path','target_path':'target_path', 'family':'label'},
+                                           subset=subset,
+                                           target_shape=target_shape,
+                                           samples_per_shard=samples_per_shard,
+                                           num_classes=num_classes)
+
+            coders[subset].execute_convert()
+            files[subset] = [os.path.join(tfrecord_dir,f) for f in os.listdir(tfrecord_dir) if subset in f]
+
+    split_data = {}
+    for subset, tfrecord_paths in files.items():
+        split_data[subset] = tf.data.Dataset.from_tensor_slices(tfrecord_paths) \
+                                                .cache() \
+                                                .shuffle(100) \
+                                                .interleave(tf.data.TFRecordDataset) \
+                                                .map(coders[subset].decode_example, num_parallel_calls=-1)
+    return split_data  
+
+
+
+
+
+
+
+
+
+
+
+
+
 def load_data_from_tensor_slices(data: List[List], cache: Union[bool,str], training=False, seed=None):
 
     num_samples = len(data[0])
@@ -369,7 +419,13 @@ def extract_and_load_data(data_fold: DataFold,
                           val_split=0.0,
                           subsets=['train','val','test'],
                           cache: Union[bool,str]=True,
+                          use_tfrecords: bool=True,
+                          tfrecord_dir: str=None,
+                          samples_per_shard: int=0,
                           seed=None):
+
+
+
 
     extracted_data, split_datasets, encoder = extract_data(fold=data_fold,
                                                            encoder=encoder,
@@ -380,11 +436,19 @@ def extract_and_load_data(data_fold: DataFold,
                                                            subsets=subsets,
                                                            seed=seed)
                                                        
-    # subset_keys = [k for k in split_data if split_data[k] is not None]
+    subset_keys = [k for k in extracted_data if extracted_data[k] is not None]
     loaded_data = {}
     for k, data in extracted_data.items():
         training = bool('train' in k)
-        loaded_data[k] = load_data_from_tensor_slices(data, cache=cache, training=training, seed=seed)
+
+        if use_tfrecords:            
+            loaded_data[k] = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
+                                                    data=data,
+                                                    samples_per_shard=samples_per_shard,
+                                                    subset_keys=subset_keys,
+                                                    num_classes=len(encoder.classes))
+        else:
+            loaded_data[k] = load_data_from_tensor_slices(data, cache=cache, training=training, seed=seed)
 
     return loaded_data, extracted_data, split_datasets, encoder
 
@@ -397,6 +461,9 @@ def create_dataset(data_fold: DataFold,
                    subsets=['train','val','test'],
                    cache: Union[bool,str]=True,
                    cache_image_dir: str=None,
+                   use_tfrecords=False,
+                   tfrecord_dir:str = '',
+                   samples_per_shard: int=None,
                    seed: int=None):
 
     # dataset, split_datasets, encoder
@@ -407,6 +474,9 @@ def create_dataset(data_fold: DataFold,
                                                              include_classes=data_config.extract.include_classes,
                                                              val_split=data_config.extract.val_split,
                                                              subsets=subsets,
+                                                             use_tfrecords=use_tfrecords,
+                                                             tfrecord_dir=tfrecord_dir,
+                                                             samples_per_shard=samples_per_shard,
                                                              cache=cache,
                                                              seed=seed)
     num_classes = encoder.num_classes
@@ -612,7 +682,7 @@ def get_callbacks(config, model_config, model, csv_path: str, train_data=None, v
     # backup_callback = BackupAndRestore(config.run_dirs.checkpoints_path)
     # backup_callback.set_model(model)
 
-    tensorboard_callback = TensorBoard(log_dir=config.run_dirs.log_dir)
+    tensorboard_callback = TensorBoard(log_dir=config.run_dirs.log_dir, profile_batch=0)
 
     print('building callbacks')
     callbacks = [tensorboard_callback, #backup_callback,               reduce_lr, #           NeptuneMonitor(),

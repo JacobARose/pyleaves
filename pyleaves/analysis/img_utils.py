@@ -605,7 +605,7 @@ class ImageAugmentor:
         for f in self.augmentations:
             # Apply an augmentation only in 25% of the cases.000000
             aug = self.maps[f]
-            dataset = dataset.map(lambda x,y: tf.cond(tf.random_uniform([], 0, 1) > (1 - self.p)), lambda: (aug(x),y), lambda: (x,y), num_parallel_calls=4)
+            dataset = dataset.map(lambda x,y: tf.cond(tf.random_uniform([], 0, 1) > (1 - self.p)), lambda x,y: (aug(x),y), lambda x,y: (x,y), num_parallel_calls=4)
 
         return dataset
 
