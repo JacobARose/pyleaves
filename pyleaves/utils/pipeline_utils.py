@@ -351,6 +351,8 @@ def load_data_from_tfrecords(tfrecord_dir: str,
 
     data = pd.DataFrame({'source_path':data[0],'label':data[1]})
 
+    print(f'Creating TFRecordCoder with samples_per_shard={samples_per_shard}')
+
     coder = TFRecordCoder(data = data,
                           output_dir = tfrecord_dir,
                           columns={'source_path':'source_path','target_path':'target_path', 'label':'label'},
@@ -418,7 +420,7 @@ def extract_and_load_data(data_fold: DataFold,
                           cache: Union[bool,str]=True,
                           use_tfrecords: bool=True,
                           tfrecord_dir: str=None,
-                          samples_per_shard: int=0,
+                          samples_per_shard: int=400,
                           seed=None):
 
 
@@ -460,7 +462,7 @@ def create_dataset(data_fold: DataFold,
                    cache_image_dir: str=None,
                    use_tfrecords=False,
                    tfrecord_dir:str = '',
-                   samples_per_shard: int=None,
+                   samples_per_shard: int=300,
                    seed: int=None):
 
     # dataset, split_datasets, encoder
