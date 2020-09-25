@@ -339,38 +339,35 @@ def extract_data(fold: DataFold,
 
 
 
-def load_data_from_tfrecords(tfrecord_dir,
-                             data=None,
-                             target_shape=(768,768,3),
-                             samples_per_shard=800,
-                             subset_keys=['train','val'],
-                             num_classes=None):
+def load_data_from_tfrecords(tfrecord_dir: str,
+                             data: Tuple[List[str],List[int]]=None,
+                             target_shape: Tuple[int]=(768,768,3),
+                             samples_per_shard: int=400,
+                             subset_key: str='train', #'val',
+                             num_classes: int=None,
+                             num_parallel_calls: int=-1):
 
-    if data:
-        for k,v in data.items():
-            if v is not None and k in subset_keys:
-                data[k] = pd.DataFrame({'source_path':v[0],'label':v[1]})
-        coders = {}; files = {}
-        for subset in subset_keys:
-            coders[subset] = TFRecordCoder(data = data[subset],
-                                           output_dir = tfrecord_dir,
-                                           columns={'source_path':'source_path','target_path':'target_path', 'family':'label'},
-                                           subset=subset,
-                                           target_shape=target_shape,
-                                           samples_per_shard=samples_per_shard,
-                                           num_classes=num_classes)
+    assert isinstance(data, tuple)
 
-            coders[subset].execute_convert()
-            files[subset] = [os.path.join(tfrecord_dir,f) for f in os.listdir(tfrecord_dir) if subset in f]
+    data = pd.DataFrame({'source_path':data[0],'label':data[1]})
 
-    split_data = {}
-    for subset, tfrecord_paths in files.items():
-        split_data[subset] = tf.data.Dataset.from_tensor_slices(tfrecord_paths) \
-                                                .cache() \
-                                                .shuffle(100) \
-                                                .interleave(tf.data.TFRecordDataset) \
-                                                .map(coders[subset].decode_example, num_parallel_calls=-1)
-    return split_data  
+    coder = TFRecordCoder(data = data,
+                          output_dir = tfrecord_dir,
+                          columns={'source_path':'source_path','target_path':'target_path', 'label':'label'},
+                          subset=subset_key,
+                          target_shape=target_shape,
+                          samples_per_shard=samples_per_shard,
+                          num_classes=num_classes)
+
+    coder.execute_convert()
+    tfrecord_files = [os.path.join(tfrecord_dir,f) for f in os.listdir(tfrecord_dir) if subset_key in f]
+
+    subset_data = tf.data.Dataset.from_tensor_slices(tfrecord_files) \
+                                                    .cache() \
+                                                    .shuffle(100) \
+                                                    .interleave(tf.data.TFRecordDataset) \
+                                                    .map(coder.decode_example, num_parallel_calls=num_parallel_calls)
+    return subset_data
 
 
 
@@ -438,17 +435,17 @@ def extract_and_load_data(data_fold: DataFold,
                                                        
     subset_keys = [k for k in extracted_data if extracted_data[k] is not None]
     loaded_data = {}
-    for k, data in extracted_data.items():
-        training = bool('train' in k)
+    for subset_key, data in extracted_data.items():
+        training = bool('train' in subset_key)
 
         if use_tfrecords:            
-            loaded_data[k] = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
-                                                    data=data,
-                                                    samples_per_shard=samples_per_shard,
-                                                    subset_keys=subset_keys,
-                                                    num_classes=len(encoder.classes))
+            loaded_data[subset_key] = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
+                                                               data=data,
+                                                               samples_per_shard=samples_per_shard,
+                                                               subset_key=subset_key,
+                                                               num_classes=len(encoder.classes))
         else:
-            loaded_data[k] = load_data_from_tensor_slices(data, cache=cache, training=training, seed=seed)
+            loaded_data[subset_key] = load_data_from_tensor_slices(data, cache=cache, training=training, seed=seed)
 
     return loaded_data, extracted_data, split_datasets, encoder
 
