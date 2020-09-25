@@ -320,7 +320,7 @@ def main(config : DictConfig):
                                                                    samples_per_shard=data_config.training.samples_per_shard,
                                                                    seed=config.misc.seed)
 
-    import pdb;pdb.set_trace()
+    # import pdb;pdb.set_trace()
     class_weight=None
     if config.pipeline.stage_1.params.fit_class_weights:
         class_weight = split_datasets['train'].metadata.calc_class_weights(class_distribution=split_datasets['train'].class_distribution,
