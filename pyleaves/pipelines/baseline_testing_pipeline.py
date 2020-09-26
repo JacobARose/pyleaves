@@ -250,7 +250,7 @@ neptune_experiment_name = 'baseline-PNAS_family'
 
 
 
-@hydra.main(config_path='configs', config_name='testing_config')
+@hydra.main(config_path='configs', config_name='baseline_testing_config')
 def main(config):
 
     params = config
