@@ -6,7 +6,7 @@ dataset_name: "PNAS_family"
 saved_model_path: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${dataset_name}"
 image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/${dataset_name}"
 log_dir: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/tensorboard_log_dir"
-validation_split: float(0.1)
+validation_split: 1.0e-02
 target_size: [299,299]
 batch_size: 32
 num_epochs: 30
