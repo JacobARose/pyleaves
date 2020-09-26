@@ -257,6 +257,7 @@ def main(config):
 
     params = config
     params.regularization = params.regularization or {}
+    params.lr = float(params.lr)
     try:
         params.data_augs.rescale = float(params.data_augs.rescale)
     except:
