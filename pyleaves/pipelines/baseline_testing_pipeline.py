@@ -224,6 +224,7 @@ def summarize_sample(x, y):
 
 
 
+import hydra
 
 
 
@@ -246,7 +247,6 @@ def main(config):
     import numpy as np
     import neptune
     from neptunecontrib.monitoring.keras import NeptuneMonitor
-    import hydra
 
 
     neptune_project_name = 'jacobarose/jupyter-testing-ground'
