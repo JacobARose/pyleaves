@@ -1,5 +1,23 @@
 #!/usr/bin/env python
 # coding: utf-8
+    """
+    
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 
+
+
+
+
+
+    Raises:
+        e: [description]
+
+    Returns:
+        [type]: [description]
+    """
+
+
+
+
 
 # # Programmatically transferring images into class-specific hierarchical directories
 # 
@@ -55,12 +73,6 @@ from tqdm.auto import tqdm
 # from tqdm.notebook import tqdm
 from pathlib import Path
 
-PNAS_dir = '/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06'
-output_root_dir = '/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/PNAS_family'
-collections = ['wolfe','axelrod','klucking']
-collection_dirs = [os.path.join(PNAS_dir, collection) for collection in collections]
-collection_dirs
-
 def get_collection_files(collection_dir, position=0, leave=False):
     collection_files = {}
     for family in tqdm(os.listdir(collection_dir), desc=f'collection {Path(collection_dir).name}', position=position, leave=leave):
@@ -93,6 +105,12 @@ def create_full_dataset_copy(collection_dirs: List[str]):
         os.makedirs(family_dir)
         for file in tqdm(family_files, desc = f'{family} files', position=1, leave=False):
             shutil.copy(file, family_dir)
+
+PNAS_dir = '/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06'
+output_root_dir = '/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/PNAS_family'
+collections = ['wolfe','axelrod','klucking']
+collection_dirs = [os.path.join(PNAS_dir, collection) for collection in collections]
+collection_dirs
 
 
 # 
@@ -245,9 +263,10 @@ def main(config):
         preprocess_input = None
         print("Using no preprocess_input function")
 
-    datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale=params.rescale,
-                                                            preprocessing_function=preprocess_input,
-                                                            validation_split=params.validation_split)
+    datagen = tf.keras.preprocessing.image.ImageDataGenerator(**params.data_augs)
+                                                            # rescale=params.rescale,
+                                                            # preprocessing_function=preprocess_input,
+                                                            # validation_split=params.validation_split)
 
     train_data = datagen.flow_from_directory(
         params.image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
@@ -282,8 +301,6 @@ def main(config):
     #                     'head_layers': [256,128]
     #                     })
     model_config = params
-
-
     model_config.num_classes = params.num_classes
     model_config.input_shape = (*params.target_size,3)
 
@@ -293,8 +310,6 @@ def main(config):
             neptune_params[k] = str(v)
         else:
             neptune_params[k] = v
-            
-            
             
     model = build_model(model_config)
 
