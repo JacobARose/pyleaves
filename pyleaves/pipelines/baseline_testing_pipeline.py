@@ -257,7 +257,7 @@ def main(config):
 
     if params.data_augs.preprocessing_function == "tensorflow.keras.applications.resnet_v2.preprocess_input":
         from tensorflow.keras.applications.resnet_v2 import preprocess_input
-        # params.data_augs.preprocessing_function = preprocess_input
+        params.data_augs.pop('preprocessing_function') # = preprocess_input
         print("Using preprocessing function: tensorflow.keras.applications.resnet_v2.preprocess_input")
     else:
         preprocess_input = None
