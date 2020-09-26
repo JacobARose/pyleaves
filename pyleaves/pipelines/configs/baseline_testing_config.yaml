@@ -62,8 +62,8 @@ data_augs:
     preprocessing_function: ${preprocess_input}
     validation_split: ${validation_split}
 
-tags:
-    - ${pipeline.encoding_scheme}
+# tags:
+#     - ${pipeline.encoding_scheme}
 
 
 
