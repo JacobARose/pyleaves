@@ -270,7 +270,7 @@ def main(config):
         preprocess_input = None
         print("Using no preprocess_input function")
 
-    data_augs.validation_split = float(data_augs.validation_split)
+    data_augs['validation_split'] = float(data_augs['validation_split'])
 
     datagen = tf.keras.preprocessing.image.ImageDataGenerator(**data_augs,
                                                               preprocessing_function = preprocess_input)
