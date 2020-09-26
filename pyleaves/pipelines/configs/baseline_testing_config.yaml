@@ -1,6 +1,7 @@
 defaults:
     - hydra/launcher: joblib
     
+task: ${hydra:job.num, null}
 
 dataset_name: "PNAS_family"
 saved_model_path: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${dataset_name}"
@@ -37,7 +38,6 @@ regularization: null
 loss: "categorical_crossentropy"
 METRICS: ["f1","accuracy"]
 head_layers: [256,128]
-task: ${hydra:job.num}
 
 
 

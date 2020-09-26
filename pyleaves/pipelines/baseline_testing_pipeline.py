@@ -176,28 +176,6 @@ def summarize_sample(x, y):
 
     plt.imshow(x)
 
-from pyleaves.utils import set_tf_config
-gpu = set_tf_config(gpu_num=None, num_gpus=1, wait=0)
-
-import tensorflow as tf
-from tensorflow.keras import backend as K
-K.clear_session()
-from pyleaves.utils.pipeline_utils import build_model
-from tensorflow.keras.applications.resnet_v2 import preprocess_input
-from pprint import pprint
-from box import Box
-import cv2
-import os
-import matplotlib.pyplot as plt
-import numpy as np
-import neptune
-from neptunecontrib.monitoring.keras import NeptuneMonitor
-import hydra
-
-
-neptune_project_name = 'jacobarose/jupyter-testing-ground'
-neptune_experiment_name = 'baseline-PNAS_family'
-
 
 
 
@@ -251,6 +229,31 @@ neptune_experiment_name = 'baseline-PNAS_family'
 
 @hydra.main(config_path='configs', config_name='baseline_testing_config')
 def main(config):
+
+    from pyleaves.utils import set_tf_config
+    gpu = set_tf_config(gpu_num=None, num_gpus=1, wait=(config.task+1)*2)
+
+    import tensorflow as tf
+    from tensorflow.keras import backend as K
+    K.clear_session()
+    from pyleaves.utils.pipeline_utils import build_model
+    from tensorflow.keras.applications.resnet_v2 import preprocess_input
+    from pprint import pprint
+    from box import Box
+    import cv2
+    import os
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import neptune
+    from neptunecontrib.monitoring.keras import NeptuneMonitor
+    import hydra
+
+
+    neptune_project_name = 'jacobarose/jupyter-testing-ground'
+    neptune_experiment_name = 'baseline-PNAS_family'
+
+
+
 
 
     OmegaConf.set_struct(config, False)
