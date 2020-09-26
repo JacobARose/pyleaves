@@ -260,7 +260,7 @@ def main(config):
 
     
     data_augs = {k:v for k,v in OmegaConf.to_container(params.data_augs).items() if k != "preprocessing_function"}
-
+    
 
     if params.data_augs.preprocessing_function == "tensorflow.keras.applications.resnet_v2.preprocess_input":
         from tensorflow.keras.applications.resnet_v2 import preprocess_input
