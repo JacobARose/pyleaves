@@ -5,8 +5,7 @@
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 
 
 
-
-
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 'lr=1e-5,1e-4,1e-3,1e-2' 'weights=null,"imagenet"' hydra.launcher.n_jobs=2 hydra.launcher.verbose=1 num_epochs=40
 
     Raises:
         e: [description]
