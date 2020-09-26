@@ -590,16 +590,39 @@ def build_head(base, num_classes=10, head_layers: List[int]=None):
 
 def build_model(model_config):
     '''
-    e.g.
+
+    Minimum config:
         model_config = {
+                'model_name': None,
+                'optimizer':"Adam",
+                'num_classes':32,
+                'weights': None,
+                'frozen_layers':None,
+                'input_shape':(224,224,3),
+                'lr':1e-5,
+                'lr_momentum': None,
+                'regularization':None,
+                'loss':'categorical_crossentropy',
+                'METRICS':['accuracy']
+                'head_layers': None,
+                }
+
+
+    Example config:
+
+        model_config = {
+                        'model_name': "resnet_50_v2",
+                        'optimizer':"Adam",
                         'num_classes':32,
                         'weights': "imagenet",
                         'frozen_layers':(0,-4),
                         'input_shape':(224,224,3),
                         'lr':1e-5,
+                        'lr_momentum':0.9,
                         'regularization':{"l2": 1e-4},
                         'loss':'categorical_crossentropy',
-                        'METRICS':['accuracy']
+                        'METRICS':['accuracy'],
+                        'head_layers': [256,128]
                         }
     '''
 
