@@ -315,7 +315,7 @@ def main(config):
     model_config.input_shape = (*params.target_size,3)
 
     neptune_params = {}
-    for k,v in {**params.to_dict(), **model_config.to_dict()}.items():
+    for k,v in {**OmegaConf.to_container(params, resolve=True), **OmegaConf.to_container(model_config, resolve=True)}.items():
         if type(v)==dict:
             neptune_params[k] = str(v)
         else:
