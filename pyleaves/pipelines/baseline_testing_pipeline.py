@@ -259,16 +259,18 @@ def main(config):
     params = config
 
     
+    data_augs = {k:v for k,v in params.data_augs.to_dict().items() if k != "preprocessing_function"}
+
 
     if params.data_augs.preprocessing_function == "tensorflow.keras.applications.resnet_v2.preprocess_input":
         from tensorflow.keras.applications.resnet_v2 import preprocess_input
-        params.data_augs.pop('preprocessing_function') # = preprocess_input
+        # params.data_augs.pop('preprocessing_function') # = preprocess_input
         print("Using preprocessing function: tensorflow.keras.applications.resnet_v2.preprocess_input")
     else:
         preprocess_input = None
         print("Using no preprocess_input function")
 
-    datagen = tf.keras.preprocessing.image.ImageDataGenerator(**dict(**params.data_augs.to_dict(),
+    datagen = tf.keras.preprocessing.image.ImageDataGenerator(**data_augs,
                                                               preprocessing_function = preprocess_input))
                                                             # rescale=params.rescale,
                                                             # preprocessing_function=preprocess_input,
