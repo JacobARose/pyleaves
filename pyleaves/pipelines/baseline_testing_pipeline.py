@@ -257,13 +257,14 @@ def main(config):
 
     if params.data_augs.preprocessing_function == "tensorflow.keras.applications.resnet_v2.preprocess_input":
         from tensorflow.keras.applications.resnet_v2 import preprocess_input
-        params.data_augs.preprocessing_function = preprocess_input
+        # params.data_augs.preprocessing_function = preprocess_input
         print("Using preprocessing function: tensorflow.keras.applications.resnet_v2.preprocess_input")
     else:
         preprocess_input = None
         print("Using no preprocess_input function")
 
-    datagen = tf.keras.preprocessing.image.ImageDataGenerator(**params.data_augs)
+    datagen = tf.keras.preprocessing.image.ImageDataGenerator(**params.data_augs,
+                                                              preprocessing_function = preprocess_input)
                                                             # rescale=params.rescale,
                                                             # preprocessing_function=preprocess_input,
                                                             # validation_split=params.validation_split)
@@ -349,7 +350,7 @@ def main(config):
             raise e
         from pyleaves.utils.pipeline_utils import evaluate_performance
 
-        model.save(config.run_dirs.saved_model_path)
+        model.save(config.saved_model_path)
         print('[STAGE COMPLETED]')
         print(f'Saved trained model to {config.saved_model_path}')
         subset='val'
