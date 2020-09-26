@@ -231,7 +231,10 @@ import hydra
 @hydra.main(config_path='configs', config_name='baseline_testing_config')
 def main(config):
 
+    OmegaConf.set_struct(config, False)
+
     from pyleaves.utils import set_tf_config
+    config.task = config.task or 1
     gpu = set_tf_config(gpu_num=None, num_gpus=1, wait=(config.task+1)*2)
 
     import tensorflow as tf
@@ -256,7 +259,7 @@ def main(config):
 
 
 
-    OmegaConf.set_struct(config, False)
+
 
     params = config
     params.regularization = params.regularization or {}

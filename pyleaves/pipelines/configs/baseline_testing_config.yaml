@@ -1,7 +1,7 @@
 defaults:
     - hydra/launcher: joblib
     
-task: ${hydra:job.num, null}
+task: ${hydra:job.num}
 
 dataset_name: "PNAS_family"
 saved_model_path: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${dataset_name}"
