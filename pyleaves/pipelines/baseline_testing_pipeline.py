@@ -141,7 +141,7 @@ collection_dirs
 # 
 
 
-
+from omegaconf import OmegaConf
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -253,7 +253,12 @@ neptune_experiment_name = 'baseline-PNAS_family'
 @hydra.main(config_path='configs', config_name='baseline_testing_config')
 def main(config):
 
+
+    OmegaConf.set_struct(config, False)
+
     params = config
+
+    
 
     if params.data_augs.preprocessing_function == "tensorflow.keras.applications.resnet_v2.preprocess_input":
         from tensorflow.keras.applications.resnet_v2 import preprocess_input
