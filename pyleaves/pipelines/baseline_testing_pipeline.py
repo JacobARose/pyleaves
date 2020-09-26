@@ -271,7 +271,7 @@ def main(config):
         print("Using no preprocess_input function")
 
     datagen = tf.keras.preprocessing.image.ImageDataGenerator(**data_augs,
-                                                              preprocessing_function = preprocess_input))
+                                                              preprocessing_function = preprocess_input)
                                                             # rescale=params.rescale,
                                                             # preprocessing_function=preprocess_input,
                                                             # validation_split=params.validation_split)
