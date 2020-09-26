@@ -257,7 +257,11 @@ def main(config):
     OmegaConf.set_struct(config, False)
 
     params = config
-
+    params.regularization = params.regularization or {}
+    try:
+        params.data_augs.rescale = float(params.data_augs.rescale)
+    except:
+        params.data_augs.rescale = None
     
     data_augs = {k:v for k,v in OmegaConf.to_container(params.data_augs, resolve=True).items() if k != "preprocessing_function"}
 
@@ -297,7 +301,7 @@ def main(config):
     steps_per_epoch=params.num_samples_train//params.batch_size
     validation_steps=params.num_samples_val//params.batch_size
 
-    params.regularization = params.regularization or {}
+    
 
     # model_config = Box({
     #                     'model_name': "resnet_50_v2",
