@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 """
-    
+
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 
 
 
@@ -394,6 +394,14 @@ def evaluate(model, val_data, y=None, output_dict: bool=True, experiment=None, s
         print(e)
 
     return y, y_hat, y_prob
+
+
+
+
+
+if __name__=='__main__':
+    main()
+
 
 
     ## TODO Saturday: plot image grid with color coded labels with correct/incorrect status of a trained model's prediction on a random batch.
