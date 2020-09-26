@@ -296,6 +296,9 @@ def main(config):
     params.num_classes = train_data.num_classes
     steps_per_epoch=params.num_samples_train//params.batch_size
     validation_steps=params.num_samples_val//params.batch_size
+
+    params.regularization = params.regularization or {}
+
     # model_config = Box({
     #                     'model_name': "resnet_50_v2",
     #                     'optimizer':"Adam",
