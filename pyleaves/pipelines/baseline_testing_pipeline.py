@@ -390,6 +390,7 @@ def main(config):
         subset='test'
         y, y_hat, y_prob = evaluate(model, test_data, experiment=experiment, subset=subset)
         import pdb;pdb.set_trace()
+        print('y_prob.shape =', y_prob.shape)
         predictions = pd.DataFrame({'y':y,'y_pred':y_hat,'y_prob':y_prob})
         log_table(f'{subset}_labels_w_predictions',predictions, experiment=experiment)
         print('TEST RESULTS:')
