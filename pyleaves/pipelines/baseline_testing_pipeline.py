@@ -320,32 +320,19 @@ def main(config):
 
     test_steps=params.num_samples_test//params.batch_size
 
-    
-
-    # model_config = Box({
-    #                     'model_name': "resnet_50_v2",
-    #                     'optimizer':"Adam",
-    #                     'num_classes':params.num_classes,
-    #                     'weights': "imagenet",
-    #                     'frozen_layers':None, #(0,-4),
-    #                     'input_shape':(*params.target_size,3),
-    #                     'lr':1e-5,
-    #                     'lr_momentum':None,#0.9,
-    #                     'regularization':{},#{"l2": 1e-4},
-    #                     'loss':'categorical_crossentropy',
-    #                     'METRICS':['f1','accuracy'],
-    #                     'head_layers': [256,128]
-    #                     })
-    model_config = params
-    model_config.num_classes = params.num_classes
-    model_config.input_shape = (*params.target_size,3)
-
     neptune_params = {}
     for k,v in OmegaConf.to_container(params, resolve=True).items():
         if type(v)==dict:
             neptune_params[k] = str(v)
         else:
             neptune_params[k] = v
+
+
+
+    model_config = params
+    model_config.num_classes = params.num_classes
+    model_config.input_shape = (*params.target_size,3)
+
             
     model = build_model(model_config)
 
@@ -407,7 +394,7 @@ import pandas as pd
 from sklearn.metrics import classification_report#, confusion_matrix
 
 def evaluate(model, data_iter, y=None, output_dict: bool=True, experiment=None, subset='val'):
-    num_classes = data_iter.num_classes
+    # num_classes = data_iter.num_classes
     num_samples = data_iter.samples
     batch_size = data_iter.batch_size
     steps = int(np.ceil(num_samples/batch_size))
@@ -434,12 +421,17 @@ def evaluate(model, data_iter, y=None, output_dict: bool=True, experiment=None, 
         print(e)
 
 
-    from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
-    callbacks = [NeptuneMonitor()]
+    # from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
+    # callbacks = [NeptuneMonitor()]
     # NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=target_names, steps=steps, subset_prefix=subset, experiment=experiment),
-    test_results = model.evaluate(data_iter, callbacks=callbacks, steps=steps, verbose=1)
+    test_results = model.evaluate(data_iter, steps=steps, verbose=1)
 
     print('TEST RESULTS:\n',test_results)
+
+    print('Results:')
+    for m, result in zip(model.metrics_names, test_results):
+        print(f'{m}: {result}')
+        experiment.log_metric(f'{subset}_{m}', result)
 
     return y_true, y_hat, y_prob
 

@@ -4,7 +4,7 @@ defaults:
 task: ${hydra:job.num}
 
 dataset_name: "PNAS_family"
-saved_model_path: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${dataset_name}"
+saved_model_path: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${dataset_name}-${target_size}"
 train_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/${dataset_name}/train"
 test_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/${dataset_name}/test"
 log_dir: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/tensorboard_log_dir"
