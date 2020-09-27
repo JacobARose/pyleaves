@@ -2,7 +2,7 @@
 # coding: utf-8
 """
 
-python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.py 
 
 
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 'lr=1e-5,1e-4,1e-3,1e-2' 'weights=null,"imagenet"' hydra.launcher.n_jobs=2 hydra.launcher.verbose=1 num_epochs=40
@@ -65,8 +65,9 @@ from neptunecontrib.monitoring.keras import NeptuneMonitor
 
 
 
-def load_data_from_tensor_slices(data: pd.DataFrame, cache_paths: Union[bool,str]=True, training=False, seed=None, x_col='path', y_col='label', dtype=tf.uint8):
+def load_data_from_tensor_slices(data: pd.DataFrame, cache_paths: Union[bool,str]=True, training=False, seed=None, x_col='path', y_col='label', dtype=None):
     import tensorflow as tf
+    dtype = dtype or tf.uint8
     num_samples = data.shape[0]
 
     def load_img(image_path):
