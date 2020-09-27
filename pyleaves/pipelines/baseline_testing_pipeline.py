@@ -68,6 +68,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 'targ
 # 
 # 
 
+from pyleaves.utils.pipeline_utils import evaluate_performance
 
 
 import os
@@ -367,33 +368,34 @@ def main(config):
     with neptune.create_experiment(name=neptune_experiment_name, params=neptune_params) as experiment:
         model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
 
-        # print('[BEGINNING TRAINING]')
-        # try:
-        #     history = model.fit(train_data,
-        #                         epochs=params.num_epochs,
-        #                         callbacks=callbacks,
-        #                         validation_data=val_data,
-        #                         validation_freq=1,
-        #                         shuffle=True,
-        #                         steps_per_epoch=steps_per_epoch,
-        #                         validation_steps=validation_steps,
-        #                         verbose=1)
+        print('[BEGINNING TRAINING]')
+        try:
+            history = model.fit(train_data,
+                                epochs=params.num_epochs,
+                                callbacks=callbacks,
+                                validation_data=val_data,
+                                validation_freq=1,
+                                shuffle=True,
+                                steps_per_epoch=steps_per_epoch,
+                                validation_steps=validation_steps,
+                                verbose=1)
 
-        # except Exception as e:
-        #     raise e
-        print('skipping traing for pdb')
-        from pyleaves.utils.pipeline_utils import evaluate_performance
+        except Exception as e:
+            raise e
 
         model.save(config.saved_model_path)
         print('[STAGE COMPLETED]')
         print(f'Saved trained model to {config.saved_model_path}')
         subset='test'
         y, y_hat, y_prob = evaluate(model, test_data, experiment=experiment, subset=subset)
-        import pdb;pdb.set_trace()
+
         print('y_prob.shape =', y_prob.shape)
-        predictions = pd.DataFrame({'y':y,'y_pred':y_hat,'y_prob':y_prob})
+        predictions = pd.DataFrame({'y':y,'y_pred':y_hat})
         log_table(f'{subset}_labels_w_predictions',predictions, experiment=experiment)
-        print('TEST RESULTS:')
+
+        y_prob_df = pd.DataFrame(y_prob, columns=list(test_data.class_indices.keys()))
+        log_table(f'{subset}_probabilities',y_prob_df,experiment=experiment)
+
 
     print(['[FINISHED TRAINING AND TESTING]'])
 
