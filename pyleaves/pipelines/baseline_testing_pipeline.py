@@ -300,7 +300,7 @@ def main(config):
         subset='validation', interpolation='nearest')
 
 
-    test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale = data_augs.rescale,
+    test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale = data_augs['rescale'],
                                                               preprocessing_function = preprocess_input)
 
     test_data = test_datagen.flow_from_directory(
