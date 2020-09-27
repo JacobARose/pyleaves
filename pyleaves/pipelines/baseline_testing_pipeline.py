@@ -268,23 +268,19 @@ def main(config):
     params = config
     params.regularization = params.regularization or {}
     params.lr = float(params.lr)
+    params.data_augs.validation_split = float(params.data_augs.validation_split)
     try:
         params.data_augs.rescale = float(params.data_augs.rescale)
     except:
         params.data_augs.rescale = None
     
     data_augs = {k:v for k,v in OmegaConf.to_container(params.data_augs, resolve=True).items() if k != "preprocessing_function"}
-
-
     if params.data_augs.preprocessing_function == "tensorflow.keras.applications.resnet_v2.preprocess_input":
         from tensorflow.keras.applications.resnet_v2 import preprocess_input
-        # params.data_augs.pop('preprocessing_function') # = preprocess_input
         print("Using preprocessing function: tensorflow.keras.applications.resnet_v2.preprocess_input")
     else:
         preprocess_input = None
         print("Using no preprocess_input function")
-
-    data_augs['validation_split'] = float(data_augs['validation_split'])
 
     datagen = tf.keras.preprocessing.image.ImageDataGenerator(**data_augs,
                                                               preprocessing_function = preprocess_input)
@@ -293,23 +289,34 @@ def main(config):
                                                             # validation_split=params.validation_split)
 
     train_data = datagen.flow_from_directory(
-        params.image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+        params.train_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
         class_mode='categorical', batch_size=params.batch_size, shuffle=True, seed=params.seed,
         subset='training', interpolation='nearest')
 
 
     val_data = datagen.flow_from_directory(
-        params.image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+        params.train_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
         class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed,
         subset='validation', interpolation='nearest')
+
+
+    test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale = data_augs.rescale,
+                                                              preprocessing_function = preprocess_input)
+
+    test_data = test_datagen.flow_from_directory(
+        params.test_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+        class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed, interpolation='nearest')
 
 
 
     params.num_samples_train = train_data.samples
     params.num_samples_val = val_data.samples
+    params.num_samples_test = test_data.samples
     params.num_classes = train_data.num_classes
     steps_per_epoch=params.num_samples_train//params.batch_size
     validation_steps=params.num_samples_val//params.batch_size
+
+    test_steps=params.num_samples_test//params.batch_size
 
     
 
@@ -379,8 +386,8 @@ def main(config):
         model.save(config.saved_model_path)
         print('[STAGE COMPLETED]')
         print(f'Saved trained model to {config.saved_model_path}')
-        subset='val'
-        y, y_hat, y_prob = evaluate(model, val_data, experiment=experiment, subset=subset)
+        subset='test'
+        y, y_hat, y_prob = evaluate(model, test_data, experiment=experiment, subset=subset)
         predictions = pd.DataFrame({'y':y,'y_pred':y_hat,'y_prob':y_prob})
         log_table(f'{subset}_labels_w_predictions',predictions, experiment=experiment)
         print('TEST RESULTS:')
@@ -393,15 +400,15 @@ def main(config):
 import pandas as pd
 from sklearn.metrics import classification_report#, confusion_matrix
 
-def evaluate(model, val_data, y=None, output_dict: bool=True, experiment=None, subset='val'):
-    num_samples = val_data.samples
-    batch_size = val_data.batch_size
+def evaluate(model, data_iter, y=None, output_dict: bool=True, experiment=None, subset='val'):
+    num_samples = data_iter.samples
+    batch_size = data_iter.batch_size
     steps = int(np.ceil(num_samples/batch_size))
 
-    y_true = val_data.labels
-    y_prob = model.predict(val_data, steps=steps, verbose=1)
+    y_true = data_iter.labels
+    y_prob = model.predict(data_iter, steps=steps, verbose=1)
     
-    classes = val_data.class_indices
+    classes = data_iter.class_indices
     target_names = list(classes.keys())
     labels = [classes[text_label] for text_label in target_names]
 
@@ -414,8 +421,6 @@ def evaluate(model, val_data, y=None, output_dict: bool=True, experiment=None, s
         report = classification_report(y_true, y_hat, labels=labels, target_names=target_names, output_dict=output_dict)
         if type(report)==dict:
             report = pd.DataFrame(report)
-        
-        
         log_table(f'{subset}_classification_report', report, experiment=experiment)
     except Exception as e:
         import pdb; pdb.set_trace()
