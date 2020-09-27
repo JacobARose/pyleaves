@@ -150,6 +150,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from neptunecontrib.api.table import log_table
+from neptunecontrib.monitoring.keras import NeptuneMonitor
 #hide
 # Image plotting utils
 def show_batch(image_batch, label_batch, image_data_gen=True, class_names=None):
@@ -254,7 +255,7 @@ def main(config):
     import matplotlib.pyplot as plt
     import numpy as np
     import neptune
-    from neptunecontrib.monitoring.keras import NeptuneMonitor
+
 
 
     neptune_project_name = 'jacobarose/jupyter-testing-ground'
@@ -406,6 +407,7 @@ import pandas as pd
 from sklearn.metrics import classification_report#, confusion_matrix
 
 def evaluate(model, data_iter, y=None, output_dict: bool=True, experiment=None, subset='val'):
+    num_classes = data_iter.num_classes
     num_samples = data_iter.samples
     batch_size = data_iter.batch_size
     steps = int(np.ceil(num_samples/batch_size))
@@ -430,6 +432,14 @@ def evaluate(model, data_iter, y=None, output_dict: bool=True, experiment=None, 
     except Exception as e:
         import pdb; pdb.set_trace()
         print(e)
+
+
+    from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
+    callbacks = [NeptuneMonitor()]
+    # NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=target_names, steps=steps, subset_prefix=subset, experiment=experiment),
+    test_results = model.evaluate(data_iter, callbacks=callbacks, steps=steps, verbose=1)
+
+    print('TEST RESULTS:\n',test_results)
 
     return y_true, y_hat, y_prob
 
