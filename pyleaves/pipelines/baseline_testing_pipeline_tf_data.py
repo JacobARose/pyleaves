@@ -1,0 +1,480 @@
+#!/usr/bin/env python
+# coding: utf-8
+"""
+
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 'lr=1e-5,1e-4,1e-3,1e-2' 'weights=null,"imagenet"' hydra.launcher.n_jobs=2 hydra.launcher.verbose=1 num_epochs=40
+
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 'target_size=[768,768]' 'lr=1e-5,1e-4,1e-3' 'weights=null,"imagenet"' hydra.launcher.n_jobs=2 hydra.launcher.verbose=1 num_epochs=40
+
+    Raises:
+        e: [description]
+
+    Returns:
+        [type]: [description]
+"""
+
+from pyleaves.utils.pipeline_utils import evaluate_performance
+
+
+import os
+import shutil
+from tqdm.auto import tqdm
+# from tqdm.notebook import tqdm
+from pathlib import Path
+
+
+
+# 
+# ################################################################################################################################################
+# ################################################################################################################################################
+# # NEW SECTION
+# ################################################################################################################################################
+# ################################################################################################################################################
+# 
+# 
+
+
+from typing import Union
+import pandas as pd
+from boltons.dictutils import OneToOne
+# from pyleaves.utils import set_tf_config
+# gpu = set_tf_config(gpu_num=None, num_gpus=1, wait=0)
+
+# import tensorflow as tf
+# from tensorflow.keras import backend as K
+# K.clear_session()
+
+# from pyleaves.utils.pipeline_utils import build_model
+# from tensorflow.keras.applications.resnet_v2 import preprocess_input
+from pprint import pprint
+from box import Box
+import cv2
+import os
+import matplotlib.pyplot as plt
+import numpy as np
+
+import neptune
+# import neptune_tensorboard as neptune_tb
+
+from neptunecontrib.monitoring.keras import NeptuneMonitor
+
+
+
+def load_data_from_tensor_slices(data: pd.DataFrame, cache_paths: Union[bool,str]=True, training=False, seed=None, x_col='path', y_col='label', dtype=tf.uint8):
+    import tensorflow as tf
+    num_samples = data.shape[0]
+
+    def load_img(image_path):
+        img = tf.io.read_file(image_path)
+        img = tf.image.decode_jpeg(img, channels=3)
+        img = tf.image.convert_image_dtype(img, tf.float32)
+        return img
+
+    x_data = tf.data.Dataset.from_tensor_slices(data[x_col].values.tolist())
+    y_data = tf.data.Dataset.from_tensor_slices(data[y_col].values.tolist())
+    data = tf.data.Dataset.zip((x_data, y_data))
+    
+    # TODO TEST performance and randomness of the order of shuffle and cache when shuffling full dataset each iteration, but only filepaths and not full images.
+    if training:
+        data = data.shuffle(num_samples,seed=seed, reshuffle_each_iteration=True)
+    if cache_paths:
+        if isinstance(cache_paths, str):
+            data = data.cache(cache_paths)
+        else:
+            data = data.cache()
+
+    data = data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=dtype),y), num_parallel_calls=-1)
+    return data
+
+def img_data_gen_2_tf_data(data, training=False, target_size=(256,256), batch_size=16, seed=None, preprocess_input=None, num_parallel_calls=-1):
+    import tensorflow as tf
+    num_samples = data.samples
+    num_classes = data.num_classes
+    class_encoder = OneToOne(data.class_indices)
+    paths = data.filepaths
+    labels = data.labels
+
+    prepped_data = pd.DataFrame.from_records([{'path':path, 'label':label} for path, label in zip(paths, labels)])
+    tf_data = load_data_from_tensor_slices(data=prepped_data, training=training, seed=seed, x_col='path', y_col='label', dtype=tf.float32)
+    
+    if preprocess_input is not None:
+        tf_data = tf_data.map(lambda x,y: (preprocess_input(x), y), num_parallel_calls=num_parallel_calls)
+    
+    tf_data = tf_data.map(lambda x,y: (tf.image.resize(x, size=target_size), tf.one_hot(y, depth=num_classes)), num_parallel_calls=num_parallel_calls)
+    
+    tf_data = tf_data.repeat().batch(batch_size).prefetch(1)
+    return {'data':tf_data, 'encoder':class_encoder, 'num_samples':num_samples, 'num_classes':num_classes}
+
+
+
+
+
+from omegaconf import OmegaConf
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from neptunecontrib.api.table import log_table
+from neptunecontrib.monitoring.keras import NeptuneMonitor
+#hide
+# Image plotting utils
+def show_batch(image_batch, label_batch, image_data_gen=True, class_names=None):
+    fig = plt.figure(figsize=(10, 10))
+    for n in range(25):
+        ax = plt.subplot(5, 5, n+1)
+        plt.imshow(image_batch[n])
+        
+        if image_data_gen:
+            plt.title(class_names[label_batch[n].argmax()])
+        else:
+            plt.title(label_batch[n])
+        
+        plt.axis('off')
+    return fig
+
+
+def summarize_sample(x, y):
+    y_int=y
+    y_encoding = 'sparse int'
+    if isinstance(y, np.ndarray):
+        y_int = np.argmax(y, axis=-1)
+        if y.ndim>=1 and y.shape[-1] > 1:
+            y_encoding = 'one hot'
+    print(f'y = {y_int} [{y_encoding} encoded]')
+    print(f'y.dtype = {y.dtype}, x.dtype = {x.dtype}\n')
+    print(f'y.shape = {y.shape},\ny.min() = {y.min():.3f} | y.max() = {y.max():.3f},\ny.mean() = {y.mean():.3f} | y.std() = {y.std():.3f}\n')
+    print(f'x.shape = {x.shape},\nx.min() = {x.min():.3f} | x.max() = {x.max():.3f},\nx.mean() = {x.mean():.3f} | x.std() = {x.std():.3f}')
+
+    plt.imshow(x)
+
+
+
+
+# params = Box({
+#               'image_dir': '/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/PNAS_family',
+#               'log_dir': '/media/data_cifs_lrs/projects/prj_fossils/users/jacob/tensorboard_log_dir',          
+#               'validation_split': 0.1,
+#               'target_size':(299,299),
+#               'batch_size':32,
+#               'num_epochs': 30,
+#               'seed': 20,
+#               'rescale': None, #1.0/255,
+#               'preprocess_input': "tensorflow.keras.applications.resnet_v2.preprocess_input",
+#               'color_mode': 'rgb',
+#               'early_stopping': {'monitor':"val_loss",
+#                                 'patience':10,
+#                                 'min_delta':0.01,
+#                                 'restore_best_weights':True}
+# })
+
+# model_config = Box({
+#                     'model_name': "resnet_50_v2",
+#                     'optimizer':"Adam",
+#                     'num_classes':None, #params.num_classes,
+#                     'weights': "imagenet",
+#                     'frozen_layers':None, #(0,-4),
+#                     'input_shape':None,#(*params.target_size,3),
+#                     'lr':1e-5,
+#                     'lr_momentum':None,#0.9,
+#                     'regularization':{},#{"l2": 1e-4},
+#                     'loss':'categorical_crossentropy',
+#                     'METRICS':['f1','accuracy'],
+#                     'head_layers': [256,128]
+#                     })
+
+
+
+#     featurewise_center=False, samplewise_center=False,
+#     featurewise_std_normalization=False, samplewise_std_normalization=False,
+#     zca_whitening=False, zca_epsilon=1e-06, rotation_range=0, width_shift_range=0.0,
+#     height_shift_range=0.0, brightness_range=None, shear_range=0.0, zoom_range=0.0,
+#     channel_shift_range=0.0, fill_mode='nearest', cval=0.0, horizontal_flip=False,
+#     vertical_flip=False, rescale=1.0/255, preprocessing_function=preprocess_input,
+#     data_format=None, validation_split=validation_split, dtype=np.uint8
+
+
+
+
+import hydra
+
+
+
+@hydra.main(config_path='configs', config_name='baseline_testing_config')
+def main(config):
+
+    OmegaConf.set_struct(config, False)
+
+    from pyleaves.utils import set_tf_config
+    config.task = config.task or 1
+    gpu = set_tf_config(gpu_num=None, num_gpus=1, wait=(config.task+1)*2)
+
+    import tensorflow as tf
+    from tensorflow.keras import backend as K
+    K.clear_session()
+    from pyleaves.utils.pipeline_utils import build_model
+    from tensorflow.keras.applications.resnet_v2 import preprocess_input
+    from pprint import pprint
+    from box import Box
+    import cv2
+    import os
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import neptune
+
+    # from pyleaves.utils import set_tf_config
+    # gpu = set_tf_config(gpu_num=None, num_gpus=1, wait=0)
+
+    # import tensorflow as tf
+    # from tensorflow.keras import backend as K
+    # K.clear_session()
+
+    # from pyleaves.utils.pipeline_utils import build_model
+    # from tensorflow.keras.applications.resnet_v2 import preprocess_input
+
+
+    neptune_project_name = 'jacobarose/jupyter-testing-ground'
+    neptune_experiment_name = 'baseline-PNAS_family'
+
+    params = config
+    params.regularization = params.regularization or {}
+    params.lr = float(params.lr)
+    params.data_augs.validation_split = float(params.data_augs.validation_split)
+    try:
+        params.data_augs.rescale = float(params.data_augs.rescale)
+    except:
+        params.data_augs.rescale = None
+    
+    data_augs = {k:v for k,v in OmegaConf.to_container(params.data_augs, resolve=True).items() if k != "preprocessing_function"}
+    if params.data_augs.preprocessing_function == "tensorflow.keras.applications.resnet_v2.preprocess_input":
+        from tensorflow.keras.applications.resnet_v2 import preprocess_input
+        print("Using preprocessing function: tensorflow.keras.applications.resnet_v2.preprocess_input")
+    else:
+        preprocess_input = None
+        print("Using no preprocess_input function")
+
+    datagen = tf.keras.preprocessing.image.ImageDataGenerator(**data_augs,
+                                                              preprocessing_function = preprocess_input)
+                                                            # rescale=params.rescale,
+                                                            # preprocessing_function=preprocess_input,
+                                                            # validation_split=params.validation_split)
+
+    # train_data = datagen.flow_from_directory(
+    #     params.train_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+    #     class_mode='categorical', batch_size=params.batch_size, shuffle=True, seed=params.seed,
+    #     subset='training', interpolation='nearest')
+
+
+    # val_data = datagen.flow_from_directory(
+    #     params.train_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+    #     class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed,
+    #     subset='validation', interpolation='nearest')
+
+
+    # test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale = data_augs['rescale'],
+    #                                                           preprocessing_function = preprocess_input)
+
+    # test_data = test_datagen.flow_from_directory(
+    #     params.test_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+    #     class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed, interpolation='nearest')
+
+    train_iter = datagen.flow_from_directory(
+        params.train_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+        class_mode='categorical', batch_size=params.batch_size, shuffle=True, seed=params.seed,
+        subset='training', interpolation='nearest')
+
+
+    val_iter = datagen.flow_from_directory(
+        params.train_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+        class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed,
+        subset='validation', interpolation='nearest')
+
+
+    test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale = data_augs['rescale'],
+                                                                preprocessing_function = preprocess_input)
+
+    test_iter = test_datagen.flow_from_directory(
+        params.test_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+        class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed, interpolation='nearest')
+
+
+    train_data_info = img_data_gen_2_tf_data(train_iter, training=True, target_size=params.target_size, batch_size=params.batch_size, seed=params.seed, preprocess_input=preprocess_input)
+    val_data_info = img_data_gen_2_tf_data(val_iter, training=False, target_size=params.target_size, batch_size=params.batch_size, seed=params.seed, preprocess_input=preprocess_input)
+    test_data_info = img_data_gen_2_tf_data(test_iter, training=False, target_size=params.target_size, batch_size=params.batch_size, seed=params.seed, preprocess_input=preprocess_input)
+
+    train_data = train_data_info['data']
+    val_data = val_data_info['data']
+    test_data = test_data_info['data']
+
+
+
+
+
+
+
+
+
+
+    params.num_samples_train = train_iter.samples
+    params.num_samples_val = val_iter.samples
+    params.num_samples_test = test_iter.samples
+    params.num_classes = train_iter.num_classes
+    steps_per_epoch=params.num_samples_train//params.batch_size
+    validation_steps=params.num_samples_val//params.batch_size
+    test_steps=params.num_samples_test//params.batch_size
+
+    neptune_params = {}
+    for k,v in OmegaConf.to_container(params, resolve=True).items():
+        if type(v)==dict:
+            neptune_params[k] = str(v)
+        else:
+            neptune_params[k] = v
+
+
+
+    model_config = params
+    model_config.num_classes = params.num_classes
+    model_config.input_shape = (*params.target_size,3)
+
+            
+    model = build_model(model_config)
+
+    ################################################################################
+    ################################################################################
+    ################################################################################
+
+
+    neptune.init(project_qualified_name=neptune_project_name)
+
+    from tensorflow.keras.callbacks import TensorBoard, EarlyStopping
+    callbacks = [TensorBoard(log_dir=params.log_dir, profile_batch=0),
+                NeptuneMonitor(),
+                EarlyStopping(monitor=params.early_stopping.monitor,
+                            patience=params.early_stopping.patience,
+                            min_delta=params.early_stopping.min_delta, 
+                            verbose=1, 
+                            restore_best_weights=params.early_stopping.restore_best_weights)]
+
+
+    with neptune.create_experiment(name=neptune_experiment_name, params=neptune_params) as experiment:
+        model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+
+        print('[BEGINNING TRAINING]')
+        try:
+            history = model.fit(train_data,
+                                epochs=params.num_epochs,
+                                callbacks=callbacks,
+                                validation_data=val_data,
+                                validation_freq=1,
+                                shuffle=True,
+                                steps_per_epoch=steps_per_epoch,
+                                validation_steps=validation_steps,
+                                verbose=1)
+
+        except Exception as e:
+            raise e
+
+        model.save(config.saved_model_path)
+        print('[STAGE COMPLETED]')
+        print(f'Saved trained model to {config.saved_model_path}')
+        subset='test'
+        # num_samples = data_iter.samples
+        # batch_size = data_iter.batch_size
+        # steps = int(np.ceil(num_samples/batch_size))
+        y_true = test_iter.labels
+        classes = test_iter.class_indices
+        y, y_hat, y_prob = evaluate(model, test_data, y_true=y_true, classes=classes, steps=test_steps, experiment=experiment, subset=subset)
+
+        print('y_prob.shape =', y_prob.shape)
+        predictions = pd.DataFrame({'y':y,'y_pred':y_hat})
+        log_table(f'{subset}_labels_w_predictions',predictions, experiment=experiment)
+
+        y_prob_df = pd.DataFrame(y_prob, columns=list(test_data.class_indices.keys()))
+        log_table(f'{subset}_probabilities',y_prob_df,experiment=experiment)
+
+
+    print(['[FINISHED TRAINING AND TESTING]'])
+
+    return predictions
+
+
+import pandas as pd
+from sklearn.metrics import classification_report#, confusion_matrix
+
+def evaluate(model, data_iter, y_true, steps: int, classes, output_dict: bool=True, experiment=None, subset='val'):
+    # num_classes = data_iter.num_classes
+
+
+    y_prob = model.predict(data_iter, steps=steps, verbose=1)
+    
+    target_names = list(classes.keys())
+    labels = [classes[text_label] for text_label in target_names]
+
+    y_hat = y_prob.argmax(axis=1)
+    print('y_hat.shape = ', y_hat.shape)
+    if y_true.ndim > 1:
+        y_true = y_true.argmax(axis=1)
+    print('y_true.shape = ', y_true.shape)
+    try:
+        report = classification_report(y_true, y_hat, labels=labels, target_names=target_names, output_dict=output_dict)
+        if type(report)==dict:
+            report = pd.DataFrame(report)
+        log_table(f'{subset}_classification_report', report, experiment=experiment)
+    except Exception as e:
+        import pdb; pdb.set_trace()
+        print(e)
+
+
+    # from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
+    # callbacks = [NeptuneMonitor()]
+    # NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=target_names, steps=steps, subset_prefix=subset, experiment=experiment),
+    test_results = model.evaluate(data_iter, steps=steps, verbose=1)
+
+    print('TEST RESULTS:\n',test_results)
+
+    print('Results:')
+    for m, result in zip(model.metrics_names, test_results):
+        print(f'{m}: {result}')
+        experiment.log_metric(f'{subset}_{m}', result)
+
+    return y_true, y_hat, y_prob
+
+
+
+
+
+if __name__=='__main__':
+    main()
+
+
+
+    ## TODO Saturday: plot image grid with color coded labels with correct/incorrect status of a trained model's prediction on a random batch.
+
+#     # get a random batch of images
+# image_batch, label_batch = next(iter(validation_generator))
+# # turn the original labels into human-readable text
+# label_batch = [class_names[np.argmax(label_batch[i])] for i in range(batch_size)]
+# # predict the images on the model
+# predicted_class_names = model.predict(image_batch)
+# predicted_ids = [np.argmax(predicted_class_names[i]) for i in range(batch_size)]
+# # turn the predicted vectors to human readable labels
+# predicted_class_names = np.array([class_names[id] for id in predicted_ids])
+# # some nice plotting
+# plt.figure(figsize=(10,9))
+# for n in range(30):
+#     plt.subplot(6,5,n+1)
+#     plt.subplots_adjust(hspace = 0.3)
+#     plt.imshow(image_batch[n])
+#     if predicted_class_names[n] == label_batch[n]:
+#         color = "blue"
+#         title = predicted_class_names[n].title()
+#     else:
+#         color = "red"
+#         title = f"{predicted_class_names[n].title()}, correct:{label_batch[n]}"
+#     plt.title(title, color=color)
+#     plt.axis('off')
+# _ = plt.suptitle("Model predictions (blue: correct, red: incorrect)")
+# plt.show()
