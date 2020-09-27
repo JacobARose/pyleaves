@@ -407,10 +407,11 @@ def evaluate(model, val_data, y=None, output_dict: bool=True, experiment=None, s
 
     y_hat = y_prob.argmax(axis=1)
     print('y_hat.shape = ', y_hat.shape)
-    y = y_true.argmax(axis=1)
-    print('y.shape = ', y.shape)
+    if y_true.ndim > 1:
+        y_true = y_true.argmax(axis=1)
+    print('y_true.shape = ', y_true.shape)
     try:
-        report = classification_report(y, y_hat, labels=labels, target_names=target_names, output_dict=output_dict)
+        report = classification_report(y_true, y_hat, labels=labels, target_names=target_names, output_dict=output_dict)
         if type(report)==dict:
             report = pd.DataFrame(report)
         
@@ -420,7 +421,7 @@ def evaluate(model, val_data, y=None, output_dict: bool=True, experiment=None, s
         import pdb; pdb.set_trace()
         print(e)
 
-    return y, y_hat, y_prob
+    return y_true, y_hat, y_prob
 
 
 
