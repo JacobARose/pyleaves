@@ -106,7 +106,10 @@ def img_data_gen_2_tf_data(data, training=False, target_size=(256,256), batch_si
     if preprocess_input is not None:
         tf_data = tf_data.map(lambda x,y: (preprocess_input(x), y), num_parallel_calls=num_parallel_calls)
     
-    tf_data = tf_data.map(lambda x,y: (tf.image.resize(x, size=target_size), tf.one_hot(y, depth=num_classes)), num_parallel_calls=num_parallel_calls)
+    from functools import partial
+    resize = partial(tf.image.resize, size=target_size)
+    print('target_size = ', target_size)
+    tf_data = tf_data.map(lambda x,y: (resize(x), tf.one_hot(y, depth=num_classes)), num_parallel_calls=num_parallel_calls)
     
     tf_data = tf_data.repeat().batch(batch_size).prefetch(1)
     return {'data':tf_data, 'encoder':class_encoder, 'num_samples':num_samples, 'num_classes':num_classes}
