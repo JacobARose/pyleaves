@@ -549,7 +549,7 @@ def vis_saliency_maps(model, imgs, labels, classes: Dict[int,str], dataset_name=
         axes[0].set_title('Original image')
         axes[1].imshow(visualization)
         axes[1].set_title('Saliency map')
-    fig.suptitle(ff'{dataset_name} target = {input_class_name}')
+    fig.suptitle(f'{dataset_name} target = {input_class_name}')
     plt.show()
 
 
@@ -564,41 +564,41 @@ def vis_saliency_maps(model, imgs, labels, classes: Dict[int,str], dataset_name=
 
 
 
-    ## TODO Saturday: plot image grid with color coded labels with correct/incorrect status of a trained model's prediction on a random batch.
+#     ## TODO Saturday: plot image grid with color coded labels with correct/incorrect status of a trained model's prediction on a random batch.
 
-    # get a random batch of images
-image_batch, label_batch = next(iter(validation_generator))
-# turn the original labels into human-readable text
-label_batch = [class_names[np.argmax(label_batch[i])] for i in range(batch_size)]
-# predict the images on the model
-predicted_class_names = model.predict(image_batch)
-predicted_ids = [np.argmax(predicted_class_names[i]) for i in range(batch_size)]
-# turn the predicted vectors to human readable labels
-predicted_class_names = np.array([class_names[id] for id in predicted_ids])
-# some nice plotting
-plt.figure(figsize=(10,9))
-for n in range(30):
-    plt.subplot(6,5,n+1)
-    plt.subplots_adjust(hspace = 0.3)
-    plt.imshow(image_batch[n])
-    if predicted_class_names[n] == label_batch[n]:
-        color = "blue"
-        title = predicted_class_names[n].title()
-    else:
-        color = "red"
-        title = f"{predicted_class_names[n].title()}, correct:{label_batch[n]}"
-    plt.title(title, color=color)
-    plt.axis('off')
-_ = plt.suptitle("Model predictions (blue: correct, red: incorrect)")
-plt.show()
+#     # get a random batch of images
+# image_batch, label_batch = next(iter(validation_generator))
+# # turn the original labels into human-readable text
+# label_batch = [class_names[np.argmax(label_batch[i])] for i in range(batch_size)]
+# # predict the images on the model
+# predicted_class_names = model.predict(image_batch)
+# predicted_ids = [np.argmax(predicted_class_names[i]) for i in range(batch_size)]
+# # turn the predicted vectors to human readable labels
+# predicted_class_names = np.array([class_names[id] for id in predicted_ids])
+# # some nice plotting
+# plt.figure(figsize=(10,9))
+# for n in range(30):
+#     plt.subplot(6,5,n+1)
+#     plt.subplots_adjust(hspace = 0.3)
+#     plt.imshow(image_batch[n])
+#     if predicted_class_names[n] == label_batch[n]:
+#         color = "blue"
+#         title = predicted_class_names[n].title()
+#     else:
+#         color = "red"
+#         title = f"{predicted_class_names[n].title()}, correct:{label_batch[n]}"
+#     plt.title(title, color=color)
+#     plt.axis('off')
+# _ = plt.suptitle("Model predictions (blue: correct, red: incorrect)")
+# plt.show()
 
 
 
-# =============================================
-# Activation Maximization code
-# =============================================
-# from vis.visualization import visualize_activation
-# from vis.utils import utils
+# # =============================================
+# # Activation Maximization code
+# # =============================================
+# # from vis.visualization import visualize_activation
+# # from vis.utils import utils
 # import matplotlib.pyplot as plt
 
 # # Find the index of the to be visualized layer above
