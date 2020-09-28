@@ -568,7 +568,7 @@ def build_base_vgg16_RGB(weights="imagenet", input_shape=(224,224,3), frozen_lay
                                              include_top=False,
                                              input_tensor=Input(shape=input_shape))
 
-    if frozen_layers is not None:
+    if (frozen_layers is not None) and (type(frozen_layers) is not str):
         for layer in base.layers[frozen_layers[0]:frozen_layers[1]]:
             layer.trainable = False
 
@@ -598,6 +598,40 @@ def build_head(base, num_classes=10, head_layers: List[int]=None):
         model = tf.keras.Sequential(layers)
 
     return model
+
+
+
+
+def build_lightweight_nets(model_name="mobile_net_v2", weights="imagenet", input_shape=(224,224,3), frozen_layers: Tuple[int]=None):
+
+
+    if model_name=="mobile_net_v2":
+        model = tf.keras.applications.MobileNetV2(input_shape=input_shape, include_top=False, weights=weights)
+    elif model_name=="inception_v3":
+        model = tf.keras.applications.InceptionV3(input_shape=input_shape, include_top=False, weights=weights)
+    elif model_name=="xception":
+        model = tf.keras.applications.Xception(input_shape=input_shape, include_top=False, weights=weights)
+    elif model_name=="efficient_net_B0":
+        model = tf.keras.applications.EfficientNetB0(input_shape=input_shape, include_top=False, weights=weights)
+    elif model_name=="efficient_net_B1":
+        model = tf.keras.applications.EfficientNetB1(input_shape=input_shape, include_top=False, weights=weights)
+    elif model_name=="efficient_net_B2":
+        model = tf.keras.applications.EfficientNetB2(input_shape=input_shape, include_top=False, weights=weights)
+    elif model_name=="efficient_net_B3":
+        model = tf.keras.applications.EfficientNetB3(input_shape=input_shape, include_top=False, weights=weights)
+    elif model_name=="efficient_net_B4":
+        model = tf.keras.applications.EfficientNetB4(input_shape=input_shape, include_top=False, weights=weights)
+    elif model_name=="efficient_net_B5":
+        model = tf.keras.applications.EfficientNetB5(input_shape=input_shape, include_top=False, weights=weights)
+
+
+    if type(frozen_layers) is tuple:
+        for layer in model.layers[frozen_layers[0]:frozen_layers[1]]:
+            layer.trainable = False
+
+    return model
+
+
 
 
 def build_model(model_config):
@@ -649,6 +683,21 @@ def build_model(model_config):
     elif model_config['model_name'].startswith('resnet'):
         model_builder = resnet.ResNet(model_config)
         build_base = partial(model_builder.build_base, weights=model_config.weights, input_shape=model_config.input_shape)
+
+    elif model_config in ["mobile_net_v2",
+                          "inception_v3",
+                          "xception",
+                          "efficient_net_B0",
+                          "efficient_net_B1",
+                          "efficient_net_B2",
+                          "efficient_net_B3",
+                          "efficient_net_B4",
+                          "efficient_net_B5"]:
+        build_base = partial(build_lightweight_nets,
+                             model_name=model_config.model_name,
+                             weights=model_config.weights,
+                             input_shape=model_config.input_shape,
+                             frozen_layers=model_config.frozen_layers)
 
     base = build_base()
 

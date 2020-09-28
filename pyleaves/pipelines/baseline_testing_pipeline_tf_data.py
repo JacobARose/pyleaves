@@ -92,7 +92,7 @@ def load_data_from_tensor_slices(data: pd.DataFrame, cache_paths: Union[bool,str
     data = data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=dtype),y), num_parallel_calls=-1)
     return data
 
-def img_data_gen_2_tf_data(data, training=False, target_size=(256,256), batch_size=16, seed=None, preprocess_input=None, num_parallel_calls=-1):
+def img_data_gen_2_tf_data(data, training=False, target_size=(256,256), batch_size=16, seed=None, preprocess_input=None, num_parallel_calls=-1, cache=False):
     import tensorflow as tf
     num_samples = data.samples
     num_classes = data.num_classes
@@ -112,7 +112,11 @@ def img_data_gen_2_tf_data(data, training=False, target_size=(256,256), batch_si
     print('target_size = ', target_size)
     tf_data = tf_data.map(lambda x,y: (resize(x), tf.one_hot(y, depth=num_classes)), num_parallel_calls=num_parallel_calls)
     
-    tf_data = tf_data.repeat().batch(batch_size).prefetch(1)
+
+    tf_data = tf_data.repeat().batch(batch_size)
+    
+    if cache:
+        tf_data = tf_data.prefetch(-1)
     return {'data':tf_data, 'data_iterator':data, 'encoder':class_encoder, 'num_samples':num_samples, 'num_classes':num_classes}
 
 
