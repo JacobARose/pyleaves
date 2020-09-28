@@ -158,7 +158,8 @@ def load_Fossil_family_4_subset(params, subset='test', preprocess_input=None):
                                                target_size=params.target_size,
                                                batch_size=params.batch_size,
                                                seed=params.seed,
-                                               preprocess_input=preprocess_input)
+                                               preprocess_input=preprocess_input,
+                                               cache=True)
         return data_info
 
     elif subset=='test':
@@ -399,40 +400,32 @@ def main(config):
 
 
 
-    with tf.device('/cpu:0'):
-        train_data_info = img_data_gen_2_tf_data(train_iter,
-                                                training=True,
-                                                target_size=params.target_size,
-                                                batch_size=params.batch_size,
-                                                seed=params.seed,
-                                                preprocess_input=preprocess_input,
-                                                num_parallel_calls=params.num_parallel_calls)
-    with tf.device('/cpu:0'):
-        val_data_info = img_data_gen_2_tf_data(val_iter,
+    # with tf.device('/cpu:0'):
+    train_data_info = img_data_gen_2_tf_data(train_iter,
+                                            training=True,
+                                            target_size=params.target_size,
+                                            batch_size=params.batch_size,
+                                            seed=params.seed,
+                                            preprocess_input=preprocess_input,
+                                            num_parallel_calls=params.num_parallel_calls)
+    # with tf.device('/cpu:0'):
+    val_data_info = img_data_gen_2_tf_data(val_iter,
+                                        training=False,
+                                        target_size=params.target_size,
+                                        batch_size=params.batch_size,
+                                        seed=params.seed,
+                                        preprocess_input=preprocess_input)
+    # with tf.device('/cpu:0'):
+    test_data_info = img_data_gen_2_tf_data(test_iter,
                                             training=False,
                                             target_size=params.target_size,
                                             batch_size=params.batch_size,
                                             seed=params.seed,
                                             preprocess_input=preprocess_input)
-    with tf.device('/cpu:0'):
-        test_data_info = img_data_gen_2_tf_data(test_iter,
-                                                training=False,
-                                                target_size=params.target_size,
-                                                batch_size=params.batch_size,
-                                                seed=params.seed,
-                                                preprocess_input=preprocess_input)
 
-        train_data = train_data_info['data']
-        val_data = val_data_info['data']
-        test_data = test_data_info['data']
-
-
-
-
-
-
-
-
+    train_data = train_data_info['data']
+    val_data = val_data_info['data']
+    test_data = test_data_info['data']
 
 
     params.num_samples_train = train_iter.samples
