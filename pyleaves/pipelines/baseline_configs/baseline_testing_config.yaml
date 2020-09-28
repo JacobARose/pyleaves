@@ -1,7 +1,7 @@
 defaults:
 
-    - dataset/base
-    - dataset@dataset: PNAS_family_4
+    - baseline_dataset/base
+    - baseline_dataset@baseline_dataset: PNAS_family_4
     - hydra/launcher: joblib
     
 task: ${hydra:job.num}

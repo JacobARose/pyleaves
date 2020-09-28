@@ -260,7 +260,7 @@ import hydra
 
 
 
-@hydra.main(config_path='configs', config_name='baseline_testing_config')
+@hydra.main(config_path='baseline_configs', config_name='baseline_testing_config')
 def main(config):
 
     OmegaConf.set_struct(config, False)

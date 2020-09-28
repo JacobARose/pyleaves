@@ -1,0 +1,6 @@
+# @package _group_
+
+dataset_name: "Leaves_family_4"
+train_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Leaves_family_4_2020-03/train"
+test_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Leaves_family_4_2020-03/test"
+validation_split: 0.1
