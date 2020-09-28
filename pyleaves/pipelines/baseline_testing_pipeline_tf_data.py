@@ -449,7 +449,9 @@ def main(config):
         # steps = int(np.ceil(num_samples/batch_size))
         y_true = test_iter.labels
         classes = test_iter.class_indices
-        y, y_hat, y_prob = evaluate(model, test_data, y_true=y_true, classes=classes, steps=test_steps, experiment=experiment, subset=subset)
+        eval_iter = test_data.unbatch().take(len(y_true)).batch(params.batch_size)
+
+        y, y_hat, y_prob = evaluate(model, eval_iter, y_true=y_true, classes=classes, steps=test_steps, experiment=experiment, subset=subset)
 
         print('y_prob.shape =', y_prob.shape)
         predictions = pd.DataFrame({'y':y,'y_pred':y_hat})
