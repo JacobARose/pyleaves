@@ -350,6 +350,7 @@ def main(config):
     upload_source_files=[os.path.join(os.path.dirname(__file__),'*.py')]
 
     # neptune_experiment_name = config.misc.experiment_name
+    import pdb;pdb.set_trace()
 
 
     with neptune.create_experiment(name=neptune_experiment_name,
