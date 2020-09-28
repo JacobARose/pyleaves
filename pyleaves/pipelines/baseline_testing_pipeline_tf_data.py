@@ -5,8 +5,11 @@
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.py 
 
 
- python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.py target_size=[299,299] batch_size=32 num_epochs=60 'frozen_layers=[0,-4]' num_parallel_calls=4
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.py target_size=[299,299] batch_size=32 num_epochs=60 'frozen_layers=[0,-4]' num_parallel_calls=4
 
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.py dataset_name="Leaves_family_4" target_size=[299,299] batch_size=32 num_epochs=80 'frozen_layers=[0,-4]' num_parallel_calls=4
 
 
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 'target_size=[768,768]' 'lr=1e-5,1e-4,1e-3' 'weights=null,"imagenet"' hydra.launcher.n_jobs=2 hydra.launcher.verbose=1 num_epochs=40
@@ -278,17 +281,6 @@ def main(config):
     import matplotlib.pyplot as plt
     import numpy as np
     import neptune
-
-    # from pyleaves.utils import set_tf_config
-    # gpu = set_tf_config(gpu_num=None, num_gpus=1, wait=0)
-
-    # import tensorflow as tf
-    # from tensorflow.keras import backend as K
-    # K.clear_session()
-
-    # from pyleaves.utils.pipeline_utils import build_model
-    # from tensorflow.keras.applications.resnet_v2 import preprocess_input
-
 
     neptune_project_name = 'jacobarose/jupyter-testing-ground'
     neptune_experiment_name = f'baseline-{config.dataset_name}'
