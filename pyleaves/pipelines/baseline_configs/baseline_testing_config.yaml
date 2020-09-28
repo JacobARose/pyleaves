@@ -47,8 +47,8 @@ loss: "categorical_crossentropy"
 METRICS: ["f1","accuracy"]
 head_layers: [256,128]
 
-augmentations: null
-    # flip: 1.0
+augmentations: #null
+    flip: 0.0
 
 
 
