@@ -548,6 +548,18 @@ def create_dataset(data_fold: DataFold,
 
 
 
+def freeze_batchnorm_layers(model, verbose=False):
+    layer_nums = []
+    for i, layer in enumerate(model.layers):
+        if layer.name.endswith('bn'):
+            layer_nums.append(i)
+            layer.trainable = False
+            if verbose: print(f'layer {i}', layer.name)
+    return model, layer_nums
+
+
+
+
 
 
 def build_base_vgg16_RGB(weights="imagenet", input_shape=(224,224,3), frozen_layers: Tuple[int]=None):
@@ -639,10 +651,19 @@ def build_model(model_config):
         build_base = partial(model_builder.build_base, weights=model_config.weights, input_shape=model_config.input_shape)
 
     base = build_base()
+
+    if model_config.frozen_layers=='bn':
+        base, frozen_layers = freeze_batchnorm_layers(base, verbose=False)
+        model_config.frozen_layers = frozen_layers
+
+
     # base = base_model.Model.add_regularization(base, **model_config.regularization)
     model = build_head(base, num_classes=model_config.num_classes, head_layers=model_config.head_layers)
     
     model = base_model.Model.add_regularization(model, **model_config.regularization)
+
+
+
 
     if model_config.optimizer == "RMSprop":
         optimizer = tf.keras.optimizers.RMSprop(learning_rate=model_config.lr, momentum=model_config.lr_momentum)#, decay=model_config.lr_decay)

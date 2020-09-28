@@ -12,7 +12,9 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.py dataset@dataset=Leaves_family_4 target_size=[299,299] batch_size=32 num_epochs=80 'frozen_layers=[0,-4]' num_parallel_calls=4
 
 
-python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 'target_size=[768,768]' 'lr=1e-5,1e-4,1e-3' 'weights=null,"imagenet"' hydra.launcher.n_jobs=2 hydra.launcher.verbose=1 num_epochs=40
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.py dataset@dataset=Fossil_family_4 target_size=[299,299] batch_size=32 num_epochs=80 'frozen_layers=[0,-4]' num_parallel_calls=4
+
+
 
     Raises:
         e: [description]

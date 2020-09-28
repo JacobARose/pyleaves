@@ -76,7 +76,7 @@ class ResNet(BaseModel):
                                include_top=False,
                                input_tensor=Input(shape=input_shape))
 
-        if self.frozen_layers is not None:
+        if self.frozen_layers is not None and type(self.frozen_layers)!=str:
             for layer in base.layers[self.frozen_layers[0]:self.frozen_layers[1]]:
                 layer.trainable = False
 
