@@ -9,7 +9,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.
 
 
 
-python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.py dataset_name="Leaves_family_4" target_size=[299,299] batch_size=32 num_epochs=80 'frozen_layers=[0,-4]' num_parallel_calls=4
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.py dataset@dataset=Leaves_family_4 target_size=[299,299] batch_size=32 num_epochs=80 'frozen_layers=[0,-4]' num_parallel_calls=4
 
 
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 'target_size=[768,768]' 'lr=1e-5,1e-4,1e-3' 'weights=null,"imagenet"' hydra.launcher.n_jobs=2 hydra.launcher.verbose=1 num_epochs=40
@@ -452,7 +452,7 @@ def main(config):
         predictions = pd.DataFrame({'y':y,'y_pred':y_hat})
         log_table(f'{subset}_labels_w_predictions',predictions, experiment=experiment)
 
-        y_prob_df = pd.DataFrame(y_prob, columns=list(test_data.class_indices.keys()))
+        y_prob_df = pd.DataFrame(y_prob, columns=list(classes.keys()))
         log_table(f'{subset}_probabilities',y_prob_df,experiment=experiment)
 
 
