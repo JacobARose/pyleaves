@@ -515,32 +515,117 @@ def evaluate(model, data_iter, y_true, steps: int, classes, output_dict: bool=Tr
 if __name__=='__main__':
     main()
 
+from typing import Dict
+
+def vis_saliency_maps(model, imgs, labels, classes: Dict[int,str], dataset_name=''):
+    from vis.visualization import visualize_saliency
+    from vis.utils import utils
+    import tensorflow as tf
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    # Find the index of the to be visualized layer above
+    layer_index = utils.find_layer_idx(model, 'visualized_layer')
+
+    # Swap softmax with linear
+    model.layers[layer_index].activation = tf.keras.activations.linear
+    model = utils.apply_modifications(model)  
+
+    # Numbers to visualize
+    indices_to_visualize = [ 0, 12, 38, 83, 112, 74, 190 ]
+
+    # Visualize
+    for index_to_visualize in indices_to_visualize:
+    # Get input
+        input_image = imgs[index_to_visualize]
+
+        input_class = np.argmax(labels[index_to_visualize])
+        input_class_name = classes[input_class]
+    # Matplotlib preparations
+        fig, axes = plt.subplots(1, 2)
+        # Generate visualization
+        visualization = visualize_saliency(model, layer_index, filter_indices=input_class, seed_input=input_image)
+        axes[0].imshow(input_image) 
+        axes[0].set_title('Original image')
+        axes[1].imshow(visualization)
+        axes[1].set_title('Saliency map')
+    fig.suptitle(ff'{dataset_name} target = {input_class_name}')
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+
 
 
     ## TODO Saturday: plot image grid with color coded labels with correct/incorrect status of a trained model's prediction on a random batch.
 
-#     # get a random batch of images
-# image_batch, label_batch = next(iter(validation_generator))
-# # turn the original labels into human-readable text
-# label_batch = [class_names[np.argmax(label_batch[i])] for i in range(batch_size)]
-# # predict the images on the model
-# predicted_class_names = model.predict(image_batch)
-# predicted_ids = [np.argmax(predicted_class_names[i]) for i in range(batch_size)]
-# # turn the predicted vectors to human readable labels
-# predicted_class_names = np.array([class_names[id] for id in predicted_ids])
-# # some nice plotting
-# plt.figure(figsize=(10,9))
-# for n in range(30):
-#     plt.subplot(6,5,n+1)
-#     plt.subplots_adjust(hspace = 0.3)
-#     plt.imshow(image_batch[n])
-#     if predicted_class_names[n] == label_batch[n]:
-#         color = "blue"
-#         title = predicted_class_names[n].title()
-#     else:
-#         color = "red"
-#         title = f"{predicted_class_names[n].title()}, correct:{label_batch[n]}"
-#     plt.title(title, color=color)
-#     plt.axis('off')
-# _ = plt.suptitle("Model predictions (blue: correct, red: incorrect)")
-# plt.show()
+    # get a random batch of images
+image_batch, label_batch = next(iter(validation_generator))
+# turn the original labels into human-readable text
+label_batch = [class_names[np.argmax(label_batch[i])] for i in range(batch_size)]
+# predict the images on the model
+predicted_class_names = model.predict(image_batch)
+predicted_ids = [np.argmax(predicted_class_names[i]) for i in range(batch_size)]
+# turn the predicted vectors to human readable labels
+predicted_class_names = np.array([class_names[id] for id in predicted_ids])
+# some nice plotting
+plt.figure(figsize=(10,9))
+for n in range(30):
+    plt.subplot(6,5,n+1)
+    plt.subplots_adjust(hspace = 0.3)
+    plt.imshow(image_batch[n])
+    if predicted_class_names[n] == label_batch[n]:
+        color = "blue"
+        title = predicted_class_names[n].title()
+    else:
+        color = "red"
+        title = f"{predicted_class_names[n].title()}, correct:{label_batch[n]}"
+    plt.title(title, color=color)
+    plt.axis('off')
+_ = plt.suptitle("Model predictions (blue: correct, red: incorrect)")
+plt.show()
+
+
+
+# =============================================
+# Activation Maximization code
+# =============================================
+# from vis.visualization import visualize_activation
+# from vis.utils import utils
+# import matplotlib.pyplot as plt
+
+# # Find the index of the to be visualized layer above
+# layer_index = utils.find_layer_idx(model, 'visualized_layer')
+
+# # Swap softmax with linear
+# model.layers[layer_index].activation = activations.linear
+# model = utils.apply_modifications(model)  
+
+# # Classes to visualize
+# classes_to_visualize = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]
+# classes = {
+#   0: 'airplane',
+#   1: 'automobile',
+#   2: 'bird',
+#   3: 'cat',
+#   4: 'deer',
+#   5: 'dog',
+#   6: 'frog',
+#   7: 'horse',
+#   8: 'ship',
+#   9: 'truck'
+# }
+
+# # Visualize
+# for number_to_visualize in classes_to_visualize:
+#   visualization = visualize_activation(model, layer_index, filter_indices=number_to_visualize, input_range=(0., 1.))
+#   plt.imshow(visualization)
+#   plt.title(f'CIFAR10 target = {classes[number_to_visualize]}')
+#   plt.show()
