@@ -261,11 +261,12 @@ def show_batch(image_batch, label_batch, title='', class_names=None):
     elif label_batch.ndim==2:
         label_batch = np.argmax(label_batch, axis=1)
     
+    img_shape = image_batch.shape
     img_max = np.max(image_batch)
     img_min = np.min(image_batch)
     scaled_image_batch = (image_batch-img_min)/(img_max-img_min)
 
-    title = f'{title}|min={img_min:.2f}|max={img_max:.2f}|dtype={image_batch.dtype}\n(Scaled to [0,1] for visualization)'
+    title = f'{title}|min={img_min:.2f}|max={img_max:.2f}|dtype={image_batch.dtype}|shape={img_shape}\n(Scaled to [0,1] for visualization)'
     plt.suptitle(title)
 
     num_batches = np.min([image_batch.shape[0], 25])

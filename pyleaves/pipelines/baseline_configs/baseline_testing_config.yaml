@@ -39,7 +39,7 @@ optimizer: "Adam"
 num_classes: null
 weights: "imagenet"
 frozen_layers: null #(0,-4),
-input_shape': null
+input_shape: null
 lr: 1.0e-5
 lr_momentum: null
 regularization: null
