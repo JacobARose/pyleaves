@@ -1,12 +1,8 @@
 # @package _group_
 
-params:
-  extract:
-    fold_id: 0
-    fold_dir: '/home/jacob/projects/paleoai_data/paleoai_data/v0_2/data/staged_data/PNAS_family_4/ksplit_2'
-    dataset_name: 'PNAS_family_4'
-    num_classes: 117
-    num_samples: 7494
-    threshold: 4
-    include_classes: []
-    exclude_classes: ['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified']
+
+dataset_name: "PNAS_family_4"
+train_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/${dataset_name}/train"
+test_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/${dataset_name}/test"
+validation_split: 0.1
+threshold: 4
