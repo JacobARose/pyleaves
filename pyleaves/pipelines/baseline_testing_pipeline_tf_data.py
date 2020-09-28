@@ -5,7 +5,7 @@
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.py 
 
 
-python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 'lr=1e-5,1e-4,1e-3,1e-2' 'weights=null,"imagenet"' hydra.launcher.n_jobs=2 hydra.launcher.verbose=1 num_epochs=40
+ python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.py target_size=[299,299] batch_size=32 num_epochs=60 'frozen_layers=[0,-4]' num_parallel_calls=4
 
 
 
@@ -151,7 +151,10 @@ def show_batch(image_batch, label_batch, title='', class_names=None):
 
     title = f'{title}|min={img_min:.2f}|max={img_max:.2f}|dtype={image_batch.dtype}\n(Scaled to [0,1] for visualization)'
     plt.suptitle(title)
-    for n in range(25):
+
+    num_batches = np.min([image_batch.shape[0], 25])
+
+    for n in range(num_batches):
         ax = plt.subplot(5, 5, n+1)
         plt.imshow(scaled_image_batch[n])
         plt.title(label_batch[n])
