@@ -39,7 +39,7 @@ from tqdm.auto import tqdm
 from pathlib import Path
 
 
-from typing import Union
+from typing import Union, Dict
 import pandas as pd
 from boltons.dictutils import OneToOne
 # from pyleaves.utils import set_tf_config
