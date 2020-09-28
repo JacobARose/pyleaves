@@ -240,9 +240,14 @@ def main(config):
     # from pyleaves.utils.pipeline_utils import build_model
     # from tensorflow.keras.applications.resnet_v2 import preprocess_input
 
+    if config.dataset_name == "Leaves_family_4":
+
+        config.train_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/${dataset_name}/train"
+        config.test_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/${dataset_name}/test"
+
 
     neptune_project_name = 'jacobarose/jupyter-testing-ground'
-    neptune_experiment_name = 'baseline-PNAS_family'
+    neptune_experiment_name = f'baseline-{config.dataset_name}'
 
     params = config
     params.regularization = params.regularization or {}
@@ -263,28 +268,6 @@ def main(config):
 
     datagen = tf.keras.preprocessing.image.ImageDataGenerator(**data_augs,
                                                               preprocessing_function = preprocess_input)
-                                                            # rescale=params.rescale,
-                                                            # preprocessing_function=preprocess_input,
-                                                            # validation_split=params.validation_split)
-
-    # train_data = datagen.flow_from_directory(
-    #     params.train_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
-    #     class_mode='categorical', batch_size=params.batch_size, shuffle=True, seed=params.seed,
-    #     subset='training', interpolation='nearest')
-
-
-    # val_data = datagen.flow_from_directory(
-    #     params.train_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
-    #     class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed,
-    #     subset='validation', interpolation='nearest')
-
-
-    # test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale = data_augs['rescale'],
-    #                                                           preprocessing_function = preprocess_input)
-
-    # test_data = test_datagen.flow_from_directory(
-    #     params.test_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
-    #     class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed, interpolation='nearest')
 
     train_iter = datagen.flow_from_directory(
         params.train_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
@@ -327,9 +310,9 @@ def main(config):
     params.num_samples_val = val_iter.samples
     params.num_samples_test = test_iter.samples
     params.num_classes = train_iter.num_classes
-    steps_per_epoch=params.num_samples_train//params.batch_size
-    validation_steps=params.num_samples_val//params.batch_size
-    test_steps=params.num_samples_test//params.batch_size
+    steps_per_epoch=int(np.ceil(params.num_samples_train/params.batch_size))
+    validation_steps=int(np.ceil(params.num_samples_val/params.batch_size))
+    test_steps=int(np.ceil(params.num_samples_test/params.batch_size))
 
     neptune_params = {}
     for k,v in OmegaConf.to_container(params, resolve=True).items():
@@ -362,9 +345,15 @@ def main(config):
                             min_delta=params.early_stopping.min_delta, 
                             verbose=1, 
                             restore_best_weights=params.early_stopping.restore_best_weights)]
+    upload_source_files=[os.path.join(os.path.dirname(__file__),'*.py')]
+
+    # neptune_experiment_name = config.misc.experiment_name
 
 
-    with neptune.create_experiment(name=neptune_experiment_name, params=neptune_params) as experiment:
+    with neptune.create_experiment(name=neptune_experiment_name,
+                                   params=neptune_params,
+                                   upload_source_files=upload_source_files,
+                                   tags=list(params.tags)) as experiment:
         model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
 
         print('[BEGINNING TRAINING]')

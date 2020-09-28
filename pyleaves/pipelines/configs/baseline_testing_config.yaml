@@ -23,7 +23,10 @@ early_stopping:
     min_delta: 0.01
     restore_best_weights: True
 
-
+tags:
+    -"${dataset_name}"
+    -"${target_size}"
+    -"${batch_size}"
 
 
 
