@@ -39,7 +39,7 @@ from tqdm.auto import tqdm
 from pathlib import Path
 
 
-from typing import Union, Dict
+from typing import Union, Dict, List
 import pandas as pd
 from boltons.dictutils import OneToOne
 # from pyleaves.utils import set_tf_config
@@ -92,6 +92,15 @@ def load_data_from_tensor_slices(data: pd.DataFrame, cache_paths: Union[bool,str
     data = data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=dtype),y), num_parallel_calls=-1)
     return data
 
+
+
+def decode_int2str(labels: List[int], class_decoder: Dict[int, str]) -> List[str]:
+    return [class_decoder[label] for label in labels]
+
+def encode_str2int(labels: List[str], class_encoder: Dict[str, int]) -> List[int]:
+    return [class_encoder[label] for label in labels]
+
+
 def img_data_gen_2_tf_data(data, 
                            training=False,
                            target_size=(256,256),
@@ -100,7 +109,8 @@ def img_data_gen_2_tf_data(data,
                            preprocess_input=None,
                            augmentations: Dict[str,float]=None,
                            num_parallel_calls=-1,
-                           cache=False):
+                           cache=False,
+                           class_encodings: Dict[str,int]=None):
     from pyleaves.utils.pipeline_utils import flip, _cond_apply
     import tensorflow as tf
     augmentations = augmentations or {}
@@ -109,6 +119,11 @@ def img_data_gen_2_tf_data(data,
     class_encoder = OneToOne(data.class_indices)
     paths = data.filepaths
     labels = data.labels
+
+    if class_encodings:
+        #Encode according to a previously established str<->int mapping in class_encodings
+        text_labels = decode_int2str(labels=labels, class_decoder=class_encoder.inv)
+        labels = encode_str2int(labels=text_labels, class_encoder=class_encodings)
 
     prepped_data = pd.DataFrame.from_records([{'path':path, 'label':label} for path, label in zip(paths, labels)])
     tf_data = load_data_from_tensor_slices(data=prepped_data, training=training, seed=seed, x_col='path', y_col='label', dtype=tf.float32)
@@ -137,14 +152,14 @@ def img_data_gen_2_tf_data(data,
 
 
 
-def load_Fossil_family_4_subset(params, subset='test', preprocess_input=None):
+def load_Fossil_family_4_subset(params, subset='test', preprocess_input=None, class_encodings: Dict[str,int]=None):
     import tensorflow as tf
 
     if subset=='train':
         image_dir = "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_4_2020-06/train"
         datagen = tf.keras.preprocessing.image.ImageDataGenerator(validation_split=params.validation_split)
         train_iter = datagen.flow_from_directory(
-            image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+            image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=list(class_encodings.keys()),
             class_mode='categorical', batch_size=params.batch_size, shuffle=True, seed=params.seed,
             subset='training', interpolation='nearest')
 
@@ -156,14 +171,15 @@ def load_Fossil_family_4_subset(params, subset='test', preprocess_input=None):
                                             seed=params.seed,
                                             preprocess_input=preprocess_input,
                                             augmentations=params.augmentations,
-                                            num_parallel_calls=params.num_parallel_calls)
+                                            num_parallel_calls=params.num_parallel_calls,
+                                            class_encodings=class_encodings)
         return data_info
 
     elif subset=='val':
         image_dir = "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_4_2020-06/train"
         datagen = tf.keras.preprocessing.image.ImageDataGenerator(validation_split=params.validation_split)
         val_iter = datagen.flow_from_directory(
-                            image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+                            image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=list(class_encodings.keys()),
                             class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed,
                             subset='validation', interpolation='nearest')
 
@@ -176,7 +192,8 @@ def load_Fossil_family_4_subset(params, subset='test', preprocess_input=None):
                                             batch_size=params.batch_size,
                                             seed=params.seed,
                                             preprocess_input=preprocess_input,
-                                            cache=True)
+                                            cache=True,
+                                            class_encodings=class_encodings)
         return data_info
 
     elif subset=='test':
@@ -184,7 +201,7 @@ def load_Fossil_family_4_subset(params, subset='test', preprocess_input=None):
         test_datagen = tf.keras.preprocessing.image.ImageDataGenerator()#rescale = data_augs['rescale'],
                                                                     # preprocessing_function = preprocess_input)
         test_iter = test_datagen.flow_from_directory(
-            image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+            image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=list(class_encodings.keys()),
             class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed, interpolation='nearest')
 
         # with tf.device('/cpu:0'):
@@ -193,7 +210,8 @@ def load_Fossil_family_4_subset(params, subset='test', preprocess_input=None):
                                                 target_size=params.target_size,
                                                 batch_size=params.batch_size,
                                                 seed=params.seed,
-                                                preprocess_input=preprocess_input)
+                                                preprocess_input=preprocess_input,
+                                                class_encodings=class_encodings)
         return data_info
 
 
@@ -451,7 +469,7 @@ def main(config):
     val_data = val_data_info['data']
     test_data = test_data_info['data']
 
-
+    params.class_encodings = dict(train_data_info['encoder'])
     params.num_samples_train = train_iter.samples
     params.num_samples_val = val_iter.samples
     params.num_samples_test = test_iter.samples
@@ -493,7 +511,7 @@ def main(config):
                             min_delta=params.early_stopping.min_delta, 
                             verbose=1, 
                             restore_best_weights=params.early_stopping.restore_best_weights)]
-    upload_source_files=[os.path.join(os.path.dirname(__file__),'*.py')]
+    upload_source_files=[__file__]
 
     # neptune_experiment_name = config.misc.experiment_name
     tags = OmegaConf.to_container(params.tags, resolve=True)
@@ -556,15 +574,15 @@ def main(config):
 
 
         if "zero_shot_test" in params:
-
-            test_data_info = load_Fossil_family_4_subset(params, subset='test', preprocess_input=preprocess_input)
+            class_encodings = train_data_info['encoder']
+            test_data_info = load_Fossil_family_4_subset(params, subset='test', preprocess_input=preprocess_input, class_encodings=class_encodings)
             test_iter = test_data_info['data_iterator']
             test_data = test_data_info['data']
             y_true = test_iter.labels
             classes = test_iter.class_indices
             eval_iter = test_data.unbatch().take(len(y_true)).batch(params.batch_size)
 
-            steps = np.int(np.ceil(test_data_info['sum_samples']/params.batch_size))
+            steps = np.int(np.ceil(test_data_info['num_samples']/params.batch_size))
             subset='zero-shot-test_Fossil_family_4'
             y, y_hat, y_prob = evaluate(model, eval_iter, y_true=y_true, classes=classes, steps=steps, experiment=experiment, subset=subset)
 
