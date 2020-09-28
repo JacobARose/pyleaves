@@ -18,17 +18,6 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline.py 'targ
         [type]: [description]
 """
 
-from pyleaves.utils.pipeline_utils import evaluate_performance
-
-
-import os
-import shutil
-from tqdm.auto import tqdm
-# from tqdm.notebook import tqdm
-from pathlib import Path
-
-
-
 # 
 # ################################################################################################################################################
 # ################################################################################################################################################
@@ -37,6 +26,12 @@ from pathlib import Path
 # ################################################################################################################################################
 # 
 # 
+from pyleaves.utils.pipeline_utils import evaluate_performance
+import os
+import shutil
+from tqdm.auto import tqdm
+# from tqdm.notebook import tqdm
+from pathlib import Path
 
 
 from typing import Union
@@ -119,7 +114,7 @@ def img_data_gen_2_tf_data(data, training=False, target_size=(256,256), batch_si
 
 
 
-from omegaconf import OmegaConf, ListConfig
+from omegaconf import OmegaConf, ListConfig, DictConfig
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -202,6 +197,34 @@ def summarize_sample(x, y):
 #     data_format=None, validation_split=validation_split, dtype=np.uint8
 
 
+def parse_params(params: DictConfig):
+
+    if params.dataset_name == "Leaves_family_4":
+        params.train_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Leaves_family_4_2020-03/train"
+        params.test_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Leaves_family_4_2020-03/test"
+
+    elif params.dataset_name == "PNAS_family_4":
+        params.train_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/PNAS_family_4/train"
+        params.test_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/PNAS_family_4//test"
+
+
+    params.regularization = params.regularization or {}
+    params.lr = float(params.lr)
+    params.data_augs.validation_split = float(params.data_augs.validation_split)
+    try:
+        params.data_augs.rescale = float(params.data_augs.rescale)
+    except:
+        params.data_augs.rescale = None
+    
+    data_augs = {k:v for k,v in OmegaConf.to_container(params.data_augs, resolve=True).items() if k != "preprocessing_function"}
+
+    return params, data_augs
+
+
+
+
+
+
 
 
 import hydra
@@ -240,25 +263,15 @@ def main(config):
     # from pyleaves.utils.pipeline_utils import build_model
     # from tensorflow.keras.applications.resnet_v2 import preprocess_input
 
-    if config.dataset_name == "Leaves_family_4":
-
-        config.train_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/${dataset_name}/train"
-        config.test_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/${dataset_name}/test"
-
 
     neptune_project_name = 'jacobarose/jupyter-testing-ground'
     neptune_experiment_name = f'baseline-{config.dataset_name}'
 
     params = config
-    params.regularization = params.regularization or {}
-    params.lr = float(params.lr)
-    params.data_augs.validation_split = float(params.data_augs.validation_split)
-    try:
-        params.data_augs.rescale = float(params.data_augs.rescale)
-    except:
-        params.data_augs.rescale = None
-    
-    data_augs = {k:v for k,v in OmegaConf.to_container(params.data_augs, resolve=True).items() if k != "preprocessing_function"}
+
+    params, data_augs = parse_params(params=params)
+
+
     if params.data_augs.preprocessing_function == "tensorflow.keras.applications.resnet_v2.preprocess_input":
         from tensorflow.keras.applications.resnet_v2 import preprocess_input
         print("Using preprocessing function: tensorflow.keras.applications.resnet_v2.preprocess_input")
@@ -289,9 +302,25 @@ def main(config):
         class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed, interpolation='nearest')
 
 
-    train_data_info = img_data_gen_2_tf_data(train_iter, training=True, target_size=params.target_size, batch_size=params.batch_size, seed=params.seed, preprocess_input=preprocess_input)
-    val_data_info = img_data_gen_2_tf_data(val_iter, training=False, target_size=params.target_size, batch_size=params.batch_size, seed=params.seed, preprocess_input=preprocess_input)
-    test_data_info = img_data_gen_2_tf_data(test_iter, training=False, target_size=params.target_size, batch_size=params.batch_size, seed=params.seed, preprocess_input=preprocess_input)
+    train_data_info = img_data_gen_2_tf_data(train_iter,
+                                             training=True,
+                                             target_size=params.target_size,
+                                             batch_size=params.batch_size,
+                                             seed=params.seed,
+                                             preprocess_input=preprocess_input,
+                                             num_parallel_calls=params.num_parallel_calls)
+    val_data_info = img_data_gen_2_tf_data(val_iter,
+                                           training=False,
+                                           target_size=params.target_size,
+                                           batch_size=params.batch_size,
+                                           seed=params.seed,
+                                           preprocess_input=preprocess_input)
+    test_data_info = img_data_gen_2_tf_data(test_iter,
+                                            training=False,
+                                            target_size=params.target_size,
+                                            batch_size=params.batch_size,
+                                            seed=params.seed,
+                                            preprocess_input=preprocess_input)
 
     train_data = train_data_info['data']
     val_data = val_data_info['data']

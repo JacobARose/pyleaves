@@ -13,6 +13,7 @@ validation_split: 0.1
 target_size: [299,299]
 batch_size: 32
 num_epochs: 30
+num_parallel_calls: -1
 seed: 20
 rescale: null #1.0/255,
 preprocess_input: "tensorflow.keras.applications.resnet_v2.preprocess_input"
