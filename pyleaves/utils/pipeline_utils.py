@@ -685,14 +685,14 @@ def build_model(model_config):
         build_base = partial(model_builder.build_base, weights=model_config.weights, input_shape=model_config.input_shape)
 
     elif model_config['model_name'] in ["mobile_net_v2",
-                          "inception_v3",
-                          "xception",
-                          "efficient_net_B0",
-                          "efficient_net_B1",
-                          "efficient_net_B2",
-                          "efficient_net_B3",
-                          "efficient_net_B4",
-                          "efficient_net_B5"]:
+                                        "inception_v3",
+                                        "xception"]:#,
+                        #   "efficient_net_B0",
+                        #   "efficient_net_B1",
+                        #   "efficient_net_B2",
+                        #   "efficient_net_B3",
+                        #   "efficient_net_B4",
+                        #   "efficient_net_B5"]:
         build_base = partial(build_lightweight_nets,
                              model_name=model_config.model_name,
                              weights=model_config.weights,

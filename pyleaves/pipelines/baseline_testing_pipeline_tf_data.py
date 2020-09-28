@@ -371,6 +371,13 @@ def main(config):
     if params.data_augs.preprocessing_function == "tensorflow.keras.applications.resnet_v2.preprocess_input":
         from tensorflow.keras.applications.resnet_v2 import preprocess_input
         print("Using preprocessing function: tensorflow.keras.applications.resnet_v2.preprocess_input")
+
+
+    elif params.data_augs.preprocessing_function == "tf.keras.applications.mobilenet.preprocess_input":
+        from tensorflow.keras.applications.mobilenet import preprocess_input
+
+    elif params.data_augs.preprocessing_function == "tf.keras.applications.inception_v3.preprocess_input":
+        from tensorflow.keras.applications.inception_v3 import preprocess_input
     else:
         preprocess_input = None
         print("Using no preprocess_input function")
