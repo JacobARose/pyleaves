@@ -24,9 +24,9 @@ early_stopping:
     restore_best_weights: True
 
 tags:
-    -"${dataset_name}"
-    -"${target_size}"
-    -"${batch_size}"
+    - "${dataset_name}"
+    - "${target_size}"
+    - "${batch_size}"
 
 
 
