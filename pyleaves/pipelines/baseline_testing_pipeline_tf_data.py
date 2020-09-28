@@ -465,6 +465,8 @@ def main(config):
 
 import pandas as pd
 from sklearn.metrics import classification_report#, confusion_matrix
+from neptunecontrib.monitoring.metrics import log_confusion_matrix
+
 
 def evaluate(model, data_iter, y_true, steps: int, classes, output_dict: bool=True, experiment=None, subset='val'):
     # num_classes = data_iter.num_classes
@@ -485,6 +487,8 @@ def evaluate(model, data_iter, y_true, steps: int, classes, output_dict: bool=Tr
         if type(report)==dict:
             report = pd.DataFrame(report)
         log_table(f'{subset}_classification_report', report, experiment=experiment)
+        log_confusion_matrix(y_true, y_hat)
+
     except Exception as e:
         import pdb; pdb.set_trace()
         print(e)
