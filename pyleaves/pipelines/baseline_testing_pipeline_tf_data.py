@@ -119,7 +119,7 @@ def img_data_gen_2_tf_data(data, training=False, target_size=(256,256), batch_si
 
 
 
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, ListConfig
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -318,6 +318,8 @@ def main(config):
     for k,v in OmegaConf.to_container(params, resolve=True).items():
         if type(v)==dict:
             neptune_params[k] = str(v)
+        elif type(v)==ListConfig:
+            neptune_params[k] = list(v)
         else:
             neptune_params[k] = v
 
