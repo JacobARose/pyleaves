@@ -113,7 +113,78 @@ def img_data_gen_2_tf_data(data, training=False, target_size=(256,256), batch_si
     tf_data = tf_data.map(lambda x,y: (resize(x), tf.one_hot(y, depth=num_classes)), num_parallel_calls=num_parallel_calls)
     
     tf_data = tf_data.repeat().batch(batch_size).prefetch(1)
-    return {'data':tf_data, 'encoder':class_encoder, 'num_samples':num_samples, 'num_classes':num_classes}
+    return {'data':tf_data, 'data_iterator':data, 'encoder':class_encoder, 'num_samples':num_samples, 'num_classes':num_classes}
+
+
+
+def load_Fossil_family_4_subset(params, subset='test', preprocess_input=None):
+    import tensorflow as tf
+
+    if subset=='train':
+        image_dir = "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_4_2020-06/train"
+        datagen = tf.keras.preprocessing.image.ImageDataGenerator(validation_split=params.validation_split)
+        train_iter = datagen.flow_from_directory(
+            image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+            class_mode='categorical', batch_size=params.batch_size, shuffle=True, seed=params.seed,
+            subset='training', interpolation='nearest')
+
+        with tf.device('/cpu:0'):
+            data_info = img_data_gen_2_tf_data(train_iter,
+                                                    training=True,
+                                                    target_size=params.target_size,
+                                                    batch_size=params.batch_size,
+                                                    seed=params.seed,
+                                                    preprocess_input=preprocess_input,
+                                                    num_parallel_calls=params.num_parallel_calls)
+        return data_info
+
+    elif subset=='val':
+        image_dir = "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_4_2020-06/train"
+        datagen = tf.keras.preprocessing.image.ImageDataGenerator(validation_split=params.validation_split)
+        val_iter = datagen.flow_from_directory(
+                            image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+                            class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed,
+                            subset='validation', interpolation='nearest')
+
+
+
+        with tf.device('/cpu:0'):
+            data_info = img_data_gen_2_tf_data(val_iter,
+                                               training=False,
+                                               target_size=params.target_size,
+                                               batch_size=params.batch_size,
+                                               seed=params.seed,
+                                               preprocess_input=preprocess_input)
+        return data_info
+
+    elif subset=='test':
+        image_dir = "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_4_2020-06/test"
+        test_datagen = tf.keras.preprocessing.image.ImageDataGenerator()#rescale = data_augs['rescale'],
+                                                                    # preprocessing_function = preprocess_input)
+        test_iter = test_datagen.flow_from_directory(
+            image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
+            class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed, interpolation='nearest')
+
+        with tf.device('/cpu:0'):
+            data_info = img_data_gen_2_tf_data(test_iter,
+                                                    training=False,
+                                                    target_size=params.target_size,
+                                                    batch_size=params.batch_size,
+                                                    seed=params.seed,
+                                                    preprocess_input=preprocess_input)
+        return data_info
+
+
+
+
+
+
+    
+
+
+
+
+
 
 
 
@@ -461,6 +532,32 @@ def main(config):
 
         y_prob_df = pd.DataFrame(y_prob, columns=list(classes.keys()))
         log_table(f'{subset}_probabilities',y_prob_df,experiment=experiment)
+
+
+        if "zero_shot_test" in params:
+
+            test_data_info = load_Fossil_family_4_subset(params, subset='test', preprocess_input=preprocess_input)
+            test_iter = test_data_info['data_iterator']
+            test_data = test_data_info['data']
+            y_true = test_iter.labels
+            classes = test_iter.class_indices
+            eval_iter = test_data.unbatch().take(len(y_true)).batch(params.batch_size)
+
+            steps = np.int(np.ceil(test_data_info['sum_samples']/params.batch_size))
+            subset='zero-shot-test_Fossil_family_4'
+            y, y_hat, y_prob = evaluate(model, eval_iter, y_true=y_true, classes=classes, steps=steps, experiment=experiment, subset=subset)
+
+            print('y_prob.shape =', y_prob.shape)
+            predictions = pd.DataFrame({'y':y,'y_pred':y_hat})
+            log_table(f'{subset}_labels_w_predictions',predictions, experiment=experiment)
+
+            y_prob_df = pd.DataFrame(y_prob, columns=list(classes.keys()))
+            log_table(f'{subset}_probabilities',y_prob_df,experiment=experiment)
+
+
+
+
+
 
 
     print(['[FINISHED TRAINING AND TESTING]'])

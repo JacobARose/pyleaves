@@ -74,7 +74,7 @@ data_augs:
 # tags:
 #     - ${pipeline.encoding_scheme}
 
-
+zero-shot-test: "Fossil_family_4"
 
 
 # pipeline:
