@@ -684,7 +684,7 @@ def build_model(model_config):
         model_builder = resnet.ResNet(model_config)
         build_base = partial(model_builder.build_base, weights=model_config.weights, input_shape=model_config.input_shape)
 
-    elif model_config in ["mobile_net_v2",
+    elif model_config['model_name'] in ["mobile_net_v2",
                           "inception_v3",
                           "xception",
                           "efficient_net_B0",
