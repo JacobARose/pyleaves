@@ -92,8 +92,18 @@ def load_data_from_tensor_slices(data: pd.DataFrame, cache_paths: Union[bool,str
     data = data.map(lambda x,y: (tf.image.convert_image_dtype(load_img(x)*255.0,dtype=dtype),y), num_parallel_calls=-1)
     return data
 
-def img_data_gen_2_tf_data(data, training=False, target_size=(256,256), batch_size=16, seed=None, preprocess_input=None, num_parallel_calls=-1, cache=False):
+def img_data_gen_2_tf_data(data, 
+                           training=False,
+                           target_size=(256,256),
+                           batch_size=16,
+                           seed=None,
+                           preprocess_input=None,
+                           augmentations: Dict[str,float]=None,
+                           num_parallel_calls=-1,
+                           cache=False):
+    from pyleaves.utils.pipeline_utils import flip, _cond_apply
     import tensorflow as tf
+    augmentations = augmentations or {}
     num_samples = data.samples
     num_classes = data.num_classes
     class_encoder = OneToOne(data.class_indices)
@@ -116,7 +126,13 @@ def img_data_gen_2_tf_data(data, training=False, target_size=(256,256), batch_si
     tf_data = tf_data.repeat().batch(batch_size)
     
     if cache:
-        tf_data = tf_data.prefetch(-1)
+        tf_data = tf_data.cache()
+
+    for aug in augmentations:
+        if 'flip' in aug:
+            dataset = dataset.map(lambda x, y: _cond_apply(x, y, flip, prob=aug['flip'], seed=seed), num_parallel_calls=num_parallel_calls)    
+
+    tf_data = tf_data.prefetch(-1)
     return {'data':tf_data, 'data_iterator':data, 'encoder':class_encoder, 'num_samples':num_samples, 'num_classes':num_classes}
 
 
@@ -132,14 +148,15 @@ def load_Fossil_family_4_subset(params, subset='test', preprocess_input=None):
             class_mode='categorical', batch_size=params.batch_size, shuffle=True, seed=params.seed,
             subset='training', interpolation='nearest')
 
-        with tf.device('/cpu:0'):
-            data_info = img_data_gen_2_tf_data(train_iter,
-                                                    training=True,
-                                                    target_size=params.target_size,
-                                                    batch_size=params.batch_size,
-                                                    seed=params.seed,
-                                                    preprocess_input=preprocess_input,
-                                                    num_parallel_calls=params.num_parallel_calls)
+        # with tf.device('/cpu:0'):
+        data_info = img_data_gen_2_tf_data(train_iter,
+                                            training=True,
+                                            target_size=params.target_size,
+                                            batch_size=params.batch_size,
+                                            seed=params.seed,
+                                            preprocess_input=preprocess_input,
+                                            augmentations=params.augmentations,
+                                            num_parallel_calls=params.num_parallel_calls)
         return data_info
 
     elif subset=='val':
@@ -152,14 +169,14 @@ def load_Fossil_family_4_subset(params, subset='test', preprocess_input=None):
 
 
 
-        with tf.device('/cpu:0'):
-            data_info = img_data_gen_2_tf_data(val_iter,
-                                               training=False,
-                                               target_size=params.target_size,
-                                               batch_size=params.batch_size,
-                                               seed=params.seed,
-                                               preprocess_input=preprocess_input,
-                                               cache=True)
+        # with tf.device('/cpu:0'):
+        data_info = img_data_gen_2_tf_data(val_iter,
+                                            training=False,
+                                            target_size=params.target_size,
+                                            batch_size=params.batch_size,
+                                            seed=params.seed,
+                                            preprocess_input=preprocess_input,
+                                            cache=True)
         return data_info
 
     elif subset=='test':
@@ -170,13 +187,13 @@ def load_Fossil_family_4_subset(params, subset='test', preprocess_input=None):
             image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
             class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed, interpolation='nearest')
 
-        with tf.device('/cpu:0'):
-            data_info = img_data_gen_2_tf_data(test_iter,
-                                                    training=False,
-                                                    target_size=params.target_size,
-                                                    batch_size=params.batch_size,
-                                                    seed=params.seed,
-                                                    preprocess_input=preprocess_input)
+        # with tf.device('/cpu:0'):
+        data_info = img_data_gen_2_tf_data(test_iter,
+                                                training=False,
+                                                target_size=params.target_size,
+                                                batch_size=params.batch_size,
+                                                seed=params.seed,
+                                                preprocess_input=preprocess_input)
         return data_info
 
 
