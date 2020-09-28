@@ -355,8 +355,7 @@ def main(config):
 
     with neptune.create_experiment(name=neptune_experiment_name,
                                    params=neptune_params,
-                                   upload_source_files=upload_source_files,
-                                   tags=tags) as experiment:
+                                   upload_source_files=upload_source_files) as experiment:
         model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
 
         print('[BEGINNING TRAINING]')
