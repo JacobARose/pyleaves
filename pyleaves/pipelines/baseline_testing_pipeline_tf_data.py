@@ -122,16 +122,39 @@ from neptunecontrib.api.table import log_table
 from neptunecontrib.monitoring.keras import NeptuneMonitor
 #hide
 # Image plotting utils
-def show_batch(image_batch, label_batch, image_data_gen=True, class_names=None):
-    fig = plt.figure(figsize=(10, 10))
+# def show_batch(image_batch, label_batch, image_data_gen=True, class_names=None):
+#     fig = plt.figure(figsize=(10, 10))
+#     for n in range(25):
+#         ax = plt.subplot(5, 5, n+1)
+#         plt.imshow(image_batch[n])
+        
+#         if image_data_gen:
+#             plt.title(class_names[label_batch[n].argmax()])
+#         else:
+#             plt.title(label_batch[n])
+        
+#         plt.axis('off')
+#     return fig
+
+
+# Image plotting utils
+def show_batch(image_batch, label_batch, title='', class_names=None):
+    fig = plt.figure(figsize=(15, 15))
+    if class_names is not None:
+        label_batch = [class_names[l] for l in np.argmax(label_batch, axis=1)]
+    elif label_batch.ndim==2:
+        label_batch = np.argmax(label_batch, axis=1)
+    
+    img_max = np.max(image_batch)
+    img_min = np.min(image_batch)
+    scaled_image_batch = (image_batch-img_min)/(img_max-img_min)
+
+    title = f'{title}|min={img_min:.2f}|max={img_max:.2f}|dtype={image_batch.dtype}\n(Scaled to [0,1] for visualization)'
+    plt.suptitle(title)
     for n in range(25):
         ax = plt.subplot(5, 5, n+1)
-        plt.imshow(image_batch[n])
-        
-        if image_data_gen:
-            plt.title(class_names[label_batch[n].argmax()])
-        else:
-            plt.title(label_batch[n])
+        plt.imshow(scaled_image_batch[n])
+        plt.title(label_batch[n])
         
         plt.axis('off')
     return fig
@@ -386,6 +409,21 @@ def main(config):
                                    params=neptune_params,
                                    upload_source_files=upload_source_files) as experiment:
         model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+
+        class_names = train_data_info['encoder'].inv
+
+        image_batch, label_batch = next(iter(train_data))
+        fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='train', class_names=class_names)
+        experiment.log_image('train_image_batch', fig)
+
+        image_batch, label_batch = next(iter(val_data))
+        fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='val', class_names=class_names)
+        experiment.log_image('val_image_batch', fig)
+
+
+        image_batch, label_batch = next(iter(test_data))
+        fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='test', class_names=class_names)
+        experiment.log_image('test_image_batch', fig)
 
         print('[BEGINNING TRAINING]')
         try:
