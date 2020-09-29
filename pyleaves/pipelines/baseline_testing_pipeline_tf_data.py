@@ -512,7 +512,8 @@ def main(config):
                             min_delta=params.early_stopping.min_delta, 
                             verbose=1, 
                             restore_best_weights=params.early_stopping.restore_best_weights)]
-    upload_source_files=[__file__]
+    from pyleaves.utils import pipeline_utils
+    upload_source_files=[__file__, pipeline_utils.__file__]
 
     # neptune_experiment_name = config.misc.experiment_name
     tags = OmegaConf.to_container(params.tags, resolve=True)
