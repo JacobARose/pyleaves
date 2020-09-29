@@ -79,6 +79,8 @@ def load_data_from_tensor_slices(data: pd.DataFrame, cache_paths: Union[bool,str
     x_data = tf.data.Dataset.from_tensor_slices(data[x_col].values.tolist())
     y_data = tf.data.Dataset.from_tensor_slices(data[y_col].values.tolist())
     data = tf.data.Dataset.zip((x_data, y_data))
+
+    data = data.take(num_samples)
     
     # TODO TEST performance and randomness of the order of shuffle and cache when shuffling full dataset each iteration, but only filepaths and not full images.
     if training:
