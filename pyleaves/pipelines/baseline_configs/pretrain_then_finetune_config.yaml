@@ -74,7 +74,7 @@ finetune:
     loss: "categorical_crossentropy"
     METRICS: ["f1","accuracy"]
     head_layers: [256,128]
-    target_size: [299,299]
+    target_size: ${pretrain.target_size}
 
     augmentations: #null
         flip: 0.0

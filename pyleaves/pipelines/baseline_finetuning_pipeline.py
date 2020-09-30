@@ -9,7 +9,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py ta
 
 
 
-python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py dataset@dataset=Leaves_family_4 target_size=[299,299] batch_size=32 num_epochs=80 'frozen_layers=[0,-4]' num_parallel_calls=4
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py dataset/0@dataset/0=Leaves_family_4 dataset/1@dataset/1=Fossil_family_4 pretrain.target_size=[768,768] pretrain.batch_size=16 pretrain.num_epochs=80 'pretrain.lr=3e-5' 'pretrain.frozen_layers="bn"' finetune.batch_size=16 finetune.num_epochs=80 finetune.lr=1e-3 'finetune.frozen_layers="bn"' num_parallel_calls=4
 
 
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py dataset@dataset=Fossil_family_4 target_size=[299,299] batch_size=32 num_epochs=80 'frozen_layers=[0,-4]' num_parallel_calls=4
