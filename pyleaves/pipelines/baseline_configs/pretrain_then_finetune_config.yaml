@@ -50,7 +50,7 @@ pretrain:
         
         
         
-finetune::
+finetune:
     dataset: ${dataset.1}
     saved_model_path: "${pretrain.saved_model_path}"    #"/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${dataset_name.0}-${target_size}"
     train_image_dir: "${dataset.1.train_image_dir}"
