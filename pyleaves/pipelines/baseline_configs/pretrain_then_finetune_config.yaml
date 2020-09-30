@@ -86,12 +86,7 @@ finetune:
         patience: 10
         min_delta: 0.01
         restore_best_weights: True
-        
-        
-        
-        
-        
-        
+  
     
 seed: 20
 log_dir: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/tensorboard_log_dir"
