@@ -2,13 +2,17 @@
 
 defaults:
 
-    - dataset/0/base
-    - dataset/0@dataset/0: Leaves_family_4
-    - dataset/1/base
-    - dataset/1@dataset/1: Fossil_family_4
+    - dataset_0/base
+    - dataset_0@dataset_0: Leaves_family_4
+    - dataset_1/base
+    - dataset_1@dataset_1: Fossil_family_4
     - hydra/launcher: joblib
     
 task: ${hydra:job.num}
+
+dataset:
+    "0": ${dataset_0}
+    "1": ${dataset_1}
 
 dataset_name:
     "0": "${dataset.0.dataset_name}"
