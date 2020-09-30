@@ -58,13 +58,13 @@ finetune:
     train_image_dir: "${dataset.1.train_image_dir}"
     test_image_dir: "${dataset.1.test_image_dir}"
     validation_split: "${dataset.1.validation_split}"
-    batch_size: 32
-    num_epochs: 50
+    batch_size: ${pretrain.batch_size}
+    num_epochs: 80
     num_parallel_calls: -1
     
     model_name: "resnet_50_v2"
     optimizer: "Adam"
-    num_classes: null
+    num_classes: ${pretrain.num_classes}
     weights: "imagenet"
     frozen_layers: [0,-4]
     input_shape: null
