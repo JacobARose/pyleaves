@@ -567,7 +567,7 @@ def main(config):
 
 
         # if "zero_shot_test" in params:
-        #     class_encodings = train_data_info['encoder']
+        class_encodings = train_data_info['encoder']
 
         train_data_info = load_data_by_subset(params.finetune.train_image_dir,
                                             subset='train',
