@@ -454,7 +454,7 @@ def main(config):
     test_data = test_data_info['data']
 
     stage_0_config = params.pipeline.stage_0
-    stage_0_config.class_encodings = dict(train_data_info['encoder'])
+    # stage_0_config.class_encodings = dict(train_data_info['encoder'])
     stage_0_config.num_samples_train = train_data_info['num_samples']
     stage_0_config.num_samples_val = val_data_info['num_samples']
     stage_0_config.num_samples_test = test_data_info['num_samples']
@@ -553,6 +553,17 @@ def main(config):
 
         ###############################################################################
         ###############################################################################
+        ###############################################################################
+        
+        ###############################################################################
+        ###############################################################################
+        
+        ###############################################################################
+        ###############################################################################
+        ###############################################################################
+
+
+
 
 
         # if "zero_shot_test" in params:
@@ -567,7 +578,7 @@ def main(config):
                                             batch_size=params.finetune.batch_size,
                                             augmentations=params.finetune.augmentations,
                                             num_parallel_calls=params.finetune.num_parallel_calls,
-                                            class_encodings=params.pipelines.stage_3.class_encodings)
+                                            class_encodings=class_encodings)
 
         val_data_info = load_data_by_subset(params.finetune.train_image_dir,
                                             subset='validation',
@@ -578,7 +589,7 @@ def main(config):
                                             batch_size=params.finetune.batch_size,
                                             augmentations=params.finetune.augmentations,
                                             num_parallel_calls=params.finetune.num_parallel_calls,
-                                            class_encodings=params.pipelines.stage_2.class_encodings)
+                                            class_encodings=class_encodings)
 
         test_data_info = load_data_by_subset(params.finetune.test_image_dir,
                                             subset='test',
@@ -589,7 +600,7 @@ def main(config):
                                             batch_size=params.finetune.batch_size,
                                             augmentations=params.finetune.augmentations,
                                             num_parallel_calls=params.finetune.num_parallel_calls,
-                                            class_encodings=params.pipelines.stage_3.class_encodings)
+                                            class_encodings=class_encodings)
         # test_data_info = load_Fossil_family_4_subset(params, subset='test', preprocess_input=preprocess_input, class_encodings=class_encodings)
 
         train_data = train_data_info['data']
@@ -597,7 +608,7 @@ def main(config):
         test_data = test_data_info['data']
 
         stage_2_config = params.pipeline.stage_2
-        stage_2_config.class_encodings = dict(train_data_info['encoder'])
+        # stage_2_config.class_encodings = dict(train_data_info['encoder'])
         stage_2_config.num_samples_train = train_data_info['num_samples']
         stage_2_config.num_samples_val = val_data_info['num_samples']
         stage_2_config.num_samples_test = test_data_info['num_samples']
@@ -664,21 +675,6 @@ def main(config):
         print('BEGINNING STAGE_3: FINAL TEST EVALUATION' )
         perform_evaluation_stage(model, test_data_info, batch_size=params.finetune.batch_size, experiment=experiment, subset='final_test')
         print('[STAGE_3 COMPLETED]')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     print(['[FINISHED PRETRAINING, TESTING, FINETUNING AND FINAL TESTING]'])
 
