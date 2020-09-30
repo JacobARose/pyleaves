@@ -174,7 +174,7 @@ def load_data_by_subset(image_dir, subset='test', preprocess_input=None, class_e
                                             class_encodings=class_encodings)
         return data_info
 
-    elif subset=='val':
+    elif subset.startswith('val'):
         # image_dir = "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_4_2020-06/train"
         datagen = tf.keras.preprocessing.image.ImageDataGenerator(validation_split=validation_split)
         val_iter = datagen.flow_from_directory(image_dir, classes=classes,
