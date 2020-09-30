@@ -20,7 +20,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.
 
 
 
-
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.py dataset@dataset=PNAS_family_100 target_size=[1024,1024] batch_size=6 num_epochs=180 'frozen_layers=[0,-1]' 'head_layers=[512,256]' num_parallel_calls=4 early_stopping.patience=20
 
 
 """

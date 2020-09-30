@@ -634,7 +634,7 @@ def build_lightweight_nets(model_name="mobile_net_v2", weights="imagenet", input
 
 
 
-def build_model(model_config):
+def build_model(model_config, load_saved_model=False):
     '''
 
     Minimum config:
@@ -671,7 +671,8 @@ def build_model(model_config):
                         'head_layers': [256,128]
                         }
     '''
-
+    if load_saved_model and os.path.isfile(model_config['saved_model_path']):
+        return tf.keras.models.load_model(model_config['saved_model_path'])
 
     if model_config['model_name']=='vgg16':
         if model_config['num_channels']==1:
@@ -705,14 +706,10 @@ def build_model(model_config):
         base, frozen_layers = freeze_batchnorm_layers(base, verbose=False)
         model_config.frozen_layers = frozen_layers
 
-
     # base = base_model.Model.add_regularization(base, **model_config.regularization)
     model = build_head(base, num_classes=model_config.num_classes, head_layers=model_config.head_layers)
     
     model = base_model.Model.add_regularization(model, **model_config.regularization)
-
-
-
 
     if model_config.optimizer == "RMSprop":
         optimizer = tf.keras.optimizers.RMSprop(learning_rate=model_config.lr, momentum=model_config.lr_momentum)#, decay=model_config.lr_decay)
@@ -737,7 +734,6 @@ def build_model(model_config):
         METRICS.append(tf.keras.metrics.Precision())
     if 'recall' in model_config['METRICS']:
         METRICS.append(tf.keras.metrics.Recall())
-
 
     model.compile(optimizer=optimizer,
                   loss=loss,

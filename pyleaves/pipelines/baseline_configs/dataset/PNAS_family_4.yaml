@@ -1,0 +1,8 @@
+# @package _group_
+
+
+dataset_name: "PNAS_family_4"
+train_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/${dataset_name}/train"
+test_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/${dataset_name}/test"
+validation_split: 0.1
+threshold: 4

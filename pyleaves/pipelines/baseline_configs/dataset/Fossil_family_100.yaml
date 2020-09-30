@@ -1,0 +1,7 @@
+# @package _group_
+
+dataset_name: "Fossil_family_100"
+train_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_100_2020-06/train"
+test_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_100_2020-06/test"
+validation_split: 0.1
+threshold: 100
