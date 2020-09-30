@@ -466,7 +466,7 @@ def main(config):
     ################################################################################
 
     model_config = params.finetune
-    model_config.num_classes = params.num_classes
+    model_config.num_classes = stage_0_config.num_classes
     model_config.input_shape = (*params.finetune.target_size,3)            
     model = build_model(model_config)
 
