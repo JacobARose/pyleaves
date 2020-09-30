@@ -140,9 +140,9 @@ def img_data_gen_2_tf_data(data,
     if cache:
         tf_data = tf_data.cache()
 
-    for aug in augmentations:
+    for aug in augmentations.keys():
         if 'flip' in aug:
-            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, flip, prob=aug['flip'], seed=seed), num_parallel_calls=num_parallel_calls)    
+            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, flip, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)    
 
     tf_data = tf_data.prefetch(-1)
     return {'data':tf_data, 'data_iterator':data, 'encoder':class_encoder, 'num_samples':num_samples, 'num_classes':num_classes}
