@@ -338,7 +338,16 @@ def main(config):
     neptune_experiment_name = f'baseline-{config.dataset_name}'
 
     params = config
-    params, data_augs = parse_params(params=params)
+    # params, data_augs = parse_params(params=params)
+
+    params.pretrain.regularization = params.pretrain.regularization or {}
+    params.pretrain.lr = float(params.pretrain.lr)
+    params.pretrain.validation_split = float(params.pretrain.validation_split)
+
+    params.finetune.regularization = params.finetune.regularization or {}
+    params.finetune.lr = float(params.finetune.lr)
+    params.finetune.validation_split = float(params.finetune.validation_split)
+
 
     if params.finetune.preprocess_input == "tensorflow.keras.applications.resnet_v2.preprocess_input":
         from tensorflow.keras.applications.resnet_v2 import preprocess_input
