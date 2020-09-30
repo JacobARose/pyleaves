@@ -342,10 +342,12 @@ def main(config):
 
     params.pretrain.regularization = params.pretrain.regularization or {}
     params.pretrain.lr = float(params.pretrain.lr)
+    params.pretrain.augmentations['flip'] = float(params.pretrain.augmentations['flip'])
     params.pretrain.validation_split = float(params.pretrain.validation_split)
 
     params.finetune.regularization = params.finetune.regularization or {}
     params.finetune.lr = float(params.finetune.lr)
+    params.finetune.augmentations['flip'] = float(params.finetune.augmentations['flip'])
     params.finetune.validation_split = float(params.finetune.validation_split)
 
 
