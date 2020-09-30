@@ -517,7 +517,7 @@ def main(config):
         print('[BEGINNING STAGE_0: PRE-TRAINING+VALIDATION]')
         try:
             history = model.fit(train_data,
-                                epochs=params.num_epochs,
+                                epochs=params.pretrain.num_epochs,
                                 callbacks=callbacks,
                                 validation_data=val_data,
                                 validation_freq=1,
