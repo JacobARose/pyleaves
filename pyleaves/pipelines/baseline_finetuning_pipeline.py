@@ -142,7 +142,7 @@ def img_data_gen_2_tf_data(data,
 
     for aug in augmentations:
         if 'flip' in aug:
-            dataset = dataset.map(lambda x, y: _cond_apply(x, y, flip, prob=aug['flip'], seed=seed), num_parallel_calls=num_parallel_calls)    
+            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, flip, prob=aug['flip'], seed=seed), num_parallel_calls=num_parallel_calls)    
 
     tf_data = tf_data.prefetch(-1)
     return {'data':tf_data, 'data_iterator':data, 'encoder':class_encoder, 'num_samples':num_samples, 'num_classes':num_classes}
