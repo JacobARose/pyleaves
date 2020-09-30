@@ -16,11 +16,13 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.
 
 
 
-    Raises:
-        e: [description]
+ python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.py dataset@dataset=Leaves_family_100 target_size=[1024,1024] lr=3e-4 batch_size=6 num_epochs=120 'frozen_layers="bn"' num_parallel_calls=4 zero_shot_test="Fossil_family_4"
 
-    Returns:
-        [type]: [description]
+
+
+
+
+
 """
 
 # 
@@ -33,6 +35,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_testing_pipeline_tf_data.
 # 
 from pyleaves.utils.pipeline_utils import evaluate_performance
 import os
+import sys
 import shutil
 from tqdm.auto import tqdm
 # from tqdm.notebook import tqdm
@@ -378,9 +381,7 @@ import hydra
 
 @hydra.main(config_path='baseline_configs', config_name='baseline_testing_config')
 def main(config):
-
     OmegaConf.set_struct(config, False)
-
     from pyleaves.utils import set_tf_config
     config.task = config.task or 1
     gpu = set_tf_config(gpu_num=None, num_gpus=1, wait=(config.task+1)*2)
@@ -525,6 +526,13 @@ def main(config):
                                    params=neptune_params,
                                    upload_source_files=upload_source_files) as experiment:
         model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+
+
+        try:
+            experiment.log_text('sys.argv', ' '.join(sys.argv))
+        except:
+            print(f'[DEBUG] FAILED to log sys.argv to neptune. sys.argv = {sys.argv}')
+
 
         class_names = train_data_info['encoder'].inv
 
