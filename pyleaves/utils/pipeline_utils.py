@@ -103,7 +103,7 @@ def flip(x, y, seed=None):
     return x, y
 
 def color(x, y, seed=None):
-    """Color augmentation
+    """Color, Saturation, Brightness and Contrast augmentation
 
     Args:
         x,     tf.Tensor: Image
@@ -117,6 +117,26 @@ def color(x, y, seed=None):
     x = tf.image.random_brightness(x, 0.05, seed=seed)
     x = tf.image.random_contrast(x, 0.7, 1.3, seed=seed)
     return x, y
+
+
+def sat_bright_con(x, y, seed=None):
+    """Saturation, Brightness and Contrast augmentation
+
+    Args:
+        x,     tf.Tensor: Image
+        y,     tf.Tensor: arbitrary tensor, passes through unchanged
+
+    Returns:
+        Augmented image, y
+    """
+    x = tf.image.random_saturation(x, 0.6, 1.6, seed=seed)
+    x = tf.image.random_brightness(x, 0.05, seed=seed)
+    x = tf.image.random_contrast(x, 0.7, 1.3, seed=seed)
+    return x, y
+
+
+
+
 
 def _cond_apply(x, y, func, prob, seed=None):
     """Conditionally apply func to x and y with probability prob."""
