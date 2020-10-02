@@ -110,6 +110,7 @@ dependencies:
   - imageio=2.9.*
   - imgaug=0.4.*
   - importlib-metadata=1.7.*
+  - imutils
   - ipykernel=5.3.*
   - ipython=7.18.*
   - ipython_genutils=0.2.*
@@ -391,7 +392,8 @@ dependencies:
     - neptune-tensorboard==0.4.*
     - nvidia-ml-py3==7.352.*
     - omegaconf==2.0.*
-    - opencv-python==4.4.0.*
+    # - opencv-python==4.4.0.*
+    - opencv-python==4.4.*
     - optuna==2.1.*
     - pandas-summary==0.0.*
     - parse==1.18.*
@@ -437,6 +439,7 @@ dependencies:
     - tqdm==4.49.*
     - typeguard==2.9.*
     - typer==0.3.*
+    - wandb
     - xgboost==1.2.*
     - xmltodict==0.12.*
     - yarl==1.5.*

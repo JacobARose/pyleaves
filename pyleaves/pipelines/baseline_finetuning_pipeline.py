@@ -16,8 +16,36 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py da
 
 
 
- python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py dataset@dataset=Leaves_family_100 target_size=[1024,1024] lr=3e-4 batch_size=6 num_epochs=120 'frozen_layers="bn"' num_parallel_calls=4 zero_shot_test="Fossil_family_4"
+ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Leaves_family_100' \
+                            'dataset_1@dataset_1=Fossil_family_100' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.lr=1e-4' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=6' 'finetune.batch_size=6' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.frozen_layers="bn"' 'finetune.frozen_layers="bn"' \
+                            'pretrain.num_parallel_calls=4' 'finetune.num_parallel_calls=4'
 
+ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Leaves_family_100' \
+                            'dataset_1@dataset_1=Fossil_family_4' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.lr=1e-4' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=6' 'finetune.batch_size=6' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.frozen_layers="bn"' 'finetune.frozen_layers="bn"' \
+                            'pretrain.num_parallel_calls=4' 'finetune.num_parallel_calls=4'
+
+
+ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Leaves_family_4' \
+                            'dataset_1@dataset_1=Fossil_family_4' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.lr=1e-4' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=6' 'finetune.batch_size=6' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.frozen_layers="bn"' 'finetune.frozen_layers="bn"' \
+                            'pretrain.num_parallel_calls=4' 'finetune.num_parallel_calls=4'
 
 
 
@@ -125,6 +153,11 @@ def img_data_gen_2_tf_data(data,
 
     prepped_data = pd.DataFrame.from_records([{'path':path, 'label':label} for path, label in zip(paths, labels)])
     tf_data = load_data_from_tensor_slices(data=prepped_data, training=training, seed=seed, x_col='path', y_col='label', dtype=tf.float32)
+
+    if 'augmix' in augmentations:
+        augmix = AugMix(means, stds)
+        tf_data = tf_data.map(lambda x, y: )
+
     
     if preprocess_input is not None:
         tf_data = tf_data.map(lambda x,y: (preprocess_input(x), y), num_parallel_calls=num_parallel_calls)
@@ -137,8 +170,8 @@ def img_data_gen_2_tf_data(data,
 
     tf_data = tf_data.repeat().batch(batch_size)
     
-    if cache:
-        tf_data = tf_data.cache()
+    # if cache:
+    #     tf_data = tf_data.cache()
 
     for aug in augmentations.keys():
         if 'flip' in aug:
