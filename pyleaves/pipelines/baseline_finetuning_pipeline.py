@@ -48,6 +48,19 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py da
                             'pretrain.num_parallel_calls=4' 'finetune.num_parallel_calls=4'
 
 
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Leaves_family_4' \
+                            'dataset_1@dataset_1=Fossil_family_4' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.lr=1e-5' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=12' 'finetune.batch_size=12' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
+                            'pretrain.frozen_layers="bn"' 'finetune.frozen_layers="bn"' \
+                            'pretrain.num_parallel_calls=5' 'finetune.num_parallel_calls=5'
+
+
+
 
 
 
@@ -126,6 +139,8 @@ def encode_str2int(labels: List[str], class_encoder: Dict[str, int]) -> List[int
     return [class_encoder[label] for label in labels]
 
 
+
+
 def img_data_gen_2_tf_data(data, 
                            training=False,
                            target_size=(256,256),
@@ -136,7 +151,7 @@ def img_data_gen_2_tf_data(data,
                            num_parallel_calls=-1,
                            cache=False,
                            class_encodings: Dict[str,int]=None):
-    from pyleaves.utils.pipeline_utils import flip, _cond_apply
+    from pyleaves.utils.pipeline_utils import flip, rotate, rgb2gray_1channel, rgb2gray_3channel, sat_bright_con, _cond_apply
     import tensorflow as tf
 
     augmentations = augmentations or {}
@@ -154,9 +169,9 @@ def img_data_gen_2_tf_data(data,
     prepped_data = pd.DataFrame.from_records([{'path':path, 'label':label} for path, label in zip(paths, labels)])
     tf_data = load_data_from_tensor_slices(data=prepped_data, training=training, seed=seed, x_col='path', y_col='label', dtype=tf.float32)
 
-    if 'augmix' in augmentations:
-        augmix = AugMix(means, stds)
-        tf_data = tf_data.map(lambda x, y: )
+    # if 'augmix' in augmentations:
+    #     augmix = AugMix(means, stds)
+    #     tf_data = tf_data.map(lambda x, y: )
 
     
     if preprocess_input is not None:
@@ -168,14 +183,23 @@ def img_data_gen_2_tf_data(data,
     print('target_size = ', target_size)
     tf_data = tf_data.map(lambda x,y: (resize(x), tf.one_hot(y, depth=num_classes)), num_parallel_calls=num_parallel_calls)
 
-    tf_data = tf_data.repeat().batch(batch_size)
-    
+    tf_data = tf_data.repeat()
+    # TODO collect augmentation functions in a list and execute as a formal pipeline, abstracting away the logging & validation of results
+    for aug in augmentations.keys():
+        if 'flip' in aug:
+            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, flip, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)  
+        if 'rotate' in aug:
+            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, rotate, prob=augmentations[aug], seed=seed), num_parallel_calls=-1)
+        if 'sbc' in aug:
+            "sbc = saturation, brightness, contrast"
+            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, sat_bright_con, prob=augmentations[aug], seed=seed), num_parallel_calls=-1)
+    tf_data = tf_data.map(lambda x,y: rgb2gray_3channel(x, y), num_parallel_calls=-1)
+
+
     # if cache:
     #     tf_data = tf_data.cache()
 
-    for aug in augmentations.keys():
-        if 'flip' in aug:
-            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, flip, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)    
+
 
     tf_data = tf_data.prefetch(-1)
     return {'data':tf_data, 'data_iterator':data, 'encoder':class_encoder, 'num_samples':num_samples, 'num_classes':num_classes}
