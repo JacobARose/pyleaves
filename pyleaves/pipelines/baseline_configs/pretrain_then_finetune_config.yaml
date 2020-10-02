@@ -36,7 +36,9 @@ pretrain:
     input_shape: null
     lr: 3.0e-5
     lr_momentum: null
-    regularization: null
+    regularization:
+        l2: null
+        l1: null
     loss: "categorical_crossentropy"
     METRICS: ["f1","accuracy"]
     head_layers: [256,128]
@@ -76,7 +78,9 @@ finetune:
     input_shape: null
     lr: 1e-4
     lr_momentum: null
-    regularization: null
+    regularization:
+        l2: null
+        l1: null
     loss: "categorical_crossentropy"
     METRICS: ["f1","accuracy"]
     head_layers: [256,128]
@@ -89,7 +93,7 @@ finetune:
         
     preprocess_input: "tensorflow.keras.applications.resnet_v2.preprocess_input"
     color_mode: 'rgb'
-    early_stopping: 
+    early_stopping:
         monitor: val_loss
         patience: 10
         min_delta: 0.01

@@ -29,6 +29,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'pretrain.lr=1e-4' 'finetune.lr=1e-5' \
                             'pretrain.batch_size=12' 'finetune.batch_size=12' \
                             'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.regularization.l2=1e-4' 'finetune.regularization.l2=1e-4' \
                             'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
                             'pretrain.frozen_layers="bn"' 'finetune.frozen_layers="bn"' \
                             'pretrain.num_parallel_calls=-1' 'finetune.num_parallel_calls=-1'
@@ -65,6 +66,10 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
                             'pretrain.frozen_layers="bn"' 'finetune.frozen_layers="bn"' \
                             'pretrain.num_parallel_calls=5' 'finetune.num_parallel_calls=5'
+
+
+
+neptune tensorboard "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/tensorboard_log_dir" --project 'jacobarose/jupyter-testing-ground'
 
 
 
