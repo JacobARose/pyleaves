@@ -6,6 +6,30 @@ FLAGS_color_jitter_strength = 0.3
 CROP_PROPORTION = 0.875  # Standard for ImageNet.
 
 
+class CustomAugment(object):
+    """
+    Borrowed from:
+    https://colab.research.google.com/drive/1rd-Ncw9HYFZ6KsOcgniEjh5P1Eie7vMk#scrollTo=g2oI-JNN2ybX
+    """
+    def __call__(self, image):        
+        # Random flips and grayscale with some stochasticity
+        img = self._random_apply(tf.image.flip_left_right, image, p=0.5)
+        img = self._random_apply(self._color_drop, img, p=0.8)
+        return img
+
+    def _color_drop(self, x):
+        image = tf.image.rgb_to_grayscale(x)
+        image = tf.tile(x, [1, 1, 1, 3])
+        return x
+    
+    def _random_apply(self, func, x, p):
+        return tf.cond(
+          tf.less(tf.random.uniform([], minval=0, maxval=1, dtype=tf.float32),
+                  tf.cast(p, tf.float32)),
+          lambda: func(x),
+          lambda: x)
+
+
 def random_apply(func, p, x):
     """Randomly apply function func to x with probability p."""
     return tf.cond(
