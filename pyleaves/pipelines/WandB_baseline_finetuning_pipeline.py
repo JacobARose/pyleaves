@@ -458,6 +458,26 @@ def main(config):
     ################################################################################
     ################################################################################
     ################################################################################
+    
+    wandb.init(name=args.model_name, project="neurips_test")
+    config={
+            "batch_size" : args.batch_size,
+            "epochs": args.epochs,
+            "l1_size" : args.l1_size,
+            "l2_size" : args.l2_size,
+            "l3_size" : args.l3_size,
+            "fc1_size" : args.fc1_size,
+            "fc2_size" : args.fc2_size,
+            "dropout_1" : args.dropout_1,
+            "dropout_2" : args.dropout_2,
+            "n_train" : NUM_TRAIN,
+            "n_val" : NUM_VAL,
+            "optimizer" : args.optimizer,
+            "lr" : args.learning_rate
+    }
+    wandb.config.update(config)
+    
+    
     neptune.init(project_qualified_name=neptune_project_name)
 
     neptune_params = log_neptune_params(params)

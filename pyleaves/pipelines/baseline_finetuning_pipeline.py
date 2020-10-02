@@ -20,7 +20,12 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'dataset_0@dataset_0=Leaves_family_100' \
                             'dataset_1@dataset_1=Fossil_family_100' \
                             'pretrain.target_size=[768,768]' \
-                            '+pretrain.augmentations={flip:1.0,rotate:1.0,sbc:1.0}' '+finetune.augmentations={flip:1.0,rotate:1.0,sbc:1.0}' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=1.0' \
+                            'finetune.augmentations.flip=1.0' \
+                            'finetune.augmentations.rotate=1.0' \
+                            'finetune.augmentations.sbc=1.0' \
                             'pretrain.lr=1e-4' 'finetune.lr=1e-5' \
                             'pretrain.batch_size=6' 'finetune.batch_size=6' \
                             'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
@@ -190,17 +195,17 @@ def img_data_gen_2_tf_data(data,
         if 'flip' in aug:
             tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, flip, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)  
         if 'rotate' in aug:
-            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, rotate, prob=augmentations[aug], seed=seed), num_parallel_calls=-1)
+            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, rotate, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)
         if 'sbc' in aug:
             "sbc = saturation, brightness, contrast"
-            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, sat_bright_con, prob=augmentations[aug], seed=seed), num_parallel_calls=-1)
+            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, sat_bright_con, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)
     tf_data = tf_data.map(lambda x,y: rgb2gray_3channel(x, y), num_parallel_calls=-1)
 
 
     # if cache:
     #     tf_data = tf_data.cache()
 
-
+    tf_data = tf_data.batch(batch_size)
 
     tf_data = tf_data.prefetch(-1)
     return {'data':tf_data, 'data_iterator':data, 'encoder':class_encoder, 'num_samples':num_samples, 'num_classes':num_classes}
