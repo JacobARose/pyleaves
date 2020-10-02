@@ -27,10 +27,11 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'finetune.augmentations.rotate=1.0' \
                             'finetune.augmentations.sbc=1.0' \
                             'pretrain.lr=1e-4' 'finetune.lr=1e-5' \
-                            'pretrain.batch_size=6' 'finetune.batch_size=6' \
+                            'pretrain.batch_size=12' 'finetune.batch_size=12' \
                             'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
                             'pretrain.frozen_layers="bn"' 'finetune.frozen_layers="bn"' \
-                            'pretrain.num_parallel_calls=4' 'finetune.num_parallel_calls=4'
+                            'pretrain.num_parallel_calls=-1' 'finetune.num_parallel_calls=-1'
 
  python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'dataset_0@dataset_0=Leaves_family_100' \
@@ -545,7 +546,7 @@ def main(config):
     neptune_params = log_neptune_params(params)
 
 
-    callbacks = [TensorBoard(log_dir=params.log_dir, profile_batch=0),
+    callbacks = [TensorBoard(log_dir=params.log_dir, histogram_freq=4, write_images=True),
                 NeptuneMonitor(),
                 EarlyStopping(monitor=params.pretrain.early_stopping.monitor,
                             patience=params.pretrain.early_stopping.patience,
