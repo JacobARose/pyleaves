@@ -551,7 +551,7 @@ def main(config):
     neptune_params = log_neptune_params(params)
 
 
-    callbacks = [TensorBoard(log_dir=params.log_dir, histogram_freq=4, write_images=True),
+    callbacks = [TensorBoard(log_dir=params.log_dir, histogram_freq=2, write_grads=True, write_images=True),
                 NeptuneMonitor(),
                 EarlyStopping(monitor=params.pretrain.early_stopping.monitor,
                             patience=params.pretrain.early_stopping.patience,
@@ -704,7 +704,7 @@ def main(config):
         neptune_params = log_neptune_params(params)
 
 
-        callbacks = [TensorBoard(log_dir=params.log_dir, histogram_freq=4, write_images=True),
+        callbacks = [TensorBoard(log_dir=params.log_dir, histogram_freq=2, write_grads=True, write_images=True),
                     NeptuneMonitor(),
                     EarlyStopping(monitor=params.finetune.early_stopping.monitor,
                                 patience=params.finetune.early_stopping.patience,
