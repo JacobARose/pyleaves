@@ -90,6 +90,8 @@ import hydra
 
 from sklearn.metrics import classification_report
 
+import wandb
+from wandb.keras import WandbCallback
 
 
 
@@ -401,62 +403,6 @@ def main(config):
         preprocess_input = None
         print("Using no preprocess_input function")
 
-#%%
-
-    # datagen = tf.keras.preprocessing.image.ImageDataGenerator(**data_augs,
-    #                                                           preprocessing_function = preprocess_input)
-
-    # train_iter = datagen.flow_from_directory(
-    #     params.train_image_dir, classes=None, class_mode='categorical',
-    #     shuffle=True, seed=params.seed, subset='training')
-    # val_iter = datagen.flow_from_directory(
-    #     params.train_image_dir, classes=None, class_mode='categorical',
-    #     shuffle=False, seed=params.seed, subset='validation')
-
-    # test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale = data_augs['rescale'],
-    #                                                             preprocessing_function = preprocess_input)
-    # test_iter = test_datagen.flow_from_directory(
-    #                 params.test_image_dir, classes=None, class_mode='categorical', shuffle=False, seed=params.seed)
-
-
-
-    # train_iter = datagen.flow_from_directory(
-    #     params.train_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
-    #     class_mode='categorical', batch_size=params.batch_size, shuffle=True, seed=params.seed,
-    #     subset='training', interpolation='nearest')
-
-    # val_iter = datagen.flow_from_directory(
-    #     params.train_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
-    #     class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed,
-    #     subset='validation', interpolation='nearest')
-    # test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale = data_augs['rescale'],
-    #                                                             preprocessing_function = preprocess_input)
-
-    # test_iter = test_datagen.flow_from_directory(
-    #     params.test_image_dir, target_size=params.target_size, color_mode=params.color_mode, classes=None,
-    #     class_mode='categorical', batch_size=params.batch_size, shuffle=False, seed=params.seed, interpolation='nearest')
-
-    # train_data_info = img_data_gen_2_tf_data(train_iter,
-    #                                         training=True,
-    #                                         target_size=params.target_size,
-    #                                         batch_size=params.batch_size,
-    #                                         seed=params.seed,
-    #                                         preprocess_input=preprocess_input,
-    #                                         num_parallel_calls=params.num_parallel_calls)
-    # val_data_info = img_data_gen_2_tf_data(val_iter,
-    #                                     training=False,
-    #                                     target_size=params.target_size,
-    #                                     batch_size=params.batch_size,
-    #                                     seed=params.seed,
-    #                                     preprocess_input=preprocess_input)
-    # test_data_info = img_data_gen_2_tf_data(test_iter,
-    #                                         training=False,
-    #                                         target_size=params.target_size,
-    #                                         batch_size=params.batch_size,
-    #                                         seed=params.seed,
-    #                                         preprocess_input=preprocess_input)
-
-#%%
 
     train_data_info = load_data_by_subset(params.pretrain.train_image_dir,
                                          subset='train',

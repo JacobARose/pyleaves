@@ -16,10 +16,11 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py da
 
 
 
- python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'dataset_0@dataset_0=Leaves_family_100' \
                             'dataset_1@dataset_1=Fossil_family_100' \
                             'pretrain.target_size=[768,768]' \
+                            '+pretrain.augmentations={flip:1.0,rotate:1.0,sbc:1.0}' '+finetune.augmentations={flip:1.0,rotate:1.0,sbc:1.0}' \
                             'pretrain.lr=1e-4' 'finetune.lr=1e-5' \
                             'pretrain.batch_size=6' 'finetune.batch_size=6' \
                             'pretrain.num_epochs=120' 'finetune.num_epochs=120' \

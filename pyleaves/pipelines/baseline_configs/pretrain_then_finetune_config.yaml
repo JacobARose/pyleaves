@@ -44,6 +44,8 @@ pretrain:
 
     augmentations: #null
         flip: 0.0
+        rotate: 0.0
+        sbc: 0.0 #saturation, brightness, contrast
         
     preprocess_input: "tensorflow.keras.applications.resnet_v2.preprocess_input"
     color_mode: 'rgb'
@@ -82,6 +84,8 @@ finetune:
 
     augmentations: #null
         flip: 0.0
+        rotate: 0.0
+        sbc: 0.0 #saturation, brightness, contrast
         
     preprocess_input: "tensorflow.keras.applications.resnet_v2.preprocess_input"
     color_mode: 'rgb'
