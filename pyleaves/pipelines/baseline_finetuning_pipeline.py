@@ -274,10 +274,13 @@ def load_data_by_subset(image_dir, subset='test', preprocess_input=None, class_e
 # Image plotting utils
 def show_batch(image_batch, label_batch, title='', class_names=None):
     fig = plt.figure(figsize=(15, 15))
+
+    if label_batch.ndim==2:
+        label_batch = np.argmax(label_batch, axis=-1)
+
     if class_names is not None:
-        label_batch = [class_names[l] for l in np.argmax(label_batch, axis=1)]
-    elif label_batch.ndim==2:
-        label_batch = np.argmax(label_batch, axis=1)
+        label_batch = [class_names[l] for l in label_batch]
+
     
     img_shape = image_batch.shape
     img_max = np.max(image_batch)
