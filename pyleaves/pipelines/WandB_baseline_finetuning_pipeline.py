@@ -556,7 +556,7 @@ def main(config):
                 "pretrain.augmentations":config.pretrain.augmentations,
                 "pretrain.dataset_name": config.pretrain.dataset_name,
                 "pretrain.lr":config.pretrain.lr,
-                "seed":config.seed.pretrain
+                "seed":config.pretrain.seed
     }
     wandb.config.update(run_params)
 
