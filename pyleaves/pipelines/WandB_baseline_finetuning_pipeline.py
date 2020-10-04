@@ -730,7 +730,7 @@ def main(config):
 
     image_batch, label_batch = next(iter(val_data))
     fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='val', class_names=class_names)
-    wandb.log({'target_val_image_batch', fig}: commit=False)
+    wandb.log({'target_val_image_batch': fig}, commit=False)
 
     image_batch, label_batch = next(iter(test_data))
     fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='test', class_names=class_names)
