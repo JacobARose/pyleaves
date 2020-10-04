@@ -588,11 +588,11 @@ def main(config):
     class_names = train_data_info['encoder'].inv
     image_batch, label_batch = next(iter(train_data))
     fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='train', class_names=class_names)
-    wandb.log({'train_image_batch', fig}, commit=False)
+    wandb.log({'train_image_batch', fig})#, commit=False)
 
     image_batch, label_batch = next(iter(val_data))
     fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='val', class_names=class_names)
-    wandb.log({'val_image_batch', fig}, commit=False)
+    wandb.log({'val_image_batch', fig})#, commit=False)
 
     image_batch, label_batch = next(iter(test_data))
     fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='test', class_names=class_names)
