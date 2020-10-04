@@ -22,6 +22,126 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'pretrain.target_size=[768,768]' \
                             'pretrain.augmentations.flip=1.0' \
                             'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=0.0' \
+                            'finetune.augmentations.flip=1.0' \
+                            'finetune.augmentations.rotate=1.0' \
+                            'finetune.augmentations.sbc=0.0' \
+                            'pretrain.lr=1e-4' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=12' 'finetune.batch_size=12' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.regularization.l2=1e-4' 'finetune.regularization.l2=1e-4' \
+                            'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
+                            'pretrain.head_layers=[1024]' 'finetune.head_layers=[1024]' \
+                            'pretrain.frozen_layers=[0,-1]' 'finetune.frozen_layers=[0,-1]' \
+                            'pretrain.num_parallel_calls=-1' 'finetune.num_parallel_calls=-1'
+
+
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Leaves_family_100' \
+                            'dataset_1@dataset_1=Fossil_family_100' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=0.0' \
+                            'finetune.augmentations.flip=1.0' \
+                            'finetune.augmentations.rotate=1.0' \
+                            'finetune.augmentations.sbc=0.0' \
+                            'pretrain.lr=1e-4' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=12' 'finetune.batch_size=12' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.regularization.l2=1e-4' 'finetune.regularization.l2=1e-4' \
+                            'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
+                            'pretrain.head_layers=[768,512]' 'finetune.head_layers=[768,512]' \
+                            'pretrain.frozen_layers="[0,-1]"' 'finetune.frozen_layers="[0,-1]"' \
+                            'pretrain.num_parallel_calls=-1' 'finetune.num_parallel_calls=-1'
+
+
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Leaves_family_100' \
+                            'dataset_1@dataset_1=Fossil_family_100' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=0.0' \
+                            'finetune.augmentations.flip=1.0' \
+                            'finetune.augmentations.rotate=1.0' \
+                            'finetune.augmentations.sbc=0.0' \
+                            'pretrain.lr=1e-4' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=12' 'finetune.batch_size=12' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.model_name="vgg16"' 'finetune.model_name="vgg16"' \
+                            'pretrain.regularization.l2=1e-4' 'finetune.regularization.l2=1e-4' \
+                            'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
+                            'pretrain.head_layers=[768,512]' 'finetune.head_layers=[768,512]' \
+                            'pretrain.frozen_layers="[0,-1]"' 'finetune.frozen_layers="[0,-1]"' \
+                            'pretrain.num_parallel_calls=-1' 'finetune.num_parallel_calls=-1'
+
+
+
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Leaves_family_100' \
+                            'dataset_1@dataset_1=Fossil_family_100' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=0.0' \
+                            'finetune.augmentations.flip=1.0' \
+                            'finetune.augmentations.rotate=1.0' \
+                            'finetune.augmentations.sbc=0.0' \
+                            'pretrain.lr=1e-5' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=12' 'finetune.batch_size=12' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.model_name="vgg16"' 'finetune.model_name="vgg16"' \
+                            'pretrain.regularization.l2=1e-4' 'finetune.regularization.l2=1e-4' \
+                            'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
+                            'pretrain.head_layers=[512,256]' 'finetune.head_layers=[512,256]' \
+                            'pretrain.frozen_layers="[0,-4]"' 'finetune.frozen_layers="[0,-4]"' \
+                            'pretrain.num_parallel_calls=-1' 'finetune.num_parallel_calls=-1'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Fossil_family_4' \
+                            'dataset_1@dataset_1=Leaves_family_4' \
+                            'pretrain.target_size=[512,512]' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
                             'pretrain.augmentations.sbc=1.0' \
                             'finetune.augmentations.flip=1.0' \
                             'finetune.augmentations.rotate=1.0' \
@@ -31,8 +151,18 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
                             'pretrain.regularization.l2=1e-4' 'finetune.regularization.l2=1e-4' \
                             'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
-                            'pretrain.frozen_layers="bn"' 'finetune.frozen_layers="bn"' \
+                            'pretrain.frozen_layers="[0,-1]"' 'finetune.frozen_layers="[0,-1]"' \
                             'pretrain.num_parallel_calls=-1' 'finetune.num_parallel_calls=-1'
+
+
+
+
+
+
+
+
+
+
 
  python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'dataset_0@dataset_0=Leaves_family_100' \
@@ -393,7 +523,7 @@ def log_neptune_params(params):
 @hydra.main(config_path='baseline_configs', config_name='pretrain_then_finetune_config')
 def main(config):
     OmegaConf.set_struct(config, False)
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     from pyleaves.utils import set_tf_config
     config.task = config.task or 1
     set_tf_config(gpu_num=None, num_gpus=1, wait=(config.task+1)*2)

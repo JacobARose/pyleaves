@@ -2,10 +2,6 @@
 # coding: utf-8
 """
 
-Alternative to baseline_finetuning_pipeline.py for use with Weights and Biases instead of Neptune
-
-
-
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py 
 
 
@@ -20,15 +16,78 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py da
 
 
 
- python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'dataset_0@dataset_0=Leaves_family_100' \
                             'dataset_1@dataset_1=Fossil_family_100' \
                             'pretrain.target_size=[768,768]' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=0.0' \
+                            'finetune.augmentations.flip=1.0' \
+                            'finetune.augmentations.rotate=1.0' \
+                            'finetune.augmentations.sbc=0.0' \
                             'pretrain.lr=1e-4' 'finetune.lr=1e-5' \
-                            'pretrain.batch_size=6' 'finetune.batch_size=6' \
+                            'pretrain.batch_size=12' 'finetune.batch_size=12' \
                             'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
-                            'pretrain.frozen_layers="bn"' 'finetune.frozen_layers="bn"' \
-                            'pretrain.num_parallel_calls=4' 'finetune.num_parallel_calls=4'
+                            'pretrain.regularization.l2=1e-4' 'finetune.regularization.l2=1e-4' \
+                            'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
+                            'pretrain.head_layers=[1024]' 'finetune.head_layers=[1024]' \
+                            'pretrain.frozen_layers=[0,-1]' 'finetune.frozen_layers=[0,-1]' \
+                            'pretrain.num_parallel_calls=-1' 'finetune.num_parallel_calls=-1'
+
+
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Leaves_family_100' \
+                            'dataset_1@dataset_1=Fossil_family_100' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=0.0' \
+                            'finetune.augmentations.flip=1.0' \
+                            'finetune.augmentations.rotate=1.0' \
+                            'finetune.augmentations.sbc=0.0' \
+                            'pretrain.lr=1e-4' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=12' 'finetune.batch_size=12' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.regularization.l2=1e-4' 'finetune.regularization.l2=1e-4' \
+                            'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
+                            'pretrain.head_layers=[768,512]' 'finetune.head_layers=[768,512]' \
+                            'pretrain.frozen_layers="[0,-1]"' 'finetune.frozen_layers="[0,-1]"' \
+                            'pretrain.num_parallel_calls=-1' 'finetune.num_parallel_calls=-1'
+
+
+
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Fossil_family_4' \
+                            'dataset_1@dataset_1=Leaves_family_4' \
+                            'pretrain.target_size=[512,512]' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=1.0' \
+                            'finetune.augmentations.flip=1.0' \
+                            'finetune.augmentations.rotate=1.0' \
+                            'finetune.augmentations.sbc=1.0' \
+                            'pretrain.lr=1e-4' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=12' 'finetune.batch_size=12' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.regularization.l2=1e-4' 'finetune.regularization.l2=1e-4' \
+                            'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
+                            'pretrain.frozen_layers="[0,-1]"' 'finetune.frozen_layers="[0,-1]"' \
+                            'pretrain.num_parallel_calls=-1' 'finetune.num_parallel_calls=-1'
+
+
+
+
+
+
+
+
+
+
 
  python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'dataset_0@dataset_0=Leaves_family_100' \
@@ -50,6 +109,23 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py da
                             'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
                             'pretrain.frozen_layers="bn"' 'finetune.frozen_layers="bn"' \
                             'pretrain.num_parallel_calls=4' 'finetune.num_parallel_calls=4'
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Leaves_family_4' \
+                            'dataset_1@dataset_1=Fossil_family_4' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.lr=1e-5' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=12' 'finetune.batch_size=12' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
+                            'pretrain.frozen_layers="bn"' 'finetune.frozen_layers="bn"' \
+                            'pretrain.num_parallel_calls=5' 'finetune.num_parallel_calls=5'
+
+
+
+neptune tensorboard "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/tensorboard_log_dir" --project 'jacobarose/jupyter-testing-ground'
+
 
 
 
@@ -87,9 +163,7 @@ import numpy as np
 # from neptunecontrib.api.table import log_table
 from omegaconf import OmegaConf, ListConfig, DictConfig
 import hydra
-
 from sklearn.metrics import classification_report
-
 import wandb
 from wandb.keras import WandbCallback
 
@@ -133,6 +207,8 @@ def encode_str2int(labels: List[str], class_encoder: Dict[str, int]) -> List[int
     return [class_encoder[label] for label in labels]
 
 
+
+
 def img_data_gen_2_tf_data(data, 
                            training=False,
                            target_size=(256,256),
@@ -143,7 +219,7 @@ def img_data_gen_2_tf_data(data,
                            num_parallel_calls=-1,
                            cache=False,
                            class_encodings: Dict[str,int]=None):
-    from pyleaves.utils.pipeline_utils import flip, _cond_apply
+    from pyleaves.utils.pipeline_utils import flip, rotate, rgb2gray_1channel, rgb2gray_3channel, sat_bright_con, _cond_apply
     import tensorflow as tf
 
     augmentations = augmentations or {}
@@ -175,14 +251,23 @@ def img_data_gen_2_tf_data(data,
     print('target_size = ', target_size)
     tf_data = tf_data.map(lambda x,y: (resize(x), tf.one_hot(y, depth=num_classes)), num_parallel_calls=num_parallel_calls)
 
-    tf_data = tf_data.repeat().batch(batch_size)
-    
+    tf_data = tf_data.repeat()
+    # TODO collect augmentation functions in a list and execute as a formal pipeline, abstracting away the logging & validation of results
+    for aug in augmentations.keys():
+        if 'flip' in aug:
+            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, flip, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)  
+        if 'rotate' in aug:
+            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, rotate, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)
+        if 'sbc' in aug:
+            "sbc = saturation, brightness, contrast"
+            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, sat_bright_con, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)
+    tf_data = tf_data.map(lambda x,y: rgb2gray_3channel(x, y), num_parallel_calls=-1)
+
+
     # if cache:
     #     tf_data = tf_data.cache()
 
-    for aug in augmentations.keys():
-        if 'flip' in aug:
-            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, flip, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)    
+    tf_data = tf_data.batch(batch_size)
 
     tf_data = tf_data.prefetch(-1)
     return {'data':tf_data, 'data_iterator':data, 'encoder':class_encoder, 'num_samples':num_samples, 'num_classes':num_classes}
@@ -251,10 +336,13 @@ def load_data_by_subset(image_dir, subset='test', preprocess_input=None, class_e
 # Image plotting utils
 def show_batch(image_batch, label_batch, title='', class_names=None):
     fig = plt.figure(figsize=(15, 15))
+
+    if label_batch.ndim==2:
+        label_batch = np.argmax(label_batch, axis=-1)
+
     if class_names is not None:
-        label_batch = [class_names[l] for l in np.argmax(label_batch, axis=1)]
-    elif label_batch.ndim==2:
-        label_batch = np.argmax(label_batch, axis=1)
+        label_batch = [class_names[l] for l in label_batch]
+
     
     img_shape = image_batch.shape
     img_max = np.max(image_batch)
@@ -292,7 +380,7 @@ def summarize_sample(x, y):
 
 
 
-# params = Box({
+# config = Box({
 #               'image_dir': '/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/PNAS_family',
 #               'log_dir': '/media/data_cifs_lrs/projects/prj_fossils/users/jacob/tensorboard_log_dir',          
 #               'validation_split': 0.1,
@@ -312,10 +400,10 @@ def summarize_sample(x, y):
 # model_config = Box({
 #                     'model_name': "resnet_50_v2",
 #                     'optimizer':"Adam",
-#                     'num_classes':None, #params.num_classes,
+#                     'num_classes':None, #config.num_classes,
 #                     'weights': "imagenet",
 #                     'frozen_layers':None, #(0,-4),
-#                     'input_shape':None,#(*params.target_size,3),
+#                     'input_shape':None,#(*config.target_size,3),
 #                     'lr':1e-5,
 #                     'lr_momentum':None,#0.9,
 #                     'regularization':{},#{"l2": 1e-4},
@@ -326,32 +414,32 @@ def summarize_sample(x, y):
 
 
 
-def parse_params(params: DictConfig):
+def parse_config(config: DictConfig):
 
-    params.regularization = params.regularization or {}
-    params.lr = float(params.lr)
-    params.data_augs.validation_split = float(params.data_augs.validation_split)
+    config.regularization = config.regularization or {}
+    config.lr = float(config.lr)
+    config.data_augs.validation_split = float(config.data_augs.validation_split)
     try:
-        params.data_augs.rescale = float(params.data_augs.rescale)
+        config.data_augs.rescale = float(config.data_augs.rescale)
     except:
-        params.data_augs.rescale = None
+        config.data_augs.rescale = None
     
-    data_augs = {k:v for k,v in OmegaConf.to_container(params.data_augs, resolve=True).items() if k != "preprocessing_function"}
+    data_augs = {k:v for k,v in OmegaConf.to_container(config.data_augs, resolve=True).items() if k != "preprocessing_function"}
 
-    return params, data_augs
+    return config, data_augs
 
 
-def log_neptune_params(params):
-    neptune_params = {}
-    for k,v in OmegaConf.to_container(params, resolve=True).items():
+def log_experiment_config(config):
+    experiment_config = {}
+    for k,v in OmegaConf.to_container(config, resolve=True).items():
         if type(v)==dict:
-            neptune_params[k] = str(v)
+            experiment_config[k] = str(v)
         elif type(v)==ListConfig:
-            neptune_params[k] = list(v)
+            experiment_config[k] = list(v)
         else:
-            neptune_params[k] = v
+            experiment_config[k] = v
 
-    return neptune_params
+    return experiment_config
 
 
 
@@ -361,7 +449,6 @@ def log_neptune_params(params):
 @hydra.main(config_path='baseline_configs', config_name='pretrain_then_finetune_config')
 def main(config):
     OmegaConf.set_struct(config, False)
-    import pdb; pdb.set_trace()
     from pyleaves.utils import set_tf_config
     config.task = config.task or 1
     set_tf_config(gpu_num=None, num_gpus=1, wait=(config.task+1)*2)
@@ -375,311 +462,305 @@ def main(config):
 
     # from tensorflow.keras.applications.resnet_v2 import preprocess_input
 
-    neptune_project_name = 'jacobarose/jupyter-testing-ground'
-    neptune_experiment_name = f'baseline-{config.dataset_name}'
+    project_name = 'jacobarose/jupyter-testing-ground'
+    experiment_name = f'baseline-{config.pretrain.dataset_name}-{config.finetune.dataset_name}--{config.pretrain.model_name}'
+    # config, data_augs = parse_config(config=config)
 
-    params = config
-    # params, data_augs = parse_params(params=params)
+    config.pretrain.regularization = config.pretrain.regularization or {}
+    config.pretrain.lr = float(config.pretrain.lr)
+    config.pretrain.augmentations['flip'] = float(config.pretrain.augmentations['flip'])
+    config.pretrain.validation_split = float(config.pretrain.validation_split)
 
-    params.pretrain.regularization = params.pretrain.regularization or {}
-    params.pretrain.lr = float(params.pretrain.lr)
-    params.pretrain.augmentations['flip'] = float(params.pretrain.augmentations['flip'])
-    params.pretrain.validation_split = float(params.pretrain.validation_split)
+    config.finetune.regularization = config.finetune.regularization or {}
+    config.finetune.lr = float(config.finetune.lr)
+    config.finetune.augmentations['flip'] = float(config.finetune.augmentations['flip'])
+    config.finetune.validation_split = float(config.finetune.validation_split)
 
-    params.finetune.regularization = params.finetune.regularization or {}
-    params.finetune.lr = float(params.finetune.lr)
-    params.finetune.augmentations['flip'] = float(params.finetune.augmentations['flip'])
-    params.finetune.validation_split = float(params.finetune.validation_split)
-
-
-    if params.finetune.preprocess_input == "tensorflow.keras.applications.resnet_v2.preprocess_input":
+    if config.finetune.preprocess_input == "tensorflow.keras.applications.resnet_v2.preprocess_input":
         from tensorflow.keras.applications.resnet_v2 import preprocess_input
         print("Using preprocessing function: tensorflow.keras.applications.resnet_v2.preprocess_input")
-    elif params.finetune.preprocess_input == "tf.keras.applications.mobilenet.preprocess_input":
+    elif config.finetune.preprocess_input == "tf.keras.applications.mobilenet.preprocess_input":
         from tensorflow.keras.applications.mobilenet import preprocess_input
-    elif params.finetune.preprocess_input == "tf.keras.applications.inception_v3.preprocess_input":
+    elif config.finetune.preprocess_input == "tf.keras.applications.inception_v3.preprocess_input":
         from tensorflow.keras.applications.inception_v3 import preprocess_input
     else:
         preprocess_input = None
         print("Using no preprocess_input function")
 
+#%%
 
-    train_data_info = load_data_by_subset(params.pretrain.train_image_dir,
+
+    train_data_info = load_data_by_subset(config.pretrain.train_image_dir,
                                          subset='train',
                                          preprocess_input=preprocess_input,
-                                         validation_split=params.pretrain.validation_split,
-                                         seed=params.seed,
-                                         target_size=params.pretrain.target_size,
-                                         batch_size=params.pretrain.batch_size,
-                                         augmentations=params.pretrain.augmentations,
-                                         num_parallel_calls=params.pretrain.num_parallel_calls)
+                                         validation_split=config.pretrain.validation_split,
+                                         seed=config.seed,
+                                         target_size=config.pretrain.target_size,
+                                         batch_size=config.pretrain.batch_size,
+                                         augmentations=config.pretrain.augmentations,
+                                         num_parallel_calls=config.pretrain.num_parallel_calls)
 
-    val_data_info = load_data_by_subset(params.pretrain.train_image_dir,
+    val_data_info = load_data_by_subset(config.pretrain.train_image_dir,
                                          subset='validation',
                                          preprocess_input=preprocess_input,
-                                         validation_split=params.pretrain.validation_split,
-                                         seed=params.seed,
-                                         target_size=params.pretrain.target_size,
-                                         batch_size=params.pretrain.batch_size,
-                                         augmentations=params.pretrain.augmentations,
-                                         num_parallel_calls=params.pretrain.num_parallel_calls)
+                                         validation_split=config.pretrain.validation_split,
+                                         seed=config.seed,
+                                         target_size=config.pretrain.target_size,
+                                         batch_size=config.pretrain.batch_size,
+                                         augmentations=config.pretrain.augmentations,
+                                         num_parallel_calls=config.pretrain.num_parallel_calls)
 
-    test_data_info = load_data_by_subset(params.pretrain.test_image_dir,
+    test_data_info = load_data_by_subset(config.pretrain.test_image_dir,
                                          subset='test',
                                          preprocess_input=preprocess_input,
-                                         validation_split=params.pretrain.validation_split,
-                                         seed=params.seed,
-                                         target_size=params.pretrain.target_size,
-                                         batch_size=params.pretrain.batch_size,
-                                         augmentations=params.pretrain.augmentations,
-                                         num_parallel_calls=params.pretrain.num_parallel_calls)
+                                         validation_split=config.pretrain.validation_split,
+                                         seed=config.seed,
+                                         target_size=config.pretrain.target_size,
+                                         batch_size=config.pretrain.batch_size,
+                                         augmentations=config.pretrain.augmentations,
+                                         num_parallel_calls=config.pretrain.num_parallel_calls)
 
     train_data = train_data_info['data']
     val_data = val_data_info['data']
     test_data = test_data_info['data']
 
-    stage_0_config = params.pipeline.stage_0
+    stage_0_config = config.pipeline.stage_0
     # stage_0_config.class_encodings = dict(train_data_info['encoder'])
     stage_0_config.num_samples_train = train_data_info['num_samples']
     stage_0_config.num_samples_val = val_data_info['num_samples']
     stage_0_config.num_samples_test = test_data_info['num_samples']
     stage_0_config.num_classes = train_data_info['num_classes']
-    steps_per_epoch=int(np.ceil(stage_0_config.num_samples_train/params.pretrain.batch_size))
-    validation_steps=int(np.ceil(stage_0_config.num_samples_val/params.pretrain.batch_size))
-    test_steps=int(np.ceil(stage_0_config.num_samples_test/params.pretrain.batch_size))
+    steps_per_epoch=int(np.ceil(stage_0_config.num_samples_train/config.pretrain.batch_size))
+    validation_steps=int(np.ceil(stage_0_config.num_samples_val/config.pretrain.batch_size))
+    test_steps=int(np.ceil(stage_0_config.num_samples_test/config.pretrain.batch_size))
 
     ################################################################################
 
-    model_config = params.finetune
+    model_config = config.pretrain
     model_config.num_classes = stage_0_config.num_classes
-    model_config.input_shape = (*params.finetune.target_size,3)            
+    model_config.input_shape = (*config.pretrain.target_size,3)            
     model = build_model(model_config)
 
     ################################################################################
     ################################################################################
     ################################################################################
+    from pyleaves.utils.WandB_artifact_utils import init_new_run
+
+    init_new_run(project=config.project_name, run_name=config.run_name, job_type=config.job_type)
     
-    wandb.init(name=args.model_name, project="neurips_test")
-    config={
-            "batch_size" : args.batch_size,
-            "epochs": args.epochs,
-            "l1_size" : args.l1_size,
-            "l2_size" : args.l2_size,
-            "l3_size" : args.l3_size,
-            "fc1_size" : args.fc1_size,
-            "fc2_size" : args.fc2_size,
-            "dropout_1" : args.dropout_1,
-            "dropout_2" : args.dropout_2,
-            "n_train" : NUM_TRAIN,
-            "n_val" : NUM_VAL,
-            "optimizer" : args.optimizer,
-            "lr" : args.learning_rate
+    
+    run_params={
+                "pretrain.validation_split":config.pretrain.validation_split,
+                "pretrain.target_size":config.pretrain.target_size,
+                "pretrain.batch_size":config.pretrain.batch_size,
+                "pretrain.augmentations":config.pretrain.augmentations,
+                "pretrain.dataset_name": config.pretrain.dataset_name,
+                "pretrain.lr":config.pretrain.lr,
+                "seed":config.seed,pretrain
     }
-    wandb.config.update(config)
-    
-    
-    neptune.init(project_qualified_name=neptune_project_name)
+    wandb.config.update(run_params)
 
-    neptune_params = log_neptune_params(params)
-
-
-    callbacks = [TensorBoard(log_dir=params.log_dir, profile_batch=0),
-                NeptuneMonitor(),
-                EarlyStopping(monitor=params.pretrain.early_stopping.monitor,
-                            patience=params.pretrain.early_stopping.patience,
-                            min_delta=params.pretrain.early_stopping.min_delta, 
+    # neptune.init(project_qualified_name=neptune_project_name)
+    # neptune_config = log_neptune_config(config)
+    callbacks = [TensorBoard(log_dir=config.log_dir, histogram_freq=2, write_grads=True, write_images=True),
+                 WandbCallback(),
+                 EarlyStopping(monitor=config.pretrain.early_stopping.monitor,
+                            patience=config.pretrain.early_stopping.patience,
+                            min_delta=config.pretrain.early_stopping.min_delta, 
                             verbose=1, 
-                            restore_best_weights=params.pretrain.early_stopping.restore_best_weights)]
+                            restore_best_weights=config.pretrain.early_stopping.restore_best_weights)]
 
-    upload_source_files=[__file__, pipeline_utils.__file__]
+    # upload_source_files=[__file__, pipeline_utils.__file__]
 
-    with neptune.create_experiment(name=neptune_experiment_name,
-                                   params=neptune_params,
-                                   upload_source_files=upload_source_files) as experiment:
-        model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
-        tags = OmegaConf.to_container(params.tags, resolve=True)
-        print("tags = ", tags)
+    # with neptune.create_experiment(name=neptune_experiment_name,
+    #                                config=neptune_config,
+    #                                upload_source_files=upload_source_files) as experiment:
+        # model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
+        # tags = OmegaConf.to_container(config.tags, resolve=True)
+        # print("tags = ", tags)
 
-        try:
-            experiment.log_text('sys.argv', ' '.join(sys.argv))
-        except:
-            print(f'[DEBUG] FAILED to log sys.argv to neptune. sys.argv = {sys.argv}')
-
-
-        class_names = train_data_info['encoder'].inv
-        image_batch, label_batch = next(iter(train_data))
-        fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='train', class_names=class_names)
-        experiment.log_image('train_image_batch', fig)
-
-        image_batch, label_batch = next(iter(val_data))
-        fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='val', class_names=class_names)
-        experiment.log_image('val_image_batch', fig)
-
-        image_batch, label_batch = next(iter(test_data))
-        fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='test', class_names=class_names)
-        experiment.log_image('test_image_batch', fig)
-
-        print('[BEGINNING STAGE_0: PRE-TRAINING+VALIDATION]')
-        try:
-            history = model.fit(train_data,
-                                epochs=params.pretrain.num_epochs,
-                                callbacks=callbacks,
-                                validation_data=val_data,
-                                validation_freq=1,
-                                shuffle=True,
-                                steps_per_epoch=steps_per_epoch,
-                                validation_steps=validation_steps,
-                                verbose=1)
-
-        except Exception as e:
-            raise e
-
-        # model.save(params.finetune.saved_model_path)
-        model.save(params.pretrain.saved_model_path)
-        print('[STAGE_0 COMPLETED]')
-        print(f'Saved trained model to {params.finetune.saved_model_path}')
-        
-        print('BEGINNING STAGE_1: TEST EVALUATION' )
-        perform_evaluation_stage(model, test_data_info, batch_size=params.pretrain.batch_size, experiment=experiment, subset='test')
+        # try:
+        #     experiment.log_text('sys.argv', ' '.join(sys.argv))
+        # except:
+        #     print(f'[DEBUG] FAILED to log sys.argv to neptune. sys.argv = {sys.argv}')
 
 
-        # subset='test'
-        # test_iter = test_data_info['data_iterator']
-        # y_true = test_iter.labels
-        # classes = test_iter.class_indices
-        # eval_iter = test_data.unbatch().take(len(y_true)).batch(params.batch_size)
-        # y, y_hat, y_prob = evaluate(model, eval_iter, y_true=y_true, classes=classes, steps=test_steps, experiment=experiment, subset=subset)
+    class_names = train_data_info['encoder'].inv
+    image_batch, label_batch = next(iter(train_data))
+    fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='train', class_names=class_names)
+    wandb.log({'train_image_batch', fig}, commit=False)
 
-        # print('y_prob.shape =', y_prob.shape)
-        # predictions = pd.DataFrame({'y':y,'y_pred':y_hat})
-        # log_table(f'{subset}_labels_w_predictions',predictions, experiment=experiment)
-        # y_prob_df = pd.DataFrame(y_prob, columns=list(classes.keys()))
-        # log_table(f'{subset}_probabilities',y_prob_df,experiment=experiment)
+    image_batch, label_batch = next(iter(val_data))
+    fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='val', class_names=class_names)
+    wandb.log({'val_image_batch', fig}, commit=False)
 
-        ###############################################################################
-        ###############################################################################
-        ###############################################################################
-        
-        ###############################################################################
-        ###############################################################################
-        
-        ###############################################################################
-        ###############################################################################
-        ###############################################################################
+    image_batch, label_batch = next(iter(test_data))
+    fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='test', class_names=class_names)
+    wandb.log({'test_image_batch', fig})#, commit=False)
+
+    print('[BEGINNING STAGE_0: PRE-TRAINING+VALIDATION]')
+    try:
+        history = model.fit(train_data,
+                            epochs=config.pretrain.num_epochs,
+                            callbacks=callbacks,
+                            validation_data=val_data,
+                            validation_freq=1,
+                            shuffle=True,
+                            steps_per_epoch=steps_per_epoch,
+                            validation_steps=validation_steps,
+                            verbose=1)
+
+    except Exception as e:
+        raise e
+
+    # model.save(config.finetune.saved_model_path)
+    model.save(config.pretrain.saved_model_path)
+    print('[STAGE_0 COMPLETED]')
+    print(f'Saved trained model to {config.pretrain.saved_model_path}')
+    
+    print('BEGINNING STAGE_1: TEST EVALUATION' )
+    perform_evaluation_stage(model, test_data_info, batch_size=config.pretrain.batch_size, experiment=None, subset='test')
 
 
+    # subset='test'
+    # test_iter = test_data_info['data_iterator']
+    # y_true = test_iter.labels
+    # classes = test_iter.class_indices
+    # eval_iter = test_data.unbatch().take(len(y_true)).batch(config.batch_size)
+    # y, y_hat, y_prob = evaluate(model, eval_iter, y_true=y_true, classes=classes, steps=test_steps, experiment=experiment, subset=subset)
+
+    # print('y_prob.shape =', y_prob.shape)
+    # predictions = pd.DataFrame({'y':y,'y_pred':y_hat})
+    # log_table(f'{subset}_labels_w_predictions',predictions, experiment=experiment)
+    # y_prob_df = pd.DataFrame(y_prob, columns=list(classes.keys()))
+    # log_table(f'{subset}_probabilities',y_prob_df,experiment=experiment)
+
+    ###############################################################################
+    ###############################################################################
+    ###############################################################################
+    
+    ###############################################################################
+    ###############################################################################
+    
+    ###############################################################################
+    ###############################################################################
+    ###############################################################################
 
 
 
-        # if "zero_shot_test" in params:
-        class_encodings = train_data_info['encoder']
-
-        train_data_info = load_data_by_subset(params.finetune.train_image_dir,
-                                            subset='train',
-                                            preprocess_input=preprocess_input,
-                                            validation_split=params.finetune.validation_split,
-                                            seed=params.seed,
-                                            target_size=params.finetune.target_size,
-                                            batch_size=params.finetune.batch_size,
-                                            augmentations=params.finetune.augmentations,
-                                            num_parallel_calls=params.finetune.num_parallel_calls,
-                                            class_encodings=class_encodings)
-
-        val_data_info = load_data_by_subset(params.finetune.train_image_dir,
-                                            subset='validation',
-                                            preprocess_input=preprocess_input,
-                                            validation_split=params.finetune.validation_split,
-                                            seed=params.seed,
-                                            target_size=params.finetune.target_size,
-                                            batch_size=params.finetune.batch_size,
-                                            augmentations=params.finetune.augmentations,
-                                            num_parallel_calls=params.finetune.num_parallel_calls,
-                                            class_encodings=class_encodings)
-
-        test_data_info = load_data_by_subset(params.finetune.test_image_dir,
-                                            subset='test',
-                                            preprocess_input=preprocess_input,
-                                            validation_split=params.finetune.validation_split,
-                                            seed=params.seed,
-                                            target_size=params.finetune.target_size,
-                                            batch_size=params.finetune.batch_size,
-                                            augmentations=params.finetune.augmentations,
-                                            num_parallel_calls=params.finetune.num_parallel_calls,
-                                            class_encodings=class_encodings)
-        # test_data_info = load_Fossil_family_4_subset(params, subset='test', preprocess_input=preprocess_input, class_encodings=class_encodings)
-
-        train_data = train_data_info['data']
-        val_data = val_data_info['data']
-        test_data = test_data_info['data']
-
-        stage_2_config = params.pipeline.stage_2
-        # stage_2_config.class_encodings = dict(train_data_info['encoder'])
-        stage_2_config.num_samples_train = train_data_info['num_samples']
-        stage_2_config.num_samples_val = val_data_info['num_samples']
-        stage_2_config.num_samples_test = test_data_info['num_samples']
-        stage_2_config.num_classes = train_data_info['num_classes']
-        params.finetune.stage = stage_2_config
-        steps_per_epoch=int(np.ceil(stage_2_config.num_samples_train/params.pretrain.batch_size))
-        validation_steps=int(np.ceil(stage_2_config.num_samples_val/params.pretrain.batch_size))
-        test_steps=int(np.ceil(stage_2_config.num_samples_test/params.pretrain.batch_size))
-        ################################################################################
-        model_config = params.finetune
-        model_config.num_classes = model_config.stage.num_classes
-        model_config.input_shape = (*params.finetune.target_size,3)            
-        model = build_model(model_config)
-
-        ################################################################################
-        ################################################################################
-        ################################################################################
-        neptune.init(project_qualified_name=neptune_project_name)
-
-        neptune_params = log_neptune_params(params)
 
 
-        callbacks = [TensorBoard(log_dir=params.log_dir, profile_batch=0),
-                    NeptuneMonitor(),
-                    EarlyStopping(monitor=params.finetune.early_stopping.monitor,
-                                patience=params.finetune.early_stopping.patience,
-                                min_delta=params.finetune.early_stopping.min_delta, 
-                                verbose=1, 
-                                restore_best_weights=params.finetune.early_stopping.restore_best_weights)]
-        
-        class_names = train_data_info['encoder'].inv
-        image_batch, label_batch = next(iter(train_data))
-        fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='train', class_names=class_names)
-        experiment.log_image('target_train_image_batch', fig)
-        image_batch, label_batch = next(iter(val_data))
-        fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='val', class_names=class_names)
-        experiment.log_image('target_val_image_batch', fig)
-        image_batch, label_batch = next(iter(test_data))
-        fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='test', class_names=class_names)
-        experiment.log_image('target_test_image_batch', fig)
+    # if "zero_shot_test" in config:
+    class_encodings = train_data_info['encoder']
 
-        print('BEGINNING STAGE_2: FINETUNE+VALIDATION' )
-        try:
-            history = model.fit(train_data,
-                                epochs=params.finetune.num_epochs,
-                                callbacks=callbacks,
-                                validation_data=val_data,
-                                validation_freq=1,
-                                shuffle=True,
-                                steps_per_epoch=steps_per_epoch,
-                                validation_steps=validation_steps,
-                                verbose=1)
+    train_data_info = load_data_by_subset(config.finetune.train_image_dir,
+                                        subset='train',
+                                        preprocess_input=preprocess_input,
+                                        validation_split=config.finetune.validation_split,
+                                        seed=config.seed,
+                                        target_size=config.finetune.target_size,
+                                        batch_size=config.finetune.batch_size,
+                                        augmentations=config.finetune.augmentations,
+                                        num_parallel_calls=config.finetune.num_parallel_calls,
+                                        class_encodings=class_encodings)
 
-        except Exception as e:
-            raise e
+    val_data_info = load_data_by_subset(config.finetune.train_image_dir,
+                                        subset='validation',
+                                        preprocess_input=preprocess_input,
+                                        validation_split=config.finetune.validation_split,
+                                        seed=config.seed,
+                                        target_size=config.finetune.target_size,
+                                        batch_size=config.finetune.batch_size,
+                                        augmentations=config.finetune.augmentations,
+                                        num_parallel_calls=config.finetune.num_parallel_calls,
+                                        class_encodings=class_encodings)
 
-        model.save(params.finetune.saved_model_path)
-        print('[STAGE_2 COMPLETED]')
-        print(f'Saved finetuned model to {params.finetune.saved_model_path}')
-        ################################################################################
-        ################################################################################
-        ################################################################################
+    test_data_info = load_data_by_subset(config.finetune.test_image_dir,
+                                        subset='test',
+                                        preprocess_input=preprocess_input,
+                                        validation_split=config.finetune.validation_split,
+                                        seed=config.seed,
+                                        target_size=config.finetune.target_size,
+                                        batch_size=config.finetune.batch_size,
+                                        augmentations=config.finetune.augmentations,
+                                        num_parallel_calls=config.finetune.num_parallel_calls,
+                                        class_encodings=class_encodings)
+    # test_data_info = load_Fossil_family_4_subset(config, subset='test', preprocess_input=preprocess_input, class_encodings=class_encodings)
 
-        print('BEGINNING STAGE_3: FINAL TEST EVALUATION' )
-        perform_evaluation_stage(model, test_data_info, batch_size=params.finetune.batch_size, experiment=experiment, subset='final_test')
-        print('[STAGE_3 COMPLETED]')
+    train_data = train_data_info['data']
+    val_data = val_data_info['data']
+    test_data = test_data_info['data']
+
+    stage_2_config = config.pipeline.stage_2
+    # stage_2_config.class_encodings = dict(train_data_info['encoder'])
+    stage_2_config.num_samples_train = train_data_info['num_samples']
+    stage_2_config.num_samples_val = val_data_info['num_samples']
+    stage_2_config.num_samples_test = test_data_info['num_samples']
+    stage_2_config.num_classes = train_data_info['num_classes']
+    config.finetune.stage = stage_2_config
+    steps_per_epoch=int(np.ceil(stage_2_config.num_samples_train/config.finetune.batch_size))
+    validation_steps=int(np.ceil(stage_2_config.num_samples_val/config.finetune.batch_size))
+    test_steps=int(np.ceil(stage_2_config.num_samples_test/config.finetune.batch_size))
+    ################################################################################
+    model_config = config.finetune
+    model_config.num_classes = model_config.stage.num_classes
+    model_config.input_shape = (*config.finetune.target_size,3)            
+    model = build_model(model_config)
+
+    ################################################################################
+    ################################################################################
+    ################################################################################
+    # neptune.init(project_qualified_name=project_name)
+
+    # neptune_config = log_neptune_config(config)
+
+
+    callbacks = [TensorBoard(log_dir=config.log_dir, histogram_freq=2, write_grads=True, write_images=True),
+                 WandbCallback(),
+                 EarlyStopping(monitor=config.finetune.early_stopping.monitor,
+                            patience=config.finetune.early_stopping.patience,
+                            min_delta=config.finetune.early_stopping.min_delta, 
+                            verbose=1, 
+                            restore_best_weights=config.finetune.early_stopping.restore_best_weights)]
+
+    class_names = train_data_info['encoder'].inv
+    image_batch, label_batch = next(iter(train_data))
+    fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='train', class_names=class_names)
+    wandb.log({'target_train_image_batch', fig}, commit=False)
+
+    image_batch, label_batch = next(iter(val_data))
+    fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='val', class_names=class_names)
+    wandb.log({'target_val_image_batch', fig}, commit=False)
+
+    image_batch, label_batch = next(iter(test_data))
+    fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='test', class_names=class_names)
+    wandb.log({'target_test_image_batch', fig})
+
+    print('BEGINNING STAGE_2: FINETUNE+VALIDATION' )
+    try:
+        history = model.fit(train_data,
+                            epochs=config.finetune.num_epochs,
+                            callbacks=callbacks,
+                            validation_data=val_data,
+                            validation_freq=1,
+                            shuffle=True,
+                            steps_per_epoch=steps_per_epoch,
+                            validation_steps=validation_steps,
+                            verbose=1)
+
+    except Exception as e:
+        raise e
+
+    model.save(config.finetune.saved_model_path)
+    print('[STAGE_2 COMPLETED]')
+    print(f'Saved finetuned model to {config.finetune.saved_model_path}')
+    ################################################################################
+    ################################################################################
+    ################################################################################
+
+    print('BEGINNING STAGE_3: FINAL TEST EVALUATION' )
+    perform_evaluation_stage(model, test_data_info, batch_size=config.finetune.batch_size, experiment=None, subset='final_test')
+    print('[STAGE_3 COMPLETED]')
 
     print(['[FINISHED PRETRAINING, TESTING, FINETUNING AND FINAL TESTING]'])
 
@@ -712,6 +793,9 @@ def perform_evaluation_stage(model, test_data_info, batch_size, experiment=None,
     log_table(f'{subset}_labels_w_predictions',predictions, experiment=experiment)
     y_prob_df = pd.DataFrame(y_prob, columns=list(classes.keys()))
     log_table(f'{subset}_probabilities',y_prob_df,experiment=experiment)
+
+
+    wandb.sklearn.plot_confusion_matrix(y, y_hat, classes)
 
     return y, y_hat, y_prob
 
