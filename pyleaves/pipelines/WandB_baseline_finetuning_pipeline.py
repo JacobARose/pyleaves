@@ -446,7 +446,7 @@ def log_experiment_config(config):
 
 
 
-@hydra.main(config_path='baseline_configs', config_name='pretrain_then_finetune_config')
+@hydra.main(config_path='baseline_configs', config_name='WandB_pretrain_then_finetune_config')
 def main(config):
     OmegaConf.set_struct(config, False)
     from pyleaves.utils import set_tf_config

@@ -13,7 +13,7 @@ import wandb
 
 
 def init_new_run(project, run_name, job_type):
-    run = wandb.init(project=project, run_name=run_name, job_type=job_type)
+    run = wandb.init(project=project, name=run_name, job_type=job_type)
     return run
 
 def create_dataset_artifact(run,name):
