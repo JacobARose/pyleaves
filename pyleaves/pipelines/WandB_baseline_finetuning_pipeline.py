@@ -2,21 +2,21 @@
 # coding: utf-8
 """
 
-python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py 
+python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline.py 
 
 
-python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py target_size=[299,299] batch_size=32 num_epochs=60 'frozen_layers=[0,-4]' num_parallel_calls=4
-
-
-
-python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py dataset/0@dataset/0=Leaves_family_4 dataset/1@dataset/1=Fossil_family_4 pretrain.target_size=[768,768] pretrain.batch_size=16 pretrain.num_epochs=80 'pretrain.lr=3e-5' 'pretrain.frozen_layers="bn"' finetune.batch_size=16 finetune.num_epochs=80 finetune.lr=1e-3 'finetune.frozen_layers="bn"' num_parallel_calls=4
-
-
-python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py dataset@dataset=Fossil_family_4 target_size=[299,299] batch_size=32 num_epochs=80 'frozen_layers=[0,-4]' num_parallel_calls=4
+python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline.py target_size=[299,299] batch_size=32 num_epochs=60 'frozen_layers=[0,-4]' num_parallel_calls=4
 
 
 
-python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline.py dataset/0@dataset/0=Leaves_family_4 dataset/1@dataset/1=Fossil_family_4 pretrain.target_size=[768,768] pretrain.batch_size=16 pretrain.num_epochs=80 'pretrain.lr=3e-5' 'pretrain.frozen_layers="bn"' finetune.batch_size=16 finetune.num_epochs=80 finetune.lr=1e-3 'finetune.frozen_layers="bn"' num_parallel_calls=4
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline.py dataset@dataset=Fossil_family_4 target_size=[299,299] batch_size=32 num_epochs=80 'frozen_layers=[0,-4]' num_parallel_calls=4
+
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline.py \
                             'dataset_0@dataset_0=Leaves_family_100' \
                             'dataset_1@dataset_1=Fossil_family_100' \
                             'pretrain.target_size=[768,768]' \
@@ -38,7 +38,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
 
 
 
-python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline.py \
                             'dataset_0@dataset_0=Leaves_family_100' \
                             'dataset_1@dataset_1=Fossil_family_100' \
                             'pretrain.target_size=[768,768]' \
@@ -61,7 +61,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
 
 
 
-python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline.py \
                             'dataset_0@dataset_0=Fossil_family_4' \
                             'dataset_1@dataset_1=Leaves_family_4' \
                             'pretrain.target_size=[512,512]' \
@@ -89,7 +89,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
 
 
 
- python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+ python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline.py \
                             'dataset_0@dataset_0=Leaves_family_100' \
                             'dataset_1@dataset_1=Fossil_family_4' \
                             'pretrain.target_size=[768,768]' \
@@ -100,7 +100,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'pretrain.num_parallel_calls=4' 'finetune.num_parallel_calls=4'
 
 
- python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+ python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline.py \
                             'dataset_0@dataset_0=Leaves_family_4' \
                             'dataset_1@dataset_1=Fossil_family_4' \
                             'pretrain.target_size=[768,768]' \
@@ -111,7 +111,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'pretrain.num_parallel_calls=4' 'finetune.num_parallel_calls=4'
 
 
-python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline.py \
                             'dataset_0@dataset_0=Leaves_family_4' \
                             'dataset_1@dataset_1=Fossil_family_4' \
                             'pretrain.target_size=[768,768]' \
@@ -556,7 +556,7 @@ def main(config):
                 "pretrain.augmentations":config.pretrain.augmentations,
                 "pretrain.dataset_name": config.pretrain.dataset_name,
                 "pretrain.lr":config.pretrain.lr,
-                "seed":config.seed,pretrain
+                "seed":config.seed.pretrain
     }
     wandb.config.update(run_params)
 
