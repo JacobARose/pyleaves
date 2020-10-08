@@ -15,6 +15,39 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py da
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py dataset@dataset=Fossil_family_4 target_size=[299,299] batch_size=32 num_epochs=80 'frozen_layers=[0,-4]' num_parallel_calls=4
 
 
+#####################################################################################################
+10/8/2020
+
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Leaves_family_100' \
+                            'dataset_1@dataset_1=Fossil_family_100' \
+                            'dataset_0.test_size=0.3' 'dataset_1.test_size=0.3' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=0.0' \
+                            'finetune.augmentations.flip=1.0' \
+                            'finetune.augmentations.rotate=1.0' \
+                            'finetune.augmentations.sbc=0.0' \
+                            'pretrain.lr=1e-5' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=12' 'finetune.batch_size=12' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.regularization.l2=1e-4' 'finetune.regularization.l2=1e-4' \
+                            'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
+                            'pretrain.head_layers=[512,256]' 'finetune.head_layers=[512,256]' \
+                            'pretrain.frozen_layers="[0,-4]"' 'finetune.frozen_layers="[0,-4]"' \
+                            'pretrain.num_parallel_calls=6' 'finetune.num_parallel_calls=6'
+
+
+
+
+
+
+
+
+
+
+
 ######################################################################################################
 10/7/2020
 
@@ -22,7 +55,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py da
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'dataset_0@dataset_0=Leaves_family_100' \
                             'dataset_1@dataset_1=Fossil_family_100' \
-                            'dataset.0.test_size=0.3' 'dataset.1.test_size=0.3' \
+                            'dataset_0.test_size=0.3' 'dataset_1.test_size=0.3' \
                             'pretrain.target_size=[768,768]' \
                             'pretrain.augmentations.flip=0.0' \
                             'pretrain.augmentations.rotate=0.0' \
@@ -37,9 +70,30 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
                             'pretrain.head_layers=[512,256]' 'finetune.head_layers=[512,256]' \
                             'pretrain.frozen_layers="[0,-4]"' 'finetune.frozen_layers="[0,-4]"' \
-                            'pretrain.num_parallel_calls=-1' 'finetune.num_parallel_calls=-1'
+                            'pretrain.num_parallel_calls=6' 'finetune.num_parallel_calls=6'
 
+##############
+##############
 
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Fossil_family_100' \
+                            'dataset_1@dataset_1=Leaves_family_100' \
+                            'dataset_0.test_size=0.5' 'dataset_1.test_size=0.5' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.augmentations.flip=0.0' \
+                            'pretrain.augmentations.rotate=0.0' \
+                            'pretrain.augmentations.sbc=0.0' \
+                            'finetune.augmentations.flip=0.0' \
+                            'finetune.augmentations.rotate=0.0' \
+                            'finetune.augmentations.sbc=0.0' \
+                            'pretrain.lr=1e-5' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=12' 'finetune.batch_size=12' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.regularization.l2=1e-4' 'finetune.regularization.l2=1e-4' \
+                            'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
+                            'pretrain.head_layers=[512,256]' 'finetune.head_layers=[512,256]' \
+                            'pretrain.frozen_layers="[0,-4]"' 'finetune.frozen_layers="[0,-4]"' \
+                            'pretrain.num_parallel_calls=6' 'finetune.num_parallel_calls=6'
 
 
 
@@ -556,6 +610,7 @@ def log_neptune_params(params):
 @hydra.main(config_path='baseline_configs', config_name='pretrain_then_finetune_config')
 def main(config):
     OmegaConf.set_struct(config, False)
+    print(config)
     # import pdb; pdb.set_trace()
     from pyleaves.utils import set_tf_config
     config.task = config.task or 1
@@ -706,6 +761,11 @@ def main(config):
     test_steps=int(np.ceil(stage_0_config.num_samples_test/params.pretrain.batch_size))
 
     ################################################################################
+
+    model_config.loss=="weighted_categorical_crossentropy"
+
+
+
 
     model_config = params.finetune
     model_config.num_classes = stage_0_config.num_classes
@@ -976,8 +1036,9 @@ def evaluate(model, data_iter, y_true, steps: int, classes, output_dict: bool=Tr
         report = classification_report(y_true, y_hat, labels=labels, target_names=target_names, output_dict=output_dict)
         if type(report)==dict:
             report = pd.DataFrame(report)
+        print(report)
         log_table(f'{subset}_classification_report', report, experiment=experiment)
-        log_confusion_matrix(y_true, y_hat)
+        log_confusion_matrix(y_true, y_hat, experiment=experiment)
 
     except Exception as e:
         import pdb; pdb.set_trace()
