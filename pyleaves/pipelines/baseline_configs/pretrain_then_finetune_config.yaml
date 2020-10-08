@@ -24,10 +24,11 @@ pretrain:
     stage: ${pipeline.stage_0}
     dataset: ${dataset.0}
     saved_model_path: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${experiment_name}/saved_model"
-    train_image_dir: "${dataset.0.train_image_dir}"
-    test_image_dir: "${dataset.0.test_image_dir}"
-    validation_split: '${dataset.0.validation_split}'
     test_size: '${dataset.0.test_size}'
+    image_subdir: 'test_size-${pretrain.test_size}'
+    train_image_dir: "${dataset.0.image_dir}/${pretrain.image_subdir}/train"
+    test_image_dir: "${dataset.0.image_dir}/${pretrain.image_subdir}/test"
+    validation_split: '${dataset.0.validation_split}'
     batch_size: 32
     num_epochs: 30
     num_parallel_calls: -1
@@ -67,10 +68,11 @@ finetune:
     stage: ${pipeline.stage_2}
     dataset: ${dataset.1}
     saved_model_path: "${pretrain.saved_model_path}"    #"/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${dataset_name.0}-${target_size}"
-    train_image_dir: "${dataset.1.train_image_dir}"
-    test_image_dir: "${dataset.1.test_image_dir}"
+    test_size: '${dataset.1.test_size}'
+    image_subdir: 'test_size-${finetune.test_size}'
+    train_image_dir: "${dataset.1.image_dir}/${finetune.image_subdir}/train"
+    test_image_dir: "${dataset.1.image_dir}/${finetune.image_subdir}/test"
     validation_split: "${dataset.1.validation_split}"
-    test_size: ${dataset.1.test_size}
     batch_size: ${pretrain.batch_size}
     num_epochs: 80
     num_parallel_calls: -1
