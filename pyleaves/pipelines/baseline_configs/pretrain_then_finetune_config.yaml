@@ -17,13 +17,17 @@ dataset:
 dataset_name:
     "0": "${dataset.0.dataset_name}"
     "1": "${dataset.1.dataset_name}"
+
+experiment_name: "${dataset_name.0}-${dataset_name.1}_${pretrain.target_size}-${pretrain.model_name}"
+
 pretrain:
     stage: ${pipeline.stage_0}
     dataset: ${dataset.0}
-    saved_model_path: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${dataset_name.0}-${pretrain.target_size}"
+    saved_model_path: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${experiment_name}/saved_model"
     train_image_dir: "${dataset.0.train_image_dir}"
     test_image_dir: "${dataset.0.test_image_dir}"
     validation_split: '${dataset.0.validation_split}'
+    test_size: '${dataset.0.test_size}'
     batch_size: 32
     num_epochs: 30
     num_parallel_calls: -1
@@ -66,6 +70,7 @@ finetune:
     train_image_dir: "${dataset.1.train_image_dir}"
     test_image_dir: "${dataset.1.test_image_dir}"
     validation_split: "${dataset.1.validation_split}"
+    test_size: ${dataset.1.test_size}
     batch_size: ${pretrain.batch_size}
     num_epochs: 80
     num_parallel_calls: -1
@@ -108,25 +113,29 @@ pipeline:
         task: "pretrain+validate"
         subsets: ["train","val"]
         dataset_name: "${dataset_name.0}"
+        test_size: ${dataset.0.test_size}
         params:
             fit_class_weights: false #Include class_weights in args input to model.fit()
         class_encodings: null
     stage_1: 
         task: "evaluate"
         subsets: ["test"]
+        test_size: ${dataset.0.test_size}
         class_encodings: ${pipeline.stage_0.class_encodings}
     stage_2: 
         task: "finetune"
         subsets: ["train","val"]
         dataset_name: "${dataset_name.1}"
+        test_size: ${dataset.1.test_size}
         class_encodings: ${pipeline.stage_0.class_encodings}
     #     dataset_name: "Fossil_family_100"
-        tfrecord_dir: "/media/data/jacob/experimental_data/tfrecords/${pipeline.stage_2.dataset_name}"
+        tfrecord_dir: "/media/data/jacob/experimental_data/tfrecords/${pipeline.stage_2.dataset_name}/${pipeline.stage_2.dataset_name}"
 
     stage_3: 
         task: "evaluate"
         subsets: ["test"]
         dataset_name: "${dataset_name.1}"
+        test_size: ${dataset.1.test_size}
         class_encodings: ${pipeline.stage_0.class_encodings}
     #     dataset_name: "Fossil_family_100"
         tfrecord_dir: "/media/data/jacob/experimental_data/tfrecords/${pipeline.stage_3.dataset_name}"
