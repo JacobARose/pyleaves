@@ -762,7 +762,7 @@ def main(config):
 
     ################################################################################
 
-    model_config.loss=="weighted_categorical_crossentropy"
+    # model_config.loss=="weighted_categorical_crossentropy"
 
 
 
