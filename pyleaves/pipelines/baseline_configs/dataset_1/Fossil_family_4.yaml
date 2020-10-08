@@ -1,7 +1,8 @@
 # @package _group_
 
 dataset_name: "Fossil_family_4"
-train_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_4_2020-06/train"
-test_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_4_2020-06/test"
+train_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_4_2020-06/test_size-${test_size}/train"
+test_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_4_2020-06/test_size-${test_size}/test"
 validation_split: 0.1
+test_size: 0.3
 threshold: 4
