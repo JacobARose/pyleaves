@@ -3,6 +3,6 @@
 #This should be added in the defaults of the global config
 
 dataset_name: "PNAS_family_4"
-train_image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06"
+image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06"
 validation_split: 0.1
 test_size: 0.5
