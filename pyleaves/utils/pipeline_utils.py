@@ -692,6 +692,7 @@ def build_model(model_config, load_saved_model=False):
                         }
     '''
     if load_saved_model and os.path.isfile(model_config['saved_model_path']):
+        print(f"Loading found saved model from {model_config['saved_model_path']}")
         return tf.keras.models.load_model(model_config['saved_model_path'])
 
     if model_config['model_name']=='vgg16':
@@ -726,10 +727,10 @@ def build_model(model_config, load_saved_model=False):
         base, frozen_layers = freeze_batchnorm_layers(base, verbose=False)
         model_config.frozen_layers = frozen_layers
 
-    # base = base_model.Model.add_regularization(base, **model_config.regularization)
+    base = base_model.Model.add_regularization(base, **model_config.regularization)
     model = build_head(base, num_classes=model_config.num_classes, head_layers=model_config.head_layers)
     
-    model = base_model.Model.add_regularization(model, **model_config.regularization)
+    # model = base_model.Model.add_regularization(model, **model_config.regularization)
 
     if model_config.optimizer == "RMSprop":
         optimizer = tf.keras.optimizers.RMSprop(learning_rate=model_config.lr, momentum=model_config.lr_momentum)#, decay=model_config.lr_decay)
