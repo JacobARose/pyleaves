@@ -36,11 +36,30 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
                             'pretrain.head_layers=[512,256]' 'finetune.head_layers=[512,256]' \
                             'pretrain.frozen_layers="[0,-4]"' 'finetune.frozen_layers="[0,-4]"' \
+                            'pretrain.num_parallel_calls=6' 'finetune.num_parallel_calls=6' \
+                            'pipeline.stage_0.params.fit_class_weights=True' 'pipeline.stage_2.params.fit_class_weights=True'
+
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
+                            'dataset_0@dataset_0=Fossil_family_100' \
+                            'dataset_1@dataset_1=Leaves_family_100' \
+                            'dataset_0.test_size=0.3' 'dataset_1.test_size=0.3' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=0.0' \
+                            'finetune.augmentations.flip=1.0' \
+                            'finetune.augmentations.rotate=1.0' \
+                            'finetune.augmentations.sbc=0.0' \
+                            'pretrain.lr=1e-5' 'finetune.lr=1e-5' \
+                            'pretrain.batch_size=12' 'finetune.batch_size=12' \
+                            'pretrain.num_epochs=120' 'finetune.num_epochs=120' \
+                            'pretrain.regularization.l2=1e-4' 'finetune.regularization.l2=1e-4' \
+                            'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
+                            'pretrain.head_layers=[512,256]' 'finetune.head_layers=[512,256]' \
+                            'pretrain.frozen_layers="[0,-4]"' 'finetune.frozen_layers="[0,-4]"' \
                             'pretrain.num_parallel_calls=6' 'finetune.num_parallel_calls=6'
-
-
-
-
 
 
 
@@ -325,6 +344,7 @@ from neptunecontrib.api.table import log_table
 from omegaconf import OmegaConf, ListConfig, DictConfig
 import hydra
 
+from sklearn.utils.class_weight import compute_class_weight
 from sklearn.metrics import classification_report
 from neptunecontrib.monitoring.metrics import log_confusion_matrix
 
@@ -368,6 +388,32 @@ def encode_str2int(labels: List[str], class_encoder: Dict[str, int]) -> List[int
     return [class_encoder[label] for label in labels]
 
 
+from typing import Dict
+def class_counts(y: np.ndarray) -> Dict[int,int]:
+    return dict(zip(*np.unique(y, return_counts=True)))#.shape
+
+def calc_class_weights(y: np.ndarray, balanced: bool=False) -> Dict[int,int]:    
+    """
+
+    Args:
+        y (np.ndarray): sequence of all labels as ints
+        balanced (bool, optional): Defaults to False.
+            if False, returns all weights as 1's. Else, weight each class by its sample population
+
+    Returns:
+        Dict[int,int]: Maps {integer labels: label weight}
+    """    
+    counts = class_counts(y)
+    total_samples = np.sum(list(counts.values()))
+    total_classes = len(counts)
+    class_weights = {}
+    for class_i,count_i in counts.items():
+        class_weights[class_i] = total_samples/(count_i*total_classes)
+        
+    if not balanced:
+        class_weights = {i:w for i,w in zip(list(class_weights.keys()),list(np.ones_like(list(class_weights.values()))))}
+
+    return class_weights
 
 
 def img_data_gen_2_tf_data(data, 
@@ -379,7 +425,8 @@ def img_data_gen_2_tf_data(data,
                            augmentations: Dict[str,float]=None,
                            num_parallel_calls=-1,
                            cache=False,
-                           class_encodings: Dict[str,int]=None):
+                           class_encodings: Dict[str,int]=None,
+                           fit_class_weights=False):
     from pyleaves.utils.pipeline_utils import flip, rotate, rgb2gray_1channel, rgb2gray_3channel, sat_bright_con, _cond_apply
     import tensorflow as tf
 
@@ -395,14 +442,14 @@ def img_data_gen_2_tf_data(data,
         text_labels = decode_int2str(labels=labels, class_decoder=class_encoder.inv)
         labels = encode_str2int(labels=text_labels, class_encoder=class_encodings)
 
+    # class_weights = compute_class_weight('balanced', classes=np.unique(labels), y=labels)
+    class_weights = calc_class_weights(labels, balanced=fit_class_weights)        
+    # class_weights = {i:w for i,w in class_weights.items() if i in class_encodings.inv}
+    
+
     prepped_data = pd.DataFrame.from_records([{'path':path, 'label':label} for path, label in zip(paths, labels)])
     tf_data = load_data_from_tensor_slices(data=prepped_data, training=training, seed=seed, x_col='path', y_col='label', dtype=tf.float32)
 
-    # if 'augmix' in augmentations:
-    #     augmix = AugMix(means, stds)
-    #     tf_data = tf_data.map(lambda x, y: )
-
-    
     if preprocess_input is not None:
         tf_data = tf_data.map(lambda x,y: (preprocess_input(x), y), num_parallel_calls=num_parallel_calls)
     
@@ -431,12 +478,18 @@ def img_data_gen_2_tf_data(data,
     tf_data = tf_data.batch(batch_size)
 
     tf_data = tf_data.prefetch(-1)
-    return {'data':tf_data, 'data_iterator':data, 'encoder':class_encoder, 'num_samples':num_samples, 'num_classes':num_classes}
+    return {'data':tf_data, 
+            'data_iterator':data,
+            'encoder':class_encoder,
+            'num_samples':num_samples,
+            'num_classes':num_classes,
+            'class_weights':class_weights}
 
 
 
 def load_data_by_subset(image_dir, subset='test', preprocess_input=None, class_encodings: Dict[str,int]=None,
-                        validation_split=None, seed=None, target_size=(224,224), batch_size=16, augmentations=[], num_parallel_calls=-1):
+                        fit_class_weights=False, validation_split=None, seed=None, target_size=(224,224), batch_size=16,
+                        augmentations=[], num_parallel_calls=-1):
 
     import tensorflow as tf
     class_encodings = class_encodings or {}
@@ -457,7 +510,8 @@ def load_data_by_subset(image_dir, subset='test', preprocess_input=None, class_e
                                             preprocess_input=preprocess_input,
                                             augmentations=augmentations,
                                             num_parallel_calls=num_parallel_calls,
-                                            class_encodings=class_encodings)
+                                            class_encodings=class_encodings,
+                                            fit_class_weights=fit_class_weights)
         return data_info
 
     elif subset.startswith('val'):
@@ -474,7 +528,8 @@ def load_data_by_subset(image_dir, subset='test', preprocess_input=None, class_e
                                             seed=seed,
                                             preprocess_input=preprocess_input,
                                             cache=True,
-                                            class_encodings=class_encodings)
+                                            class_encodings=class_encodings,
+                                            fit_class_weights=fit_class_weights)
         return data_info
 
     elif subset=='test':
@@ -489,7 +544,8 @@ def load_data_by_subset(image_dir, subset='test', preprocess_input=None, class_e
                                            batch_size=batch_size,
                                            seed=seed,
                                            preprocess_input=preprocess_input,
-                                           class_encodings=class_encodings)
+                                           class_encodings=class_encodings,
+                                           fit_class_weights=fit_class_weights)
         return data_info
 
 
@@ -539,42 +595,6 @@ def summarize_sample(x, y):
     plt.imshow(x)
 
 
-
-
-# params = Box({
-#               'image_dir': '/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/PNAS_family',
-#               'log_dir': '/media/data_cifs_lrs/projects/prj_fossils/users/jacob/tensorboard_log_dir',          
-#               'validation_split': 0.1,
-#               'target_size':(299,299),
-#               'batch_size':32,
-#               'num_epochs': 30,
-#               'seed': 20,
-#               'rescale': None, #1.0/255,
-#               'preprocess_input': "tensorflow.keras.applications.resnet_v2.preprocess_input",
-#               'color_mode': 'rgb',
-#               'early_stopping': {'monitor':"val_loss",
-#                                 'patience':10,
-#                                 'min_delta':0.01,
-#                                 'restore_best_weights':True}
-# })
-
-# model_config = Box({
-#                     'model_name': "resnet_50_v2",
-#                     'optimizer':"Adam",
-#                     'num_classes':None, #params.num_classes,
-#                     'weights': "imagenet",
-#                     'frozen_layers':None, #(0,-4),
-#                     'input_shape':None,#(*params.target_size,3),
-#                     'lr':1e-5,
-#                     'lr_momentum':None,#0.9,
-#                     'regularization':{},#{"l2": 1e-4},
-#                     'loss':'categorical_crossentropy',
-#                     'METRICS':['f1','accuracy'],
-#                     'head_layers': [256,128]
-#                     })
-
-
-
 def parse_params(params: DictConfig):
 
     params.regularization = params.regularization or {}
@@ -584,13 +604,12 @@ def parse_params(params: DictConfig):
         params.data_augs.rescale = float(params.data_augs.rescale)
     except:
         params.data_augs.rescale = None
-    
     data_augs = {k:v for k,v in OmegaConf.to_container(params.data_augs, resolve=True).items() if k != "preprocessing_function"}
-
     return params, data_augs
 
 
-def log_neptune_params(params):
+def log_neptune_params(params, experiment=None):
+    experiment = experiment or neptune
     neptune_params = {}
     for k,v in OmegaConf.to_container(params, resolve=True).items():
         if type(v)==dict:
@@ -599,6 +618,7 @@ def log_neptune_params(params):
             neptune_params[k] = str(list(v))
         else:
             neptune_params[k] = v
+
 
     return neptune_params
 
@@ -622,8 +642,6 @@ def main(config):
     from pyleaves.utils.pipeline_utils import build_model
     from tensorflow.keras.callbacks import TensorBoard, EarlyStopping
     from pyleaves.utils import pipeline_utils
-
-    # from tensorflow.keras.applications.resnet_v2 import preprocess_input
 
     neptune_project_name = 'jacobarose/jupyter-testing-ground'
     if 'experiment_name' in config:
@@ -720,6 +738,7 @@ def main(config):
                                          subset='train',
                                          preprocess_input=preprocess_input,
                                          validation_split=params.pretrain.validation_split,
+                                         fit_class_weights=params.pipeline.stage_0.params.fit_class_weights,
                                          seed=params.seed,
                                          target_size=params.pretrain.target_size,
                                          batch_size=params.pretrain.batch_size,
@@ -730,6 +749,7 @@ def main(config):
                                          subset='validation',
                                          preprocess_input=preprocess_input,
                                          validation_split=params.pretrain.validation_split,
+                                         fit_class_weights=params.pipeline.stage_0.params.fit_class_weights,
                                          seed=params.seed,
                                          target_size=params.pretrain.target_size,
                                          batch_size=params.pretrain.batch_size,
@@ -740,6 +760,7 @@ def main(config):
                                          subset='test',
                                          preprocess_input=preprocess_input,
                                          validation_split=params.pretrain.validation_split,
+                                         fit_class_weights=params.pipeline.stage_0.params.fit_class_weights,
                                          seed=params.seed,
                                          target_size=params.pretrain.target_size,
                                          batch_size=params.pretrain.batch_size,
@@ -756,17 +777,14 @@ def main(config):
     stage_0_config.num_samples_val = val_data_info['num_samples']
     stage_0_config.num_samples_test = test_data_info['num_samples']
     stage_0_config.num_classes = train_data_info['num_classes']
+    stage_0_config.class_weights = train_data_info['class_weights']
+
     steps_per_epoch=int(np.ceil(stage_0_config.num_samples_train/params.pretrain.batch_size))
     validation_steps=int(np.ceil(stage_0_config.num_samples_val/params.pretrain.batch_size))
-    test_steps=int(np.ceil(stage_0_config.num_samples_test/params.pretrain.batch_size))
+    # test_steps=int(np.ceil(stage_0_config.num_samples_test/params.pretrain.batch_size))
 
     ################################################################################
-
     # model_config.loss=="weighted_categorical_crossentropy"
-
-
-
-
     model_config = params.finetune
     model_config.num_classes = stage_0_config.num_classes
     model_config.input_shape = (*params.finetune.target_size,3)            
@@ -780,12 +798,12 @@ def main(config):
 
 
     callbacks = [TensorBoard(log_dir=params.log_dir, histogram_freq=2, write_grads=True, write_images=True),
-                NeptuneMonitor(),
-                EarlyStopping(monitor=params.pretrain.early_stopping.monitor,
-                            patience=params.pretrain.early_stopping.patience,
-                            min_delta=params.pretrain.early_stopping.min_delta, 
-                            verbose=1, 
-                            restore_best_weights=params.pretrain.early_stopping.restore_best_weights)]
+                 NeptuneMonitor(),
+                 EarlyStopping(monitor=params.pretrain.early_stopping.monitor,
+                             patience=params.pretrain.early_stopping.patience,
+                             min_delta=params.pretrain.early_stopping.min_delta, 
+                             verbose=1, 
+                             restore_best_weights=params.pretrain.early_stopping.restore_best_weights)]
 
     upload_source_files=[__file__, pipeline_utils.__file__]
 
@@ -795,6 +813,14 @@ def main(config):
         model.summary(print_fn=lambda x: neptune.log_text('model_summary', x))
         tags = OmegaConf.to_container(params.tags, resolve=True)
         print("tags = ", tags)
+
+        _stage_0_params = log_neptune_params(stage_0_config, experiment=experiment)
+
+        experiment.set_property('stage_0.task', _stage_0_params.task)
+        experiment.set_property('stage_0.class_weights', _stage_0_params.class_weights)
+        experiment.set_property('stage_0.dataset_name', _stage_0_params.dataset_name)
+        experiment.set_property('stage_0.dataset_name', _stage_0_params.test_size)
+        experiment.set_property('stage_0.fit_class_weights', _stage_0_params.params)
 
         try:
             experiment.log_text('sys.argv', ' '.join(sys.argv))
@@ -823,6 +849,7 @@ def main(config):
                                 validation_data=val_data,
                                 validation_freq=1,
                                 shuffle=True,
+                                class_weight=stage_0_config.class_weights,
                                 steps_per_epoch=steps_per_epoch,
                                 validation_steps=validation_steps,
                                 verbose=1)
@@ -839,19 +866,6 @@ def main(config):
         perform_evaluation_stage(model, test_data_info, batch_size=params.pretrain.batch_size, experiment=experiment, subset='test')
 
 
-        # subset='test'
-        # test_iter = test_data_info['data_iterator']
-        # y_true = test_iter.labels
-        # classes = test_iter.class_indices
-        # eval_iter = test_data.unbatch().take(len(y_true)).batch(params.batch_size)
-        # y, y_hat, y_prob = evaluate(model, eval_iter, y_true=y_true, classes=classes, steps=test_steps, experiment=experiment, subset=subset)
-
-        # print('y_prob.shape =', y_prob.shape)
-        # predictions = pd.DataFrame({'y':y,'y_pred':y_hat})
-        # log_table(f'{subset}_labels_w_predictions',predictions, experiment=experiment)
-        # y_prob_df = pd.DataFrame(y_prob, columns=list(classes.keys()))
-        # log_table(f'{subset}_probabilities',y_prob_df,experiment=experiment)
-
         ###############################################################################
         ###############################################################################
         ###############################################################################
@@ -862,10 +876,6 @@ def main(config):
         ###############################################################################
         ###############################################################################
         ###############################################################################
-
-
-
-
 
         # if "zero_shot_test" in params:
         class_encodings = train_data_info['encoder']
@@ -879,7 +889,8 @@ def main(config):
                                             batch_size=params.finetune.batch_size,
                                             augmentations=params.finetune.augmentations,
                                             num_parallel_calls=params.finetune.num_parallel_calls,
-                                            class_encodings=class_encodings)
+                                            class_encodings=class_encodings,
+                                            fit_class_weights=params.pipeline.stage_2.params.fit_class_weights)
 
         val_data_info = load_data_by_subset(params.finetune.train_image_dir,
                                             subset='validation',
@@ -890,7 +901,8 @@ def main(config):
                                             batch_size=params.finetune.batch_size,
                                             augmentations=params.finetune.augmentations,
                                             num_parallel_calls=params.finetune.num_parallel_calls,
-                                            class_encodings=class_encodings)
+                                            class_encodings=class_encodings,
+                                            fit_class_weights=params.pipeline.stage_2.params.fit_class_weights)
 
         test_data_info = load_data_by_subset(params.finetune.test_image_dir,
                                             subset='test',
@@ -901,7 +913,8 @@ def main(config):
                                             batch_size=params.finetune.batch_size,
                                             augmentations=params.finetune.augmentations,
                                             num_parallel_calls=params.finetune.num_parallel_calls,
-                                            class_encodings=class_encodings)
+                                            class_encodings=class_encodings,
+                                            fit_class_weights=params.pipeline.stage_2.params.fit_class_weights)
         # test_data_info = load_Fossil_family_4_subset(params, subset='test', preprocess_input=preprocess_input, class_encodings=class_encodings)
 
         train_data = train_data_info['data']
@@ -914,6 +927,7 @@ def main(config):
         stage_2_config.num_samples_val = val_data_info['num_samples']
         stage_2_config.num_samples_test = test_data_info['num_samples']
         stage_2_config.num_classes = train_data_info['num_classes']
+        stage_2_config.class_weights = train_data_info['class_weights']    
         params.finetune.stage = stage_2_config
         steps_per_epoch=int(np.ceil(stage_2_config.num_samples_train/params.pretrain.batch_size))
         validation_steps=int(np.ceil(stage_2_config.num_samples_val/params.pretrain.batch_size))
@@ -927,18 +941,25 @@ def main(config):
         ################################################################################
         ################################################################################
         ################################################################################
-        neptune.init(project_qualified_name=neptune_project_name)
-
+        # neptune.init(project_qualified_name=neptune_project_name)
         neptune_params = log_neptune_params(params)
 
+        _stage_2_params = log_neptune_params(stage_2_config, experiment=experiment)
 
-        callbacks = [TensorBoard(log_dir=params.log_dir, histogram_freq=2, write_grads=True, write_images=True),
-                    NeptuneMonitor(),
-                    EarlyStopping(monitor=params.finetune.early_stopping.monitor,
-                                patience=params.finetune.early_stopping.patience,
-                                min_delta=params.finetune.early_stopping.min_delta, 
-                                verbose=1, 
-                                restore_best_weights=params.finetune.early_stopping.restore_best_weights)]
+        experiment.set_property('stage_2.task', _stage_2_params.task)
+        experiment.set_property('stage_2.class_weights', _stage_2_params.class_weights)
+        experiment.set_property('stage_2.dataset_name', _stage_2_params.dataset_name)
+        experiment.set_property('stage_2.dataset_name', _stage_2_params.test_size)
+        experiment.set_property('stage_2.fit_class_weights', _stage_2_params.params)
+
+
+        callbacks = [TensorBoard(log_dir=params.log_dir, histogram_freq=2, write_images=True),
+                     NeptuneMonitor(),
+                     EarlyStopping(monitor=params.finetune.early_stopping.monitor,
+                                 patience=params.finetune.early_stopping.patience,
+                                 min_delta=params.finetune.early_stopping.min_delta, 
+                                 verbose=1, 
+                                 restore_best_weights=params.finetune.early_stopping.restore_best_weights)]
         
         class_names = train_data_info['encoder'].inv
         image_batch, label_batch = next(iter(train_data))
@@ -959,6 +980,7 @@ def main(config):
                                 validation_data=val_data,
                                 validation_freq=1,
                                 shuffle=True,
+                                class_weight=stage_2_config.class_weights,
                                 steps_per_epoch=steps_per_epoch,
                                 validation_steps=validation_steps,
                                 verbose=1)
@@ -1020,8 +1042,6 @@ def perform_evaluation_stage(model, test_data_info, batch_size, experiment=None,
 
 def evaluate(model, data_iter, y_true, steps: int, classes, output_dict: bool=True, experiment=None, subset='val'):
     # num_classes = data_iter.num_classes
-
-
     y_prob = model.predict(data_iter, steps=steps, verbose=1)
     
     target_names = list(classes.keys())
@@ -1049,7 +1069,6 @@ def evaluate(model, data_iter, y_true, steps: int, classes, output_dict: bool=Tr
     # callbacks = [NeptuneMonitor()]
     # NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=target_names, steps=steps, subset_prefix=subset, experiment=experiment),
     test_results = model.evaluate(data_iter, steps=steps, verbose=1)
-
     print('TEST RESULTS:\n',test_results)
 
     print('Results:')

@@ -129,6 +129,8 @@ pipeline:
         subsets: ["train","val"]
         dataset_name: "${dataset_name.1}"
         test_size: ${dataset.1.test_size}
+        params:
+            fit_class_weights: false #Include class_weights in args input to model.fit()
         class_encodings: ${pipeline.stage_0.class_encodings}
     #     dataset_name: "Fossil_family_100"
         tfrecord_dir: "/media/data/jacob/experimental_data/tfrecords/${pipeline.stage_2.dataset_name}/${pipeline.stage_2.dataset_name}"
