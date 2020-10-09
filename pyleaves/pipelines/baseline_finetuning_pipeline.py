@@ -777,7 +777,10 @@ def main(config):
     stage_0_config.num_samples_val = val_data_info['num_samples']
     stage_0_config.num_samples_test = test_data_info['num_samples']
     stage_0_config.num_classes = train_data_info['num_classes']
-    stage_0_config.class_weights = train_data_info['class_weights']
+    stage_0_config.class_weights = str(train_data_info['class_weights'])
+
+    class_weights = train_data_info['class_weights']
+    
 
     steps_per_epoch=int(np.ceil(stage_0_config.num_samples_train/params.pretrain.batch_size))
     validation_steps=int(np.ceil(stage_0_config.num_samples_val/params.pretrain.batch_size))
@@ -816,11 +819,11 @@ def main(config):
 
         _stage_0_params = log_neptune_params(stage_0_config, experiment=experiment)
 
-        experiment.set_property('stage_0.task', _stage_0_params.task)
-        experiment.set_property('stage_0.class_weights', _stage_0_params.class_weights)
-        experiment.set_property('stage_0.dataset_name', _stage_0_params.dataset_name)
-        experiment.set_property('stage_0.dataset_name', _stage_0_params.test_size)
-        experiment.set_property('stage_0.fit_class_weights', _stage_0_params.params)
+        experiment.set_property('stage_0.task', _stage_0_params['task'])
+        experiment.set_property('stage_0.class_weights', _stage_0_params['class_weights'])
+        experiment.set_property('stage_0.dataset_name', _stage_0_params['dataset_name'])
+        experiment.set_property('stage_0.dataset_name', _stage_0_params['test_size'])
+        experiment.set_property('stage_0.fit_class_weights', _stage_0_params['params'])
 
         try:
             experiment.log_text('sys.argv', ' '.join(sys.argv))
@@ -849,7 +852,7 @@ def main(config):
                                 validation_data=val_data,
                                 validation_freq=1,
                                 shuffle=True,
-                                class_weight=stage_0_config.class_weights,
+                                class_weight=class_weights,
                                 steps_per_epoch=steps_per_epoch,
                                 validation_steps=validation_steps,
                                 verbose=1)
@@ -927,7 +930,9 @@ def main(config):
         stage_2_config.num_samples_val = val_data_info['num_samples']
         stage_2_config.num_samples_test = test_data_info['num_samples']
         stage_2_config.num_classes = train_data_info['num_classes']
-        stage_2_config.class_weights = train_data_info['class_weights']    
+        stage_2_config.class_weights = str(train_data_info['class_weights'])
+
+        class_weights = train_data_info['class_weights']
         params.finetune.stage = stage_2_config
         steps_per_epoch=int(np.ceil(stage_2_config.num_samples_train/params.pretrain.batch_size))
         validation_steps=int(np.ceil(stage_2_config.num_samples_val/params.pretrain.batch_size))
@@ -946,11 +951,11 @@ def main(config):
 
         _stage_2_params = log_neptune_params(stage_2_config, experiment=experiment)
 
-        experiment.set_property('stage_2.task', _stage_2_params.task)
-        experiment.set_property('stage_2.class_weights', _stage_2_params.class_weights)
-        experiment.set_property('stage_2.dataset_name', _stage_2_params.dataset_name)
-        experiment.set_property('stage_2.dataset_name', _stage_2_params.test_size)
-        experiment.set_property('stage_2.fit_class_weights', _stage_2_params.params)
+        experiment.set_property('stage_2.task', _stage_2_params['task'])
+        experiment.set_property('stage_2.class_weights', _stage_2_params['class_weights'])
+        experiment.set_property('stage_2.dataset_name', _stage_2_params['dataset_name'])
+        experiment.set_property('stage_2.dataset_name', _stage_2_params['test_size'])
+        experiment.set_property('stage_2.fit_class_weights', _stage_2_params['params'])
 
 
         callbacks = [TensorBoard(log_dir=params.log_dir, histogram_freq=2, write_images=True),
@@ -980,7 +985,7 @@ def main(config):
                                 validation_data=val_data,
                                 validation_freq=1,
                                 shuffle=True,
-                                class_weight=stage_2_config.class_weights,
+                                class_weight=class_weights,
                                 steps_per_epoch=steps_per_epoch,
                                 validation_steps=validation_steps,
                                 verbose=1)
