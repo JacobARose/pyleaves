@@ -37,7 +37,7 @@ class BalancedAccuracyMetric(tf.keras.metrics.Metric):
 
     def balanced_accuracy(self):
         diag = tf.linalg.diag_part(self.total_cm)
-        return tf.reduce_sum(diag/tf.reduce_sum(self.total_cm, axis=1))/self.num_classes
+        return tf.reduce_sum(diag/(tf.reduce_sum(self.total_cm, axis=1)+ tf.constant(1e-15)))/self.num_classes
 
 
 
