@@ -59,8 +59,8 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
                             'pretrain.head_layers=[512,256]' 'finetune.head_layers=[512,256]' \
                             'pretrain.frozen_layers="[0,-4]"' 'finetune.frozen_layers="[0,-4]"' \
-                            'pretrain.num_parallel_calls=6' 'finetune.num_parallel_calls=6'
-
+                            'pretrain.num_parallel_calls=6' 'finetune.num_parallel_calls=6' \
+                            'pipeline.stage_0.params.fit_class_weights=True' 'pipeline.stage_2.params.fit_class_weights=True'
 
 
 
@@ -779,7 +779,7 @@ def main(config):
     stage_0_config.num_classes = train_data_info['num_classes']
     stage_0_config.class_weights = str(train_data_info['class_weights'])
 
-    class_weights = train_data_info['class_weights']
+    pretrain_class_weights = train_data_info['class_weights']
     
 
     steps_per_epoch=int(np.ceil(stage_0_config.num_samples_train/params.pretrain.batch_size))
@@ -852,7 +852,7 @@ def main(config):
                                 validation_data=val_data,
                                 validation_freq=1,
                                 shuffle=True,
-                                class_weight=class_weights,
+                                class_weight=pretrain_class_weights,
                                 steps_per_epoch=steps_per_epoch,
                                 validation_steps=validation_steps,
                                 verbose=1)
@@ -930,9 +930,9 @@ def main(config):
         stage_2_config.num_samples_val = val_data_info['num_samples']
         stage_2_config.num_samples_test = test_data_info['num_samples']
         stage_2_config.num_classes = train_data_info['num_classes']
-        stage_2_config.class_weights = str(train_data_info['class_weights'])
+        stage_2_config.class_weights = str(pretrain_class_weights)
 
-        class_weights = train_data_info['class_weights']
+        finetune_class_weights = pretrain_class_weights
         params.finetune.stage = stage_2_config
         steps_per_epoch=int(np.ceil(stage_2_config.num_samples_train/params.pretrain.batch_size))
         validation_steps=int(np.ceil(stage_2_config.num_samples_val/params.pretrain.batch_size))
@@ -985,12 +985,13 @@ def main(config):
                                 validation_data=val_data,
                                 validation_freq=1,
                                 shuffle=True,
-                                class_weight=class_weights,
+                                class_weight=finetune_class_weights,
                                 steps_per_epoch=steps_per_epoch,
                                 validation_steps=validation_steps,
                                 verbose=1)
 
         except Exception as e:
+            import pdb; pdb.set_trace()
             raise e
 
         model.save(params.finetune.saved_model_path)
