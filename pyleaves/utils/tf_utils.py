@@ -30,6 +30,7 @@ class BalancedAccuracyMetric(tf.keras.metrics.Metric):
         """
         Make a confusion matrix
         """
+        y_true=tf.argmax(y_true,1)
         y_pred=tf.argmax(y_pred,1)
         cm=tf.math.confusion_matrix(y_true, y_pred, dtype=tf.float32, num_classes=self.num_classes)
         return cm
