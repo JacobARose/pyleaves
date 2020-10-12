@@ -32,6 +32,7 @@ from pyleaves.models import resnet, vgg16
 # from pyleaves.models import base_model
 from pyleaves.base import base_model
 from pyleaves.utils import ensure_dir_exists, img_aug_utils as iau
+from pyleaves.utils.tf_utils import BalancedAccuracyMetric
 from paleoai_data.utils.kfold_cross_validation import DataFold
 from tfrecord_utils.encoders import TFRecordCoder
 
@@ -39,6 +40,7 @@ from tfrecord_utils.encoders import TFRecordCoder
 ##########################################################################
 
 import tensorflow as tf
+from tensorflow.keras import backend as K
 from tensorflow.python.keras.layers import Input
 from tensorflow.python.keras.optimizers import Adam
 from tensorflow.python.keras.metrics import categorical_crossentropy
@@ -567,6 +569,37 @@ def create_dataset(data_fold: DataFold,
 
 
 
+# def weighted_categorical_crossentropy(weights):
+#     """
+#     A weighted version of keras.objectives.categorical_crossentropy
+    
+#     Variables:
+#         weights: numpy array of shape (C,) where C is the number of classes
+    
+#     Usage:
+#         weights = np.array([0.5,2,10]) # Class one at 0.5, class 2 twice the normal weights, class 3 10x.
+#         loss = weighted_categorical_crossentropy(weights)
+#         model.compile(loss=loss,optimizer='adam')
+#     """
+    
+#     weights = K.variable(weights)
+        
+#     def loss(y_true, y_pred):
+#         # scale predictions so that the class probas of each sample sum to 1
+#         y_pred /= K.sum(y_pred, axis=-1, keepdims=True)
+#         # clip to prevent NaN's and Inf's
+#         y_pred = K.clip(y_pred, K.epsilon(), 1 - K.epsilon())
+#         # calc
+#         loss = y_true * K.log(y_pred) * weights
+#         loss = -K.sum(loss, -1)
+#         return loss
+    
+#     return loss
+
+
+
+
+
 
 def freeze_batchnorm_layers(model, verbose=False):
     layer_nums = []
@@ -741,6 +774,10 @@ def build_model(model_config, load_saved_model=False):
 
     if model_config.loss=='categorical_crossentropy':
         loss = 'categorical_crossentropy'
+    # elif model_config.loss=="weighted_categorical_crossentropy":
+    #     loss = weighted_categorical_crossentropy(model_config.class_weights)
+
+
 
     METRICS = []
     if 'f1' in model_config['METRICS']:
@@ -751,6 +788,8 @@ def build_model(model_config, load_saved_model=False):
         METRICS.append(tf.keras.metrics.CategoricalAccuracy(name='accuracy'))
         METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=3, name='top-3_accuracy'))
         METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='top-5_accuracy'))
+    if 'balanced_accuracy' in model_config['METRICS']:
+        METRICS.append(BalancedAccuracyMetric(model_config.num_classes))
     if 'precision' in model_config['METRICS']:
         METRICS.append(tf.keras.metrics.Precision())
     if 'recall' in model_config['METRICS']:

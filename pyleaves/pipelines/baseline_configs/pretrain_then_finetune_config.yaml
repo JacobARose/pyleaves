@@ -45,7 +45,7 @@ pretrain:
         l2: null
         l1: null
     loss: "categorical_crossentropy"
-    METRICS: ["f1","accuracy"]
+    METRICS: ["f1","accuracy", "balanced_accuracy"]
     head_layers: [256,128]
     target_size: [299,299]
 
@@ -89,7 +89,7 @@ finetune:
         l2: null
         l1: null
     loss: "categorical_crossentropy"
-    METRICS: ["f1","accuracy"]
+    METRICS: ["f1","accuracy", "balanced_accuracy"]
     head_layers: [256,128]
     target_size: ${pretrain.target_size}
 
