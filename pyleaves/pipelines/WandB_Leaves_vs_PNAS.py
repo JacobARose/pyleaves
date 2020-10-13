@@ -667,6 +667,7 @@ def main(config):
     wandb.log({'test_image_batch': [wandb.Image(fig)]})#, commit=False)
 
     print('[BEGINNING STAGE_0: PRE-TRAINING+VALIDATION]')
+    import pdb;pdb.set_trace()
     try:
         history = model.fit(train_data,
                             epochs=config.pretrain.num_epochs,
