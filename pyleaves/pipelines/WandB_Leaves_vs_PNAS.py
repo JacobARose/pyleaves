@@ -273,7 +273,7 @@ def data_df_2_tf_data(data,
     if shuffle_first:
         data = data.sample(frac=1)
 
-    if class_encodings:
+    if class_encodings is not None:
         data = data[data[y_col] in list(class_encodings.keys())]
 
     
@@ -290,7 +290,7 @@ def data_df_2_tf_data(data,
     labels = [class_encoder[l] for l in labels]
     
 
-    if class_encodings:
+    if class_encodings is not None:
         #Encode according to a previously established str<->int mapping in class_encodings
         text_labels = decode_int2str(labels=labels, class_decoder=class_encoder.inv)
         labels = encode_str2int(labels=text_labels, class_encoder=class_encodings)
