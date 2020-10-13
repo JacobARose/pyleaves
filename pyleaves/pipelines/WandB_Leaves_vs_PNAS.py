@@ -272,6 +272,10 @@ def data_df_2_tf_data(data,
     
     if shuffle_first:
         data = data.sample(frac=1)
+
+    if class_encodings:
+        data = data[data[y_col] in list(class_encodings.keys())]
+
     
     paths = data[x_col].values.tolist()
     labels = data[y_col].values.tolist()
