@@ -4,9 +4,34 @@ Logging utils for working with mlflow
 
 '''
 
-
-
+import os
+import pandas as pd
 import wandb
+
+
+
+def load_Leaves_Minus_PNAS_test_dataset():
+    run = wandb.init()
+
+    artifact = run.use_artifact('jrose/uncategorized/Leaves-PNAS_test:v2', type='dataset')
+    artifact_dir = artifact.download()
+    print(artifact_dir)
+    train_df = pd.read_csv(os.path.join(artifact_dir,'train.csv'),index_col='id')
+    test_df = pd.read_csv(os.path.join(artifact_dir,'test.csv'),index_col='id')
+    pnas_train_df = pd.read_csv(os.path.join(artifact_dir,'PNAS_train.csv'),index_col='id')
+    
+    return train_df, test_df, pnas_train_df
+
+def load_Leaves_Minus_PNAS_dataset():
+    run = wandb.init()
+
+    artifact = run.use_artifact('jrose/uncategorized/Leaves-PNAS:v1', type='dataset')
+    artifact_dir = artifact.download()
+    print(artifact_dir)
+    train_df = pd.read_csv(os.path.join(artifact_dir,'train.csv'),index_col='id')
+    test_df = pd.read_csv(os.path.join(artifact_dir,'test.csv'),index_col='id')
+    
+    return train_df, test_df
 
 
 

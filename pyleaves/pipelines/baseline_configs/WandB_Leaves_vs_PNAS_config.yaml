@@ -1,0 +1,87 @@
+#This config is meant to specify parameters for experiments involving comparisons between Leaves and PNAS
+
+defaults:
+
+    - WandB_dataset_0/base
+    - WandB_dataset_0@WandB_dataset_0: Leaves_family_4-PNAS_family_100_test
+    - hydra/launcher: joblib
+    
+task: ${hydra:job.num}
+
+dataset:
+    "0": ${WandB_dataset_0}
+
+dataset_name:
+    "0": "${dataset.0.dataset_name}"
+
+project_name: "default"
+experiment_name: "${dataset_name.0}_${pretrain.target_size}-${pretrain.model_name}"
+run_name: ${experiment_name}
+job_type: "train+validate"
+pretrain:
+    stage: ${pipeline.stage_0}
+    dataset: ${dataset.0}
+    saved_model_path: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${experiment_name}/saved_model"
+    validation_split: '${dataset.0.validation_split}'
+    batch_size: 32
+    num_epochs: 30
+    num_parallel_calls: -1
+    
+    model_name: "resnet_50_v2"
+    optimizer: "Adam"
+    num_classes: null
+    weights: "imagenet"
+    frozen_layers: null
+    input_shape: null
+    lr: 3.0e-5
+    lr_momentum: null
+    regularization:
+        l2: null
+        l1: null
+    loss: "categorical_crossentropy"
+    METRICS: ["f1","accuracy", "balanced_accuracy"]
+    head_layers: [256,128]
+    target_size: [299,299]
+
+    augmentations: #null
+        flip: 0.0
+        rotate: 0.0
+        sbc: 0.0 #saturation, brightness, contrast
+        
+    preprocess_input: "tensorflow.keras.applications.resnet_v2.preprocess_input"
+    color_mode: 'rgb'
+    early_stopping: 
+        monitor: val_loss
+        patience: 10
+        min_delta: 0.01
+        restore_best_weights: True
+        
+        
+  
+    
+seed: 20
+log_dir: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/${experiment_name}/log_dir"
+
+pipeline:
+    stage_0:
+        task: "pretrain+validate"
+        subsets: ["train","val"]
+        dataset_name: "${dataset_name.0}"
+        params:
+            fit_class_weights: false #Include class_weights in args input to model.fit()
+        class_encodings: null
+    stage_1: 
+        task: "evaluate"
+        subsets: ["test"]
+        class_encodings: ${pipeline.stage_0.class_encodings}
+
+
+
+
+
+
+
+
+
+
+
