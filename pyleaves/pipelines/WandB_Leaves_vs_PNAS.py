@@ -17,7 +17,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline
 
 
 python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
-                            'WandB_dataset_0@dataset_0=Leaves_family_4-PNAS_family_100_test' \
+                            'WandB_dataset_0@WandB_dataset_0=Leaves_family_4-PNAS_family_100_test' \
                             'pretrain.model_name="resnet_50_v2"' \
                             'pretrain.target_size=[768,768]' \
                             'pretrain.augmentations.flip=1.0' \
@@ -491,7 +491,7 @@ def log_experiment_config(config):
 
 
 
-@hydra.main(config_path='baseline_configs', config_name='WandB_pretrain_then_finetune_config')
+@hydra.main(config_path='baseline_configs', config_name='WandB_Leaves_vs_PNAS_config')
 def main(config):
     OmegaConf.set_struct(config, False)
     from pyleaves.utils import set_tf_config
