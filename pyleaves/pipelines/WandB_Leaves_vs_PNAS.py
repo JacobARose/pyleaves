@@ -624,7 +624,7 @@ def main(config):
     # init_new_run(project=config.project_name, run_name=config.run_name, job_type=config.job_type)
     
 
-    run = wandb.init(project=config.project_name, run_name=config.run_name, job_type=config.job_type)
+    run = wandb.init(project=config.project_name, name=config.run_name, job_type=config.job_type)
     run.config.update(config)
 
     # id = wandb.util.generate_id()
