@@ -273,14 +273,17 @@ def data_df_2_tf_data(data,
     if shuffle_first:
         data = data.sample(frac=1)
 
-    if class_encodings: # is not None:
+    if class_encodings:
         data = data[data[y_col].apply(lambda x: x in list(class_encodings.keys()))]
 
     
     paths = data[x_col].values.tolist()
     labels = data[y_col].values.tolist()
     
-    class_list = sorted(list(set(labels)))
+    if class_encodings:
+        class_list = sorted(list(class_encodings.keys()))
+    else:
+        class_list = sorted(list(set(labels)))
     
     augmentations = augmentations or {}
     num_samples = len(paths)
