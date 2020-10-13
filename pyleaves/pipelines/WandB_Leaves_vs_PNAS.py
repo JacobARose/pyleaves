@@ -19,7 +19,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline
 python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'WandB_dataset_0@WandB_dataset_0=Leaves_family_4-PNAS_family_100_test' \
                             'pretrain.model_name="resnet_50_v2"' \
-                            'pretrain.target_size=[768,768]' \
+                            'pretrain.target_size=[512,512]' \
                             'pretrain.augmentations.flip=1.0' \
                             'pretrain.augmentations.rotate=1.0' \
                             'pretrain.augmentations.sbc=0.0' \
@@ -562,6 +562,7 @@ def main(config):
                                           num_parallel_calls=config.pretrain.num_parallel_calls,
                                           cache=True,
                                           shuffle_first=True,
+                                          class_encodings=train_data_info['encoder'],
                                           fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
 
         test_data_info = data_df_2_tf_data(test_df,
@@ -576,6 +577,7 @@ def main(config):
                                            num_parallel_calls=config.pretrain.num_parallel_calls,
                                            cache=True,
                                            shuffle_first=True,
+                                           class_encodings=train_data_info['encoder'],
                                            fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
 
 
