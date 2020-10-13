@@ -518,17 +518,12 @@ def main(config):
     # config.pretrain.augmentations['flip'] = float(config.pretrain.augmentations['flip'])
     config.pretrain.validation_split = float(config.pretrain.validation_split)
 
-    config.finetune.regularization = config.finetune.regularization or {}
-    # config.finetune.lr = float(config.finetune.lr)
-    # config.finetune.augmentations['flip'] = float(config.finetune.augmentations['flip'])
-    config.finetune.validation_split = float(config.finetune.validation_split)
-
-    if config.finetune.preprocess_input == "tensorflow.keras.applications.resnet_v2.preprocess_input":
+    if config.pretrain.preprocess_input == "tensorflow.keras.applications.resnet_v2.preprocess_input":
         from tensorflow.keras.applications.resnet_v2 import preprocess_input
         print("Using preprocessing function: tensorflow.keras.applications.resnet_v2.preprocess_input")
-    elif config.finetune.preprocess_input == "tf.keras.applications.mobilenet.preprocess_input":
+    elif config.pretrain.preprocess_input == "tf.keras.applications.mobilenet.preprocess_input":
         from tensorflow.keras.applications.mobilenet import preprocess_input
-    elif config.finetune.preprocess_input == "tf.keras.applications.inception_v3.preprocess_input":
+    elif config.pretrain.preprocess_input == "tf.keras.applications.inception_v3.preprocess_input":
         from tensorflow.keras.applications.inception_v3 import preprocess_input
     else:
         preprocess_input = None
