@@ -31,9 +31,8 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.early_stopping.patience=12' \
                             'pretrain.head_layers=[512,256]' \
                             'pretrain.frozen_layers="bn"' \
-                            'pretrain.num_parallel_calls=-1'
-
-                            # 'pipeline.stage_0.params.fit_class_weights=True' 'pipeline.stage_2.params.fit_class_weights=True'
+                            'pretrain.num_parallel_calls=-1' \
+                            'pipeline.stage_0.params.fit_class_weights=True' 'pipeline.stage_2.params.fit_class_weights=True'
 
 
 """
@@ -113,9 +112,6 @@ def encode_str2int(labels: List[str], class_encoder: Dict[str, int]) -> List[int
     return [class_encoder[label] for label in labels]
 
 
-
-
-from typing import Dict
 def class_counts(y: np.ndarray) -> Dict[int,int]:
     return dict(zip(*np.unique(y, return_counts=True)))#.shape
 
@@ -141,89 +137,6 @@ def calc_class_weights(y: np.ndarray, balanced: bool=False) -> Dict[int,int]:
         class_weights = {i:w for i,w in zip(list(class_weights.keys()),list(np.ones_like(list(class_weights.values()))))}
 
     return class_weights
-
-
-def img_data_gen_2_tf_data(data, 
-                           training=False,
-                           target_size=(256,256),
-                           batch_size=16,
-                           seed=None,
-                           preprocess_input=None,
-                           augmentations: Dict[str,float]=None,
-                           num_parallel_calls=-1,
-                           cache=False,
-                           class_encodings: Dict[str,int]=None,
-                           fit_class_weights=False):
-    """[summary]
-
-    Args:
-        data ([type]): [description]
-        training (bool, optional): [description]. Defaults to False.
-        target_size (tuple, optional): [description]. Defaults to (256,256).
-        batch_size (int, optional): [description]. Defaults to 16.
-        seed ([type], optional): [description]. Defaults to None.
-        preprocess_input ([type], optional): [description]. Defaults to None.
-        augmentations (Dict[str,float], optional): [description]. Defaults to None.
-        num_parallel_calls (int, optional): [description]. Defaults to -1.
-        cache (bool, optional): [description]. Defaults to False.
-        class_encodings (Dict[str,int], optional): [description]. Defaults to None.
-        fit_class_weights (bool, optional): [description]. Defaults to False.
-
-    Returns:
-        [type]: [description]
-    """        
-    from pyleaves.utils.pipeline_utils import flip, rotate, rgb2gray_1channel, rgb2gray_3channel, sat_bright_con, _cond_apply
-    import tensorflow as tf
-
-    augmentations = augmentations or {}
-    num_samples = data.samples
-    num_classes = data.num_classes
-    class_encoder = OneToOne(data.class_indices)
-    paths = data.filepaths
-    labels = data.labels
-
-    if class_encodings:
-        #Encode according to a previously established str<->int mapping in class_encodings
-        text_labels = decode_int2str(labels=labels, class_decoder=class_encoder.inv)
-        labels = encode_str2int(labels=text_labels, class_encoder=class_encodings)
-
-    # class_weights = compute_class_weight('balanced', classes=np.unique(labels), y=labels)
-    class_weights = calc_class_weights(labels, balanced=fit_class_weights)        
-    # class_weights = {i:w for i,w in class_weights.items() if i in class_encodings.inv}
-    
-
-    prepped_data = pd.DataFrame.from_records([{'path':path, 'label':label} for path, label in zip(paths, labels)])
-    tf_data = load_data_from_tensor_slices(data=prepped_data, training=training, seed=seed, x_col='path', y_col='label', dtype=tf.float32)
-
-    if preprocess_input is not None:
-        tf_data = tf_data.map(lambda x,y: (preprocess_input(x), y), num_parallel_calls=num_parallel_calls)
-    
-    from functools import partial
-    target_size = tuple(target_size)
-    resize = partial(tf.image.resize, size=target_size)
-    print('target_size = ', target_size)
-    tf_data = tf_data.map(lambda x,y: (resize(x), tf.one_hot(y, depth=num_classes)), num_parallel_calls=num_parallel_calls)
-
-    tf_data = tf_data.repeat()
-    # TODO collect augmentation functions in a list and execute as a formal pipeline, abstracting away the logging & validation of results
-    for aug in augmentations.keys():
-        if 'flip' in aug:
-            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, flip, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)  
-        if 'rotate' in aug:
-            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, rotate, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)
-        if 'sbc' in aug:
-            "sbc = saturation, brightness, contrast"
-            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, sat_bright_con, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)
-    tf_data = tf_data.map(lambda x,y: rgb2gray_3channel(x, y), num_parallel_calls=-1)
-
-    tf_data = tf_data.batch(batch_size)
-    tf_data = tf_data.prefetch(-1)
-    return {'data':tf_data, 
-            'data_iterator':data,
-            'encoder':class_encoder,
-            'num_samples':num_samples,
-            'num_classes':num_classes,
-            'class_weights':class_weights}
 
 
 def data_df_2_tf_data(data, 
@@ -338,13 +251,8 @@ def data_df_2_tf_data(data,
             'class_weights':class_weights}
 
 
-
-
-
-
-
-
-
+#%%
+#region
 
 # def load_WandB_data_by_subset(image_dir, subset='test', preprocess_input=None, class_encodings: Dict[str,int]=None,
 #                         fit_class_weights=False, validation_split=None, seed=None, target_size=(224,224), batch_size=16,
@@ -407,17 +315,10 @@ def data_df_2_tf_data(data,
 #                                            fit_class_weights=fit_class_weights)
 #         return data_info
 
+#endregion
+#%%
 
-
-
-
-
-
-
-
-
-
-
+#region
 # Image plotting utils
 def show_batch(image_batch, label_batch, title='', class_names=None):
     fig = plt.figure(figsize=(15, 15))
@@ -461,7 +362,7 @@ def summarize_sample(x, y):
     print(f'x.shape = {x.shape},\nx.min() = {x.min():.3f} | x.max() = {x.max():.3f},\nx.mean() = {x.mean():.3f} | x.std() = {x.std():.3f}')
 
     plt.imshow(x)
-
+#endregion
 
 
 
@@ -511,14 +412,6 @@ def main(config):
     from pyleaves.utils.pipeline_utils import build_model
     from tensorflow.keras.callbacks import TensorBoard, EarlyStopping
     from pyleaves.utils import pipeline_utils
-
-    # project_name = 'jacobarose/jupyter-testing-ground'
-    # experiment_name = f'baseline-{config.pretrain.dataset_name}-{config.finetune.dataset_name}--{config.pretrain.model_name}'
-    # if 'experiment_name' in config:
-    #     neptune_experiment_name = config.experiment_name
-    # else:
-    #     neptune_experiment_name = f'baseline-{config.dataset_name}'
-    # config, data_augs = parse_config(config=config)
 
     config.pretrain.regularization = config.pretrain.regularization or {}
     # config.pretrain.lr = float(config.pretrain.lr)
@@ -692,7 +585,7 @@ def main(config):
     model.save(config.pretrain.saved_model_path)
     
     artifact = wandb.Artifact(type='model', name=config.pretrain.model_name)
-    artifact.add_file(config.pretrain.saved_model_path)
+    artifact.add_dir(config.pretrain.saved_model_path, name='trained_model')
     run.log_artifact(artifact)
 
     print('[STAGE_0 COMPLETED]')
