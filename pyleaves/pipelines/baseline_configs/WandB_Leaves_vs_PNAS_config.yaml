@@ -18,6 +18,7 @@ project_name: "Leaves_vs_PNAS"
 experiment_name: "${dataset_name.0}_${pretrain.target_size}-${pretrain.model_name}"
 run_name: ${experiment_name}
 job_type: "train+validate"
+entity: "jrose"
 
 tags: []
 

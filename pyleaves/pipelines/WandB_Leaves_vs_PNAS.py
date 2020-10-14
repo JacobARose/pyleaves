@@ -33,7 +33,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.frozen_layers="bn"' \
                             'pretrain.num_parallel_calls=5' \
                             'tags=["Baseline"]' \
-                            'pipeline.stage_0.params.fit_class_weights=True' 'pipeline.stage_2.params.fit_class_weights=True'
+                            'pipeline.stage_0.params.fit_class_weights=True'
 
 
 python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
@@ -50,9 +50,11 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
                             'pretrain.early_stopping.patience=15' \
                             'pretrain.head_layers=[512,256]' \
-                            'pretrain.frozen_layers="bn"' \
+                            'pretrain.frozen_layers=null' \
+                            'pretrain.weights=null' \
                             'pretrain.num_parallel_calls=4' \
-                            'tags=["Baseline"]'
+                            'pipeline.stage_0.params.fit_class_weights=True' \
+                            'tags=["weighted-crossentropy","train on PNAS","test on PNAS"]'
 
 
 """
@@ -586,7 +588,7 @@ def main(config):
     ################################################################################
     ################################################################################
     ################################################################################
-    run = wandb.init(project=config.project_name, name=config.run_name, job_type=config.job_type, tags=config.tags)
+    run = wandb.init(entity=config.entity, project=config.project_name, name=config.run_name, job_type=config.job_type, tags=config.tags)
     run.config.update(OmegaConf.to_container(config, resolve=True))
 
     # id = wandb.util.generate_id()
