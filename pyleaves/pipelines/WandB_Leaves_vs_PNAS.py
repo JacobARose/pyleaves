@@ -20,6 +20,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'WandB_dataset_0@WandB_dataset_0=Leaves_family_4-PNAS_family_100_test' \
                             'pretrain.model_name="resnet_50_v2"' \
                             'pretrain.target_size=[512,512]' \
+                            'pretrain.num_epochs=2' \
                             'pretrain.augmentations.flip=1.0' \
                             'pretrain.augmentations.rotate=1.0' \
                             'pretrain.augmentations.sbc=0.0' \
@@ -32,6 +33,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.head_layers=[512,256]' \
                             'pretrain.frozen_layers="bn"' \
                             'pretrain.num_parallel_calls=-1' \
+                            '+tags=["debugging_run"]' \
                             'pipeline.stage_0.params.fit_class_weights=True' 'pipeline.stage_2.params.fit_class_weights=True'
 
 
@@ -527,7 +529,7 @@ def main(config):
     
 
     run = wandb.init(project=config.project_name, name=config.run_name, job_type=config.job_type)
-    run.config.update(config)
+    run.config.update(OmegaConf.to_container(config))
 
     # id = wandb.util.generate_id()
     # try:
