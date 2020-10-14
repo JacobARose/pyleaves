@@ -519,12 +519,12 @@ def main(config):
     ################################################################################
     ################################################################################
     ################################################################################
-    from pyleaves.utils.WandB_artifact_utils import init_new_run
+    # from pyleaves.utils.WandB_artifact_utils import init_new_run
 
     # init_new_run(project=config.project_name, run_name=config.run_name, job_type=config.job_type)
     
 
-    run = wandb.init(project=config.project_name, name=config.run_name, job_type=config.job_type)
+    run = wandb.init(project=config.project_name, name=config.run_name, job_type=config.job_type, tags=config.tags)
     run.config.update(OmegaConf.to_container(config, resolve=True))
 
     # id = wandb.util.generate_id()
