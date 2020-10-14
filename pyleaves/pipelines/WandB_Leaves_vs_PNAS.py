@@ -20,7 +20,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'WandB_dataset_0@WandB_dataset_0=Leaves_family_4-PNAS_family_100_test' \
                             'pretrain.model_name="resnet_50_v2"' \
                             'pretrain.target_size=[512,512]' \
-                            'pretrain.num_epochs=2' \
+                            'pretrain.num_epochs=120' \
                             'pretrain.augmentations.flip=1.0' \
                             'pretrain.augmentations.rotate=1.0' \
                             'pretrain.augmentations.sbc=0.0' \
@@ -32,10 +32,8 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.head_layers=[512,256]' \
                             'pretrain.frozen_layers="bn"' \
                             'pretrain.num_parallel_calls=-1' \
-                            '+tags=["debugging_run"]' \
+                            'tags=["Baseline"]' \
                             'pipeline.stage_0.params.fit_class_weights=True' 'pipeline.stage_2.params.fit_class_weights=True'
-
-                            'pretrain.num_epochs=120' \
 """
 
 # 
@@ -450,7 +448,68 @@ def main(config):
                                             num_parallel_calls=config.pretrain.num_parallel_calls,
                                             cache=False,
                                             shuffle_first=True,
-                                            fit_class_weights=True)
+                                            fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
+
+        val_data_info = data_df_2_tf_data(val_df,
+                                          x_col='archive_path',
+                                          y_col='family',
+                                          training=False,
+                                          preprocess_input=preprocess_input,
+                                          seed=config.seed,
+                                          target_size=config.pretrain.target_size,
+                                          batch_size=config.pretrain.batch_size,
+                                          num_parallel_calls=config.pretrain.num_parallel_calls,
+                                          cache=True,
+                                          shuffle_first=True,
+                                          class_encodings=train_data_info['encoder'])
+
+        test_data_info = data_df_2_tf_data(test_df,
+                                           x_col='archive_path',
+                                           y_col='family',
+                                           training=False,
+                                           preprocess_input=preprocess_input,
+                                           seed=config.seed,
+                                           target_size=config.pretrain.target_size,
+                                           batch_size=config.pretrain.batch_size,
+                                           num_parallel_calls=config.pretrain.num_parallel_calls,
+                                           cache=True,
+                                           shuffle_first=True,
+                                           class_encodings=train_data_info['encoder'])
+#section
+        # pnas_train_data_info = data_df_2_tf_data(pnas_train_df,
+        #                                          x_col='archive_path',
+        #                                          y_col='family',
+        #                                          training=True,
+        #                                          preprocess_input=preprocess_input,
+        #                                          seed=config.seed,
+        #                                          target_size=config.pretrain.target_size,
+        #                                          batch_size=config.pretrain.batch_size,
+        #                                          augmentations=config.pretrain.augmentations,
+        #                                          num_parallel_calls=config.pretrain.num_parallel_calls,
+        #                                          cache=True,
+        #                                          shuffle_first=True,
+        #                                          fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
+#endsection
+
+    elif config.dataset_name["0"] == "PNAS_family_100":
+        _, test_df, train_df = load_Leaves_Minus_PNAS_test_dataset()
+
+        if config.pretrain.validation_split:
+            train_df, val_df = train_test_split(train_df, test_size=config.pretrain.validation_split, random_state=config.seed, shuffle=True, stratify=train_df.family)
+
+        train_data_info = data_df_2_tf_data(train_df,
+                                            x_col='archive_path',
+                                            y_col='family',
+                                            training=True,
+                                            preprocess_input=preprocess_input,
+                                            seed=config.seed,
+                                            target_size=config.pretrain.target_size,
+                                            batch_size=config.pretrain.batch_size,
+                                            augmentations=config.pretrain.augmentations,
+                                            num_parallel_calls=config.pretrain.num_parallel_calls,
+                                            cache=False,
+                                            shuffle_first=True,
+                                            fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
 
         val_data_info = data_df_2_tf_data(val_df,
                                           x_col='archive_path',
@@ -479,28 +538,15 @@ def main(config):
                                            class_encodings=train_data_info['encoder'])
 
 
-        pnas_train_data_info = data_df_2_tf_data(pnas_train_df,
-                                                 x_col='archive_path',
-                                                 y_col='family',
-                                                 training=True,
-                                                 preprocess_input=preprocess_input,
-                                                 seed=config.seed,
-                                                 target_size=config.pretrain.target_size,
-                                                 batch_size=config.pretrain.batch_size,
-                                                 augmentations=config.pretrain.augmentations,
-                                                 num_parallel_calls=config.pretrain.num_parallel_calls,
-                                                 cache=True,
-                                                 shuffle_first=True,
-                                                 fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
-
 
 
     train_data = train_data_info['data']
     val_data = val_data_info['data']
     test_data = test_data_info['data']
 
+    class_weights = train_data_info['class_weights']
+
     stage_0_config = config.pipeline.stage_0
-    
     stage_0_config.num_samples_train = train_data_info['num_samples']
     stage_0_config.num_samples_val = val_data_info['num_samples']
     stage_0_config.num_samples_test = test_data_info['num_samples']
@@ -519,29 +565,12 @@ def main(config):
     ################################################################################
     ################################################################################
     ################################################################################
-    # from pyleaves.utils.WandB_artifact_utils import init_new_run
-
-    # init_new_run(project=config.project_name, run_name=config.run_name, job_type=config.job_type)
-    
-
     run = wandb.init(project=config.project_name, name=config.run_name, job_type=config.job_type, tags=config.tags)
     run.config.update(OmegaConf.to_container(config, resolve=True))
 
     # id = wandb.util.generate_id()
     # try:
     #     wandb.init(project="resuming", resume="must", id=id)
-
-
-    # run_params={
-    #             "pretrain.validation_split":config.pretrain.validation_split,
-    #             "pretrain.target_size":config.pretrain.target_size,
-    #             "pretrain.batch_size":config.pretrain.batch_size,
-    #             "pretrain.augmentations":config.pretrain.augmentations,
-    #             "pretrain.dataset_name": config.pretrain.dataset_name,
-    #             "pretrain.lr":config.pretrain.lr,
-    #             "seed":config.pretrain.seed
-    # }
-    # wandb.config.update(run_params)
 
     callbacks = [TensorBoard(log_dir=config.log_dir, histogram_freq=2, write_images=True),
                  WandbCallback(),
@@ -573,6 +602,7 @@ def main(config):
                             validation_data=val_data,
                             validation_freq=1,
                             shuffle=True,
+                            class_weight=class_weights,
                             steps_per_epoch=steps_per_epoch,
                             validation_steps=validation_steps,
                             verbose=1)

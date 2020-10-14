@@ -2,7 +2,6 @@
 
 
 dataset_name: "PNAS_family_100"
-image_dir: "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/PNAS_2020-06/PNAS_family_100"
 validation_split: 0.1
 test_size: 0.5
 threshold: 100
