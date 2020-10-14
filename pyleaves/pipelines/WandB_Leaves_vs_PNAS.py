@@ -26,7 +26,6 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.augmentations.sbc=0.0' \
                             'pretrain.lr=1e-5' \
                             'pretrain.batch_size=12' \
-                            'pretrain.num_epochs=120' \
                             'pretrain.regularization.l2=1e-4' \
                             'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
                             'pretrain.early_stopping.patience=12' \
@@ -36,7 +35,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             '+tags=["debugging_run"]' \
                             'pipeline.stage_0.params.fit_class_weights=True' 'pipeline.stage_2.params.fit_class_weights=True'
 
-
+                            'pretrain.num_epochs=120' \
 """
 
 # 
@@ -529,7 +528,7 @@ def main(config):
     
 
     run = wandb.init(project=config.project_name, name=config.run_name, job_type=config.job_type)
-    run.config.update(OmegaConf.to_container(config))
+    run.config.update(OmegaConf.to_container(config, resolve=True))
 
     # id = wandb.util.generate_id()
     # try:
