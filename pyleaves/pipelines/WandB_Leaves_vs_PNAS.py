@@ -34,6 +34,27 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.num_parallel_calls=-1' \
                             'tags=["Baseline"]' \
                             'pipeline.stage_0.params.fit_class_weights=True' 'pipeline.stage_2.params.fit_class_weights=True'
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
+                            'WandB_dataset_0@WandB_dataset_0=PNAS_family_100' \
+                            'pretrain.model_name="resnet_50_v2"' \
+                            'pretrain.target_size=[512,512]' \
+                            'pretrain.num_epochs=120' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=0.0' \
+                            'pretrain.lr=1e-5' \
+                            'pretrain.batch_size=12' \
+                            'pretrain.regularization.l2=1e-4' \
+                            'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
+                            'pretrain.early_stopping.patience=15' \
+                            'pretrain.head_layers=[512,256]' \
+                            'pretrain.frozen_layers="bn"' \
+                            'pretrain.num_parallel_calls=4' \
+                            'tags=["Baseline"]'
+
+
 """
 
 # 
@@ -612,7 +633,7 @@ def main(config):
 
     model.save(config.pretrain.saved_model_path)
     
-    artifact = wandb.Artifact(type='model', name=config.pretrain.model_name)
+    artifact = wandb.Artifact(type='model', name=f'{config.pretrain.model_name}-{config.dataset_name["0"]}')
     artifact.add_dir(config.pretrain.saved_model_path, name='trained_model')
     run.log_artifact(artifact)
 
@@ -820,7 +841,7 @@ def perform_evaluation_stage(model, test_data_info, class_encoder, batch_size, s
     # test_iter = test_data_info['data_iterator']
     test_data = test_data_info['data']
     test_steps=int(np.ceil(test_data_info['num_samples']/batch_size))
-    y_true = test_data_info['y_true']
+    y_true = np.ndarray(test_data_info['y_true'])
     eval_iter = test_data.unbatch().take(len(y_true)).batch(batch_size)
     y, y_hat, y_prob = evaluate(model, eval_iter, y_true=y_true, steps=test_steps, class_encoder=class_encoder, subset=subset)
 
