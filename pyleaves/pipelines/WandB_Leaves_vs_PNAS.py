@@ -25,13 +25,13 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.augmentations.rotate=1.0' \
                             'pretrain.augmentations.sbc=0.0' \
                             'pretrain.lr=1e-5' \
-                            'pretrain.batch_size=12' \
+                            'pretrain.batch_size=16' \
                             'pretrain.regularization.l2=1e-4' \
                             'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
-                            'pretrain.early_stopping.patience=12' \
+                            'pretrain.early_stopping.patience=15' \
                             'pretrain.head_layers=[512,256]' \
                             'pretrain.frozen_layers="bn"' \
-                            'pretrain.num_parallel_calls=-1' \
+                            'pretrain.num_parallel_calls=5' \
                             'tags=["Baseline"]' \
                             'pipeline.stage_0.params.fit_class_weights=True' 'pipeline.stage_2.params.fit_class_weights=True'
 
@@ -45,7 +45,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.augmentations.rotate=1.0' \
                             'pretrain.augmentations.sbc=0.0' \
                             'pretrain.lr=1e-5' \
-                            'pretrain.batch_size=12' \
+                            'pretrain.batch_size=16' \
                             'pretrain.regularization.l2=1e-4' \
                             'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
                             'pretrain.early_stopping.patience=15' \
@@ -841,7 +841,7 @@ def perform_evaluation_stage(model, test_data_info, class_encoder, batch_size, s
     # test_iter = test_data_info['data_iterator']
     test_data = test_data_info['data']
     test_steps=int(np.ceil(test_data_info['num_samples']/batch_size))
-    y_true = np.ndarray(test_data_info['y_true'])
+    y_true = np.array(test_data_info['y_true'])
     eval_iter = test_data.unbatch().take(len(y_true)).batch(batch_size)
     y, y_hat, y_prob = evaluate(model, eval_iter, y_true=y_true, steps=test_steps, class_encoder=class_encoder, subset=subset)
 
