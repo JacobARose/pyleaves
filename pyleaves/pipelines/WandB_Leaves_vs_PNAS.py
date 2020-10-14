@@ -463,23 +463,20 @@ def main(config):
                                           num_parallel_calls=config.pretrain.num_parallel_calls,
                                           cache=True,
                                           shuffle_first=True,
-                                          class_encodings=train_data_info['encoder'],
-                                          fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
+                                          class_encodings=train_data_info['encoder'])
 
         test_data_info = data_df_2_tf_data(test_df,
                                            x_col='archive_path',
                                            y_col='family',
-                                           training=True,
+                                           training=False,
                                            preprocess_input=preprocess_input,
                                            seed=config.seed,
                                            target_size=config.pretrain.target_size,
                                            batch_size=config.pretrain.batch_size,
-                                           augmentations=config.pretrain.augmentations,
                                            num_parallel_calls=config.pretrain.num_parallel_calls,
                                            cache=True,
                                            shuffle_first=True,
-                                           class_encodings=train_data_info['encoder'],
-                                           fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
+                                           class_encodings=train_data_info['encoder'])
 
 
         pnas_train_data_info = data_df_2_tf_data(pnas_train_df,
