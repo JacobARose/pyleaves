@@ -1,0 +1,9 @@
+# @package hydra
+
+# User specific working directory configuration for storing run logs and data
+
+run:
+  dir: /media/data_cifs_lrs/projects/prj_fossils/users/jacob/hydra_logs/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+sweep:
+  dir: /media/data_cifs_lrs/projects/prj_fossils/users/jacob/hydra_logs/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  subdir: ${hydra.job.num}

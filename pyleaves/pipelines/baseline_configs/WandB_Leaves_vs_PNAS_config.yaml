@@ -5,6 +5,7 @@ defaults:
     - WandB_dataset_0/base
     - WandB_dataset_0@WandB_dataset_0: Leaves_family_4-PNAS_family_100_test
     - hydra/launcher: joblib
+    - hydra/output: jacob
     
 task: ${hydra:job.num}
 
