@@ -626,8 +626,14 @@ def main(config):
     #     wandb.init(project="resuming", resume="must", id=id)
 
     class_names = train_data_info['encoder'].inv
-    # train_cb = lambda : ((img, label) for img, label in iter(train_data.take(12).unbatch()))
+    train_cb = lambda : ((img, label) for img, label in iter(train_data.take(12).unbatch()))
     val_cb = lambda : ((img, label) for img, label in iter(val_data.take(12).unbatch()))
+
+    train_imgs, train_labels = [], []
+    for img, lbl in train_cb():
+        train_imgs.append(img)
+        train_labels.append(lbl)
+
 
     val_imgs, val_labels = [], []
     for img, lbl in val_cb():
@@ -639,6 +645,7 @@ def main(config):
     callbacks = [TensorBoard(log_dir=config.log_dir, histogram_freq=2, write_images=True),
                  WandbCallback(log_gradients=True,
                                data_type='image',
+                               training_data=(train_imgs,train_labels),
                                labels=list(class_names.values()),
                                predictions=36,
                                generator=val_cb()),
