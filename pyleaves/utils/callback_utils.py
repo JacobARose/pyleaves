@@ -475,11 +475,11 @@ class ConfusionMatrixCallback(Callback):
 		with self.file_writer.as_default(): #, tf.summary.always_record_summaries():
 			tf.summary.image(name='val_confusion_matrix',
 							 data=image,
-							 step=self._counter)
+							 step=epoch) #self._counter)
 
 		if self.experiment:
 			self.experiment.log_image(log_name='val_confusion_matrix',
-				   					  x=self._counter,
+				   					  x=epoch, #self._counter,
 									  y=figure)
 		plt.close(figure)
 
