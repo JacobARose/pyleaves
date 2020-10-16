@@ -474,7 +474,7 @@ class ConfusionMatrixCallback(Callback):
 		# 							 step=self._counter)
 		with self.file_writer.as_default(): #, tf.summary.always_record_summaries():
 			tf.summary.image(name='val_confusion_matrix',
-							 tensor=image,
+							 data=image,
 							 step=self._counter)
 
 		if self.experiment:
