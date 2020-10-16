@@ -671,7 +671,7 @@ def main(config):
                                predictions=36,
                                generator=tf.data.Dataset.from_generator(val_cb(),
                                                                        (tf.float64, tf.float64),
-                                                                       (tf.TensorShape(list(val_imgs.shape)), tf.TensorShape(list(val_labels.shape)))),
+                                                                       (tf.TensorShape(list(val_imgs.shape)), tf.TensorShape(list(val_labels.shape))))),
                  EarlyStopping(monitor=config.pretrain.early_stopping.monitor,
                             patience=config.pretrain.early_stopping.patience,
                             min_delta=config.pretrain.early_stopping.min_delta, 
