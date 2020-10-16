@@ -634,8 +634,8 @@ def main(config):
         val_imgs.append(img)
         val_labels.append(lbl)
 
-    val_imgs = np.stack([img for img, _ in val_imgs])
-    val_labels = np.stack([lbl for _, lbl in val_labels])
+    val_imgs = np.stack([img for img in val_imgs])
+    val_labels = np.stack([lbl for lbl in val_labels])
     callbacks = [TensorBoard(log_dir=config.log_dir, histogram_freq=2, write_images=True),
                  WandbCallback(log_gradients=True,
                                data_type='image',
