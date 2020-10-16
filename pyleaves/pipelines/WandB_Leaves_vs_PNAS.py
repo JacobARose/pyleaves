@@ -664,9 +664,8 @@ def main(config):
     val_imgs = np.stack([img for img in val_imgs])
     val_labels = np.stack([lbl for lbl in val_labels])
     callbacks = [TensorBoard(log_dir=config.log_dir, histogram_freq=2, write_images=True),
-                 WandbCallback(log_gradients=True,
-                               data_type='image',
-                               training_data=(train_imgs,train_labels),
+                 WandbCallback(log_gradients=False,#True,
+                               data_type='image',#                               training_data=(train_imgs,train_labels),
                                labels=list(class_names.values()),
                                predictions=36,
                                generator=tf.data.Dataset.from_generator(val_cb,
