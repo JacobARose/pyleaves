@@ -426,9 +426,10 @@ class NeptuneVisualizationCallback(Callback):
 
 class ConfusionMatrixCallback(Callback):
 
-	def __init__(self, log_dir, val_imgs, val_labels, classes, freq=1, seed=None):
+	def __init__(self, log_dir, val_imgs, val_labels, classes, freq=1, seed=None, neptune_experiment=None):
 		super().__init__()
-		self.file_writer = tf.contrib.summary.create_file_writer(log_dir)
+		# self.file_writer = tf.contrib.summary.create_file_writer(log_dir)
+		self.file_writer = tf.summary.create_file_writer(log_dir)
 		self.log_dir = log_dir
 		self.seed = seed
 		self._counter = 0
@@ -440,6 +441,7 @@ class ConfusionMatrixCallback(Callback):
 		self.num_samples = val_labels.numpy().shape[0]
 		self.classes = classes
 		self.freq = freq
+		self.experiment = neptune_experiment
 
 	def log_confusion_matrix(self, model, imgs, labels, epoch, norm_cm=False):
 
@@ -454,7 +456,7 @@ class ConfusionMatrixCallback(Callback):
 						 columns = self.classes)
 
 		figure = plt.figure(figsize=(16, 16))
-		sns.heatmap(con_mat_df, annot=True,cmap=plt.cm.Blues)
+		sns.heatmap(con_mat_df, annot=True, cmap=plt.cm.Blues)
 		plt.tight_layout()
 		plt.ylabel('True label')
 		plt.xlabel('Predicted label')
@@ -466,14 +468,19 @@ class ConfusionMatrixCallback(Callback):
 		image = tf.image.decode_png(buf.getvalue(), channels=4)
 		image = tf.expand_dims(image, 0)
 
-		with self.file_writer.as_default(), tf.contrib.summary.always_record_summaries():
-			tf.contrib.summary.image(name='val_confusion_matrix',
+		# with self.file_writer.as_default(), tf.contrib.summary.always_record_summaries():
+		# 	tf.contrib.summary.image(name='val_confusion_matrix',
+		# 							 tensor=image,
+		# 							 step=self._counter)
+		with self.file_writer.as_default(), tf.summary.always_record_summaries():
+			tf.summary.image(name='val_confusion_matrix',
 									 tensor=image,
 									 step=self._counter)
 
-		neptune.log_image(log_name='val_confusion_matrix',
-						  x=self._counter,
-						  y=figure)
+		if self.experiment:
+			self.experiment.log_image(log_name='val_confusion_matrix',
+				   					  x=self._counter,
+									  y=figure)
 		plt.close(figure)
 
 		self._counter += 1

@@ -211,6 +211,8 @@ def data_df_2_tf_data(data,
 
     if class_encodings:
         data = data[data[y_col].apply(lambda x: x in list(class_encodings.keys()))]
+        data = data.assign(y_true=data[y_col].apply(lambda x: class_encodings[x]),
+                           x_true=data[x_col])
 
     
     paths = data[x_col].values.tolist()
@@ -434,6 +436,7 @@ def main(config):
     from tensorflow.keras import backend as K
     K.clear_session()
     from pyleaves.utils.pipeline_utils import build_model
+    from pyleaves.utils.callback_utils import ConfusionMatrixCallback
     from tensorflow.keras.callbacks import TensorBoard, EarlyStopping
     from pyleaves.utils import pipeline_utils
 
@@ -590,22 +593,39 @@ def main(config):
     ################################################################################
     ################################################################################
     ################################################################################
-    run = wandb.init(entity=config.entity, project=config.project_name, name=config.run_name, job_type=config.job_type, tags=config.tags)
+    run = wandb.init(entity=config.entity, project=config.project_name, name=config.run_name, job_type=config.job_type, tags=config.tags, sync_tensorboard=True)
     run.config.update(OmegaConf.to_container(config, resolve=True))
 
     # id = wandb.util.generate_id()
     # try:
     #     wandb.init(project="resuming", resume="must", id=id)
 
+    class_names = train_data_info['encoder'].inv
+    # train_cb = lambda : ((img, label) for img, label in iter(train_data.take(12).unbatch()))
+    val_cb = lambda : ((img, label) for img, label in iter(val_data.take(12).unbatch()))
+
+    val_imgs, val_labels = [], []
+    for img, lbl in val_cb():
+        val_imgs.append(img)
+        val_labels.append(lbl)
     callbacks = [TensorBoard(log_dir=config.log_dir, histogram_freq=2, write_images=True),
-                 WandbCallback(),
+                 WandbCallback(log_gradients=True,
+                               data_type='image',
+                               labels=list(class_names.values()),
+                               predictions=36,
+                               generator=val_cb()),
                  EarlyStopping(monitor=config.pretrain.early_stopping.monitor,
                             patience=config.pretrain.early_stopping.patience,
                             min_delta=config.pretrain.early_stopping.min_delta, 
                             verbose=1,
-                            restore_best_weights=config.pretrain.early_stopping.restore_best_weights)]
+                            restore_best_weights=config.pretrain.early_stopping.restore_best_weights),
+                ConfusionMatrixCallback(config.log_dir,
+                                        val_imgs=val_imgs,
+                                        val_labels=val_labels,
+                                        classes=list(class_names.values()),
+                                        freq=1,
+                                        seed=config.seed)]
 
-    class_names = train_data_info['encoder'].inv
     image_batch, label_batch = next(iter(train_data))
     fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='train', class_names=class_names)
     wandb.log({'train_image_batch': [wandb.Image(fig)]}, commit=False)
@@ -847,7 +867,7 @@ def perform_evaluation_stage(model, test_data_info, class_encoder, batch_size, s
     test_steps=int(np.ceil(test_data_info['num_samples']/batch_size))
     y_true = np.array(test_data_info['y_true'])
     eval_iter = test_data.unbatch().take(len(y_true)).batch(batch_size)
-    y, y_hat, y_prob = evaluate(model, eval_iter, y_true=y_true, steps=test_steps, class_encoder=class_encoder, subset=subset)
+    y, y_hat, y_prob = evaluate(model, eval_iter, y_true=y_true, steps=test_steps, class_encoder=class_encoder, subset=subset, test_data_info=test_data_info)
 
     print('y_prob.shape =', y_prob.shape)
     predictions = pd.DataFrame({'y':y,'y_pred':y_hat})
@@ -875,12 +895,10 @@ def perform_evaluation_stage(model, test_data_info, class_encoder, batch_size, s
 
 
 
-def evaluate(model, data_iter, y_true, steps: int, output_dict: bool=True, class_encoder=None, subset='val'):
+def evaluate(model, data_iter, y_true, steps: int, output_dict: bool=True, class_encoder=None, subset='val', test_data_info=None):
     # num_classes = data_iter.num_classes
 
-
     y_prob = model.predict(data_iter, steps=steps, verbose=1)
-    
     target_names = list(class_encoder.keys())
     labels = [class_encoder[text_label] for text_label in target_names]
 
@@ -889,13 +907,24 @@ def evaluate(model, data_iter, y_true, steps: int, output_dict: bool=True, class
     if y_true.ndim > 1:
         y_true = y_true.argmax(axis=1)
     print('y_true.shape = ', y_true.shape)
+
+    if test_data_info is not None:
+        data_table = test_data_info['data_table']
+        data_table = data_table.assign(**{class_encoder.inv[i]:y_prob[:,i] for i in range(y_prob.shape[1])})
+        data_table = data_table.assign(y_pred=y_hat)
+
+        table = wandb.Table(dataframe=data_table)
+        wandb.log({"test_data_with_probabilities" : table}) #wandb.plot.bar(table, "label", "value", title="Custom Bar Chart")
+
+
     try:
         report = classification_report(y_true, y_hat, labels=labels, target_names=target_names, output_dict=output_dict)
         if type(report)==dict:
-            report = pd.DataFrame(report)
+            report = pd.DataFrame(report).T
 
         report.to_csv(f'{subset}_classification_report.csv')
-        wandb.save(f'{subset}_classification_report.csv')
+        report_table = wandb.Table(dataframe=report)
+        wandb.log({f'{subset}_classification_report':report_table})
 
     except Exception as e:
         import pdb; pdb.set_trace()
