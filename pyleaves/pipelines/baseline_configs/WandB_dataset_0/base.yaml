@@ -4,3 +4,5 @@
 
 dataset_name: "Leaves_family_4-PNAS_family_100_test"
 validation_split: 0.1
+include_classes: []
+exclude_classes: ['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified']
