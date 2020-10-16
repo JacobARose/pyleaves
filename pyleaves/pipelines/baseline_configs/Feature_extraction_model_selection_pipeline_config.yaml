@@ -3,7 +3,7 @@
 defaults:
 
     - dataset_0/base
-    - dataset_0@dataset_0: Leaves_family_4-PNAS_family_100
+    - dataset_0@dataset_0: Leaves_family_4
     - dataset_1/base
     - dataset_1@dataset_1: Fossil_family_4
     - hydra/launcher: joblib
@@ -17,17 +17,12 @@ dataset:
 dataset_name:
     "0": "${dataset.0.dataset_name}"
     "1": "${dataset.1.dataset_name}"
-
-experiment_name: "${dataset_name.0}-${dataset_name.1}_${pretrain.target_size}-${pretrain.model_name}"
-
 pretrain:
     stage: ${pipeline.stage_0}
     dataset: ${dataset.0}
-    saved_model_path: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${experiment_name}/saved_model"
-    test_size: '${dataset.0.test_size}'
-    image_subdir: 'test_size-${pretrain.test_size}'
-    train_image_dir: "${dataset.0.image_dir}/${pretrain.image_subdir}/train"
-    test_image_dir: "${dataset.0.image_dir}/${pretrain.image_subdir}/test"
+    saved_model_path: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${dataset_name.0}-${pretrain.target_size}"
+    train_image_dir: "${dataset.0.train_image_dir}"
+    test_image_dir: "${dataset.0.test_image_dir}"
     validation_split: '${dataset.0.validation_split}'
     batch_size: 32
     num_epochs: 30
@@ -45,7 +40,7 @@ pretrain:
         l2: null
         l1: null
     loss: "categorical_crossentropy"
-    METRICS: ["f1","accuracy", "balanced_accuracy"]
+    METRICS: ["f1","accuracy"]
     head_layers: [256,128]
     target_size: [299,299]
 
@@ -68,10 +63,8 @@ finetune:
     stage: ${pipeline.stage_2}
     dataset: ${dataset.1}
     saved_model_path: "${pretrain.saved_model_path}"    #"/media/data_cifs_lrs/projects/prj_fossils/users/jacob/models/${dataset_name.0}-${target_size}"
-    test_size: '${dataset.1.test_size}'
-    image_subdir: 'test_size-${finetune.test_size}'
-    train_image_dir: "${dataset.1.image_dir}/${finetune.image_subdir}/train"
-    test_image_dir: "${dataset.1.image_dir}/${finetune.image_subdir}/test"
+    train_image_dir: "${dataset.1.train_image_dir}"
+    test_image_dir: "${dataset.1.test_image_dir}"
     validation_split: "${dataset.1.validation_split}"
     batch_size: ${pretrain.batch_size}
     num_epochs: 80
@@ -89,7 +82,7 @@ finetune:
         l2: null
         l1: null
     loss: "categorical_crossentropy"
-    METRICS: ["f1","accuracy", "balanced_accuracy"]
+    METRICS: ["f1","accuracy"]
     head_layers: [256,128]
     target_size: ${pretrain.target_size}
 
@@ -110,40 +103,40 @@ finetune:
 seed: 20
 log_dir: "/media/data_cifs_lrs/projects/prj_fossils/users/jacob/tensorboard_log_dir"
 
+project_name: "1-stage_pretrain-1-stage_finetune"
+run_name: "pretrain_${dataset_name.0}-finetune_${dataset_name.1}"
+job_type: "pretrain+finetune"
+
+
+
 pipeline:
     stage_0:
         task: "pretrain+validate"
+
         subsets: ["train","val"]
         dataset_name: "${dataset_name.0}"
-        test_size: ${dataset.0.test_size}
         params:
             fit_class_weights: false #Include class_weights in args input to model.fit()
         class_encodings: null
     stage_1: 
         task: "evaluate"
         subsets: ["test"]
-        test_size: ${dataset.0.test_size}
         class_encodings: ${pipeline.stage_0.class_encodings}
     stage_2: 
         task: "finetune"
         subsets: ["train","val"]
         dataset_name: "${dataset_name.1}"
-        test_size: ${dataset.1.test_size}
-        params:
-            fit_class_weights: false #Include class_weights in args input to model.fit()
         class_encodings: ${pipeline.stage_0.class_encodings}
     #     dataset_name: "Fossil_family_100"
-        tfrecord_dir: "/media/data/jacob/experimental_data/tfrecords/${pipeline.stage_2.dataset_name}/${pipeline.stage_2.dataset_name}"
+        tfrecord_dir: "/media/data/jacob/experimental_data/tfrecords/${pipeline.stage_2.dataset_name}"
 
     stage_3: 
         task: "evaluate"
         subsets: ["test"]
         dataset_name: "${dataset_name.1}"
-        test_size: ${dataset.1.test_size}
         class_encodings: ${pipeline.stage_0.class_encodings}
     #     dataset_name: "Fossil_family_100"
         tfrecord_dir: "/media/data/jacob/experimental_data/tfrecords/${pipeline.stage_3.dataset_name}"
-
 
 
 

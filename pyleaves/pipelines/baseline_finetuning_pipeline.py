@@ -19,8 +19,8 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py da
 10/8/2020
 
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
-                            'dataset_0@dataset_0=Leaves_family_100' \
-                            'dataset_1@dataset_1=Fossil_family_100' \
+                            'dataset_0@dataset_0=Leaves_family_4' \
+                            'dataset_1@dataset_1=Fossil_family_4' \
                             'dataset_0.test_size=0.3' 'dataset_1.test_size=0.3' \
                             'pretrain.target_size=[768,768]' \
                             'pretrain.augmentations.flip=1.0' \
@@ -36,14 +36,14 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
                             'pretrain.head_layers=[512,256]' 'finetune.head_layers=[512,256]' \
                             'pretrain.frozen_layers="[0,-4]"' 'finetune.frozen_layers="[0,-4]"' \
-                            'pretrain.num_parallel_calls=6' 'finetune.num_parallel_calls=6' \
+                            'pretrain.num_parallel_calls=4' 'finetune.num_parallel_calls=4' \
                             'pipeline.stage_0.params.fit_class_weights=True' 'pipeline.stage_2.params.fit_class_weights=True'
 
 
 
 python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
-                            'dataset_0@dataset_0=Fossil_family_100' \
-                            'dataset_1@dataset_1=Leaves_family_100' \
+                            'dataset_0@dataset_0=Fossil_family_4' \
+                            'dataset_1@dataset_1=Leaves_family_4' \
                             'dataset_0.test_size=0.3' 'dataset_1.test_size=0.3' \
                             'pretrain.target_size=[768,768]' \
                             'pretrain.augmentations.flip=1.0' \
@@ -59,7 +59,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/baseline_finetuning_pipeline.py \
                             'pretrain.early_stopping.patience=12' 'finetune.early_stopping.patience=12' \
                             'pretrain.head_layers=[512,256]' 'finetune.head_layers=[512,256]' \
                             'pretrain.frozen_layers="[0,-4]"' 'finetune.frozen_layers="[0,-4]"' \
-                            'pretrain.num_parallel_calls=6' 'finetune.num_parallel_calls=6' \
+                            'pretrain.num_parallel_calls=4' 'finetune.num_parallel_calls=4' \
                             'pipeline.stage_0.params.fit_class_weights=True' 'pipeline.stage_2.params.fit_class_weights=True'
 
 

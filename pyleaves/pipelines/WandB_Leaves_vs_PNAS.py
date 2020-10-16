@@ -30,7 +30,8 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
                             'pretrain.early_stopping.patience=15' \
                             'pretrain.head_layers=[512,256]' \
-                            'pretrain.frozen_layers="bn"' \
+                            'pretrain.frozen_layers=null' \
+                            'pretrain.weights=null' \
                             'pretrain.num_parallel_calls=5' \
                             'tags=["Baseline"]' \
                             'pipeline.stage_0.params.fit_class_weights=True'
@@ -270,7 +271,8 @@ def data_df_2_tf_data(data,
             'encoder':class_encoder,
             'num_samples':num_samples,
             'num_classes':num_classes,
-            'class_weights':class_weights}
+            'class_weights':class_weights,
+            'data_table':data}
 
 
 #%%
