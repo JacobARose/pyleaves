@@ -628,9 +628,9 @@ def build_base_vgg16_RGB(weights="imagenet", input_shape=(224,224,3), frozen_lay
     return base
 
 
-def build_head(base, num_classes=10, head_layers: List[int]=None):
+def build_head(base, num_classes=10, head_layers: List[int]=None, pool_size=(2,2), kernel_l2=1e-2):
     if head_layers is None:
-        global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
+        global_average_layer = tf.keras.layers.GlobalAveragePooling2D(pool_size=pool_size)
         dense1 = tf.keras.layers.Dense(2048,activation='relu',name='dense1')
         dense2 = tf.keras.layers.Dense(512,activation='relu',name='dense2')
         prediction_layer = tf.keras.layers.Dense(num_classes, activation='softmax')
@@ -643,9 +643,9 @@ def build_head(base, num_classes=10, head_layers: List[int]=None):
     else:
         layers = [base] # ToDo try adding all base layers one by one
         # layers = [layer for layer in base.layers] # ToDo try adding all base layers one by one
-        layers.append(tf.keras.layers.GlobalAveragePooling2D())
+        layers.append(tf.keras.layers.GlobalAveragePooling2D(pool_size=pool_size))
         for layer_num, layer_units in enumerate(head_layers):
-            layers.append(tf.keras.layers.Dense(layer_units,activation='relu',name=f'dense{layer_num}'))
+            layers.append(tf.keras.layers.Dense(layer_units,activation='relu',name=f'dense{layer_num}', kernel_regularizer=tf.keras.regularizers.l2(kernel_l2)))
         
         layers.append(tf.keras.layers.Dense(num_classes, activation='softmax'))
         model = tf.keras.Sequential(layers)
@@ -761,7 +761,7 @@ def build_model(model_config, load_saved_model=False):
         model_config.frozen_layers = frozen_layers
 
     base = base_model.Model.add_regularization(base, **model_config.regularization)
-    model = build_head(base, num_classes=model_config.num_classes, head_layers=model_config.head_layers)
+    model = build_head(base, num_classes=model_config.num_classes, head_layers=model_config.head_layers, pool_size=model_config.pool_size, kernel_l2=model_config.kernel_l2)
     
     # model = base_model.Model.add_regularization(model, **model_config.regularization)
 
