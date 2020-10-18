@@ -24,7 +24,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.augmentations.rotate=1.0' \
                             'pretrain.augmentations.sbc=0.0' \
                             'pretrain.lr=1e-4' \
-                            'pretrain.batch_size=12' \
+                            'pretrain.batch_size=10' \
                             'pretrain.regularization.l2=1e-3' \
                             'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
                             'pretrain.early_stopping.patience=15' \
@@ -33,27 +33,6 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.num_parallel_calls=5' \
                             'tags=["Baseline"]' \
                             'pipeline.stage_0.params.fit_class_weights=True'
-
-
-python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
-                            'WandB_dataset_0@WandB_dataset_0=Leaves_family_4-PNAS_family_100_test' \
-                            'pretrain.model_name="resnet_50_v2"' \
-                            'pretrain.target_size=[768,768]' \
-                            'pretrain.num_epochs=120' \
-                            'pretrain.augmentations.flip=1.0' \
-                            'pretrain.augmentations.rotate=1.0' \
-                            'pretrain.augmentations.sbc=0.0' \
-                            'pretrain.lr=1e-4' \
-                            'pretrain.batch_size=12' \
-                            'pretrain.regularization.l2=1e-3' \
-                            'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
-                            'pretrain.early_stopping.patience=15' \
-                            'pretrain.head_layers=[512,256]' \
-                            'pretrain.frozen_layers=[0,-1]' \
-                            'pretrain.num_parallel_calls=5' \
-                            'tags=["Baseline"]' \
-                            'pipeline.stage_0.params.fit_class_weights=True'
-
 
 
 
@@ -76,8 +55,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
                             'pretrain.early_stopping.patience=15' \
                             'pretrain.head_layers=[512,256]' \
-                            'pretrain.frozen_layers=null' \
-                            'pretrain.weights=null' \
+                            'pretrain.frozen_layers=[0,-1]' \
                             'pretrain.num_parallel_calls=5' \
                             'tags=["Baseline"]' \
                             'pipeline.stage_0.params.fit_class_weights=True'
