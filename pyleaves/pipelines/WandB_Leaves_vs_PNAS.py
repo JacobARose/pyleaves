@@ -744,6 +744,7 @@ def main(config):
                                         seed=config.seed)]
 
     image_batch, label_batch = next(iter(train_data))
+    import pdb;pdb.set_trace()
     fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='train', class_names=class_names)
     wandb.log({'train_image_batch': [wandb.Image(fig)]}, commit=False)
 
