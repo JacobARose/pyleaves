@@ -436,7 +436,7 @@ class ConfusionMatrixCallback(Callback):
 		self.val_imgs = val_imgs
 
 		if val_labels.ndim==2:
-			val_labels = tf.argmax(val_labels,axis=1)
+			val_labels = tf.argmax(val_labels,axis=-1)
 		self.val_labels = val_labels
 		self.num_samples = val_labels.numpy().shape[0]
 		self.classes = classes
@@ -445,8 +445,10 @@ class ConfusionMatrixCallback(Callback):
 
 	def log_confusion_matrix(self, model, imgs, labels, epoch, norm_cm=False):
 
-		pred_labels = model.predict_classes(imgs)# = tf.reshape(imgs, (-1,PARAMS['image_size'], PARAMS['num_channels'])))
-		pred_labels = pred_labels[:,None]
+		# pred_labels = model.predict_classes(imgs)
+		# pred_labels = pred_labels[:,None]
+		pred_labels = tf.argmax(model.predict(imgs), axis=-1)
+		# pred_labels = pred_labels[:,None]
 
 		con_mat = tf.math.confusion_matrix(labels=labels, predictions=pred_labels, num_classes=len(self.classes)).numpy()
 		if norm_cm:
