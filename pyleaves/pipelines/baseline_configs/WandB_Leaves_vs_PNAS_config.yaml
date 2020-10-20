@@ -46,6 +46,7 @@ pretrain:
     regularization:
         l2: null
         l1: null
+    kernel_l2: 1e-10
     loss: "categorical_crossentropy"
     METRICS: ["f1","accuracy", "balanced_accuracy"]
     head_layers: [256,128]
