@@ -274,6 +274,7 @@ def data_df_2_tf_data(data,
     """        
     from pyleaves.utils.pipeline_utils import flip, rotate, rgb2gray_1channel, rgb2gray_3channel, sat_bright_con, _cond_apply, load_data_from_tfrecords
     import tensorflow as tf
+    from tensorflow.keras import backend as K
 
     
     if shuffle_first:
