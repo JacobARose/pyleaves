@@ -319,7 +319,7 @@ def data_df_2_tf_data(data,
         if target_size[0] > 768:
             tfrecord_target_shape = (*target_size,3)
         else:
-            tfrecord_target_shape = (768,768,3),
+            tfrecord_target_shape = (768,768,3)
         prepped_data = (paths, labels)
         tf_data = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
                                            data=prepped_data,
