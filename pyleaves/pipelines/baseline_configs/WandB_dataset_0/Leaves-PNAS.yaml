@@ -1,6 +1,6 @@
 # @package _group_
 
 dataset_name: "Leaves-PNAS"
-artifact_name: "Leaves-PNAS_70-30"
+artifact_name: "Leaves-PNAS_70-30:latest"
 test_size: 0.3
 validation_split: 0.1
