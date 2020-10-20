@@ -466,6 +466,8 @@ def show_batch(image_batch, label_batch, title='', class_names=None):
     if label_batch.ndim==2:
         label_batch = np.argmax(label_batch, axis=-1)
 
+    if isinstance(label_batch, (np.ndarray,)):
+        label_batch = label_batch.tolist()
     if class_names is not None:
         label_batch = [class_names[l] for l in label_batch]
 
