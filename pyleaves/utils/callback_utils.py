@@ -437,8 +437,10 @@ class ConfusionMatrixCallback(Callback):
 
 		if val_labels.ndim==2:
 			val_labels = tf.argmax(val_labels,axis=-1)
+		if not isinstance(val_labels, (np.ndarray)):
+			val_labels = val_labels.numpy()
 		self.val_labels = val_labels
-		self.num_samples = val_labels.numpy().shape[0]
+		self.num_samples = val_labels.shape[0]
 		self.classes = classes
 		self.freq = freq
 		self.experiment = neptune_experiment
