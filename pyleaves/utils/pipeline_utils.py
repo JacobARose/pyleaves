@@ -446,8 +446,6 @@ def extract_and_load_data(data_fold: DataFold,
                           seed=None):
 
 
-
-
     extracted_data, split_datasets, encoder = extract_data(fold=data_fold,
                                                            encoder=encoder,
                                                            class_names=class_names,
@@ -457,11 +455,10 @@ def extract_and_load_data(data_fold: DataFold,
                                                            subsets=subsets,
                                                            seed=seed)
                                                        
-    subset_keys = [k for k in extracted_data if extracted_data[k] is not None]
+    # subset_keys = [k for k in extracted_data if extracted_data[k] is not None]
     loaded_data = {}
     for subset_key, data in extracted_data.items():
         training = bool('train' in subset_key)
-
         if use_tfrecords:            
             loaded_data[subset_key] = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
                                                                data=data,

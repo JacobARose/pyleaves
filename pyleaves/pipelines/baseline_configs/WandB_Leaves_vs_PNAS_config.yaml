@@ -66,6 +66,9 @@ pretrain:
         restore_best_weights: True
         
         
+use_tfrecords: false
+samples_per_shard: 400
+tfrecord_dir: "/media/data/jacob/tfrecords"
   
     
 seed: 20

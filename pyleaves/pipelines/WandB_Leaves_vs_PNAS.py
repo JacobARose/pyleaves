@@ -18,13 +18,15 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.lr=1e-4' \
                             'pretrain.batch_size=10' \
                             'pretrain.regularization.l2=1e-3' \
+                            'pretrain.kernel_l2=1e-5' \
                             'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
                             'pretrain.early_stopping.patience=15' \
                             'pretrain.head_layers=[512,256]' \
                             'pretrain.frozen_layers="bn"' \
                             'pretrain.num_parallel_calls=5' \
                             'tags=["Baseline"]' \
-                            'pipeline.stage_0.params.fit_class_weights=False'
+                            'pipeline.stage_0.params.fit_class_weights=False' \
+                            'use_tfrecords=True'
 
 
 
@@ -72,6 +74,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.num_parallel_calls=5' \
                             'tags=["Baseline"]' \
                             'pipeline.stage_0.params.fit_class_weights=True'
+
 
 
 
@@ -238,7 +241,11 @@ def data_df_2_tf_data(data,
                       cache=False,
                       class_encodings: Dict[str,int]=None,
                       shuffle_first: bool=False,
-                      fit_class_weights=False):
+                      fit_class_weights=False,
+                      subset_key='train',
+                      use_tfrecords=False,
+                      samples_per_shard=400,
+                      tfrecord_dir='.'):
     """Helper function for loading data queried from WandB into tf.data.Datasets
 
     Args:
@@ -265,7 +272,7 @@ def data_df_2_tf_data(data,
     Returns:
         [type]: [description]
     """        
-    from pyleaves.utils.pipeline_utils import flip, rotate, rgb2gray_1channel, rgb2gray_3channel, sat_bright_con, _cond_apply
+    from pyleaves.utils.pipeline_utils import flip, rotate, rgb2gray_1channel, rgb2gray_3channel, sat_bright_con, _cond_apply, load_data_from_tfrecords
     import tensorflow as tf
 
     
@@ -303,9 +310,27 @@ def data_df_2_tf_data(data,
     class_weights = calc_class_weights(labels, balanced=fit_class_weights)        
     # class_weights = {i:w for i,w in class_weights.items() if i in class_encodings.inv}
     
+    ####################
 
     prepped_data = pd.DataFrame.from_records([{'path':path, 'label':label} for path, label in zip(paths, labels)])
-    tf_data = load_data_from_tensor_slices(data=prepped_data, training=training, seed=seed, x_col='path', y_col='label', dtype=tf.float32)
+
+    training = bool('train' in subset_key)
+    if use_tfrecords:
+        if target_size[0] > 768:
+            tfrecord_target_shape = (*target_size,3)
+        else:
+            tfrecord_target_shape = (768,768,3),
+        prepped_data = (paths, labels)
+        tf_data = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
+                                           data=prepped_data,
+                                           target_shape=tfrecord_target_shape,
+                                           samples_per_shard=samples_per_shard,
+                                           subset_key=subset_key,
+                                           num_classes=num_classes)
+    else:
+        tf_data = load_data_from_tensor_slices(data=prepped_data, training=training, seed=seed, x_col='path', y_col='label', dtype=tf.float32)
+        
+    ####################
 
     if preprocess_input is not None:
         tf_data = tf_data.map(lambda x,y: (preprocess_input(x), y), num_parallel_calls=num_parallel_calls)
@@ -341,7 +366,8 @@ def data_df_2_tf_data(data,
 
 
 def get_experiment_data(dataset_name='Fossil', threshold=4, test_size=0.3, version='latest', validation_split=0.1, seed=None,
-                        preprocess_input=lambda x: x, target_size=(256,256), batch_size=16, augmentations={}, num_parallel_calls=1, fit_class_weights=False, artifact_name=None):
+                        preprocess_input=lambda x: x, target_size=(256,256), batch_size=16, augmentations={}, num_parallel_calls=1, fit_class_weights=False, artifact_name=None,
+                        use_tfrecords=False, samples_per_shard=400, tfrecord_dir='.'):
 
     from pyleaves.utils.WandB_artifact_utils import load_dataset_from_artifact, load_Leaves_Minus_PNAS_dataset, load_Leaves_Minus_PNAS_test_dataset
 
@@ -365,7 +391,11 @@ def get_experiment_data(dataset_name='Fossil', threshold=4, test_size=0.3, versi
                                         num_parallel_calls=num_parallel_calls,
                                         cache=False,
                                         shuffle_first=True,
-                                        fit_class_weights=fit_class_weights)
+                                        fit_class_weights=fit_class_weights,
+                                        subset_key='train',
+                                        use_tfrecords=use_tfrecords,
+                                        samples_per_shard=samples_per_shard,
+                                        tfrecord_dir=tfrecord_dir)
 
     val_data_info = data_df_2_tf_data(val_df,
                                         x_col='archive_path',
@@ -378,7 +408,11 @@ def get_experiment_data(dataset_name='Fossil', threshold=4, test_size=0.3, versi
                                         num_parallel_calls=num_parallel_calls,
                                         cache=True,
                                         shuffle_first=True,
-                                        class_encodings=train_data_info['encoder'])
+                                        class_encodings=train_data_info['encoder'],
+                                        subset_key='val',
+                                        use_tfrecords=use_tfrecords,
+                                        samples_per_shard=samples_per_shard,
+                                        tfrecord_dir=tfrecord_dir)
 
     test_data_info = data_df_2_tf_data(test_df,
                                         x_col='archive_path',
@@ -391,7 +425,11 @@ def get_experiment_data(dataset_name='Fossil', threshold=4, test_size=0.3, versi
                                         num_parallel_calls=num_parallel_calls,
                                         cache=True,
                                         shuffle_first=True,
-                                        class_encodings=train_data_info['encoder'])
+                                        class_encodings=train_data_info['encoder'],
+                                        subset_key='test',
+                                        use_tfrecords=use_tfrecords,
+                                        samples_per_shard=samples_per_shard,
+                                        tfrecord_dir=tfrecord_dir)
     return train_data_info, val_data_info, test_data_info
 #section
         # pnas_train_data_info = data_df_2_tf_data(pnas_train_df,
@@ -624,7 +662,10 @@ def main(config):
                                                                          augmentations=config.pretrain.augmentations, 
                                                                          num_parallel_calls=config.num_parallel_calls,
                                                                          fit_class_weights=config.pipeline.stage_0.fit_class_weights,
-                                                                         artifact_name=config.pretrain.artifact_name)
+                                                                         artifact_name=config.pretrain.artifact_name,
+                                                                         use_tfrecords=config.use_tfrecords,
+                                                                         samples_per_shard=config.samples_per_shard,
+                                                                         tfrecord_dir=config.tfrecord_dir)
 
     train_data = train_data_info['data']
     val_data = val_data_info['data']
