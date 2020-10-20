@@ -454,7 +454,7 @@ class ConfusionMatrixCallback(Callback):
 
 		con_mat = tf.math.confusion_matrix(labels=labels, predictions=pred_labels, num_classes=len(self.classes)).numpy()
 		if norm_cm:
-			con_mat = np.around(con_mat.astype('float') / con_mat.sum(axis=1)[:, np.newaxis], decimals=2)
+			con_mat = np.around(con_mat.astype('float') / (con_mat.sum(axis=1)[:, np.newaxis] + 1e-15), decimals=2)
 		con_mat_df = pd.DataFrame(con_mat,
 						 index = self.classes,
 						 columns = self.classes)
