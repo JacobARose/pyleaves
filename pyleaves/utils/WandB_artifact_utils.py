@@ -49,10 +49,11 @@ def load_train_test_artifact(artifact_uri='jrose/uncategorized/Leaves-PNAS:v1'):
 
 
 
-def load_dataset_from_artifact(dataset_name='Fossil', threshold=4, test_size=0.3, version='latest'):
+def load_dataset_from_artifact(dataset_name='Fossil', threshold=4, test_size=0.3, version='latest', artifact_name=None):
     train_size = 1 - test_size
-    
-    if dataset_name=='Fossil':
+    if artifact_name:
+        pass
+    elif dataset_name=='Fossil':
         artifact_name = f'{dataset_name}_{threshold}_{int(train_size*100)}-{int(100*test_size)}:{version}'
     elif dataset_name=='PNAS':
         artifact_name = f'{dataset_name}_family_{threshold}_50-50:{version}'

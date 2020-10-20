@@ -2,7 +2,10 @@
 
 #This should be added in the defaults of the global config
 
-dataset_name: "Leaves_family_4-PNAS_family_100_test"
+dataset_name: "PNAS"
+artifact_name: "PNAS_family_100_50-50"
+test_size: 0.5
+
 validation_split: 0.1
 include_classes: []
 exclude_classes: ['notcataloged','notcatalogued', 'II. IDs, families uncertain', 'Unidentified']

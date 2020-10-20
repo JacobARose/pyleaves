@@ -5,6 +5,45 @@
 python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline.py 
 
 
+
+
+python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
+                            'WandB_dataset_0@WandB_dataset_0=Leaves-PNAS' \
+                            'pretrain.model_name="resnet_50_v2"' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.num_epochs=120' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=0.0' \
+                            'pretrain.lr=1e-4' \
+                            'pretrain.batch_size=10' \
+                            'pretrain.regularization.l2=1e-3' \
+                            'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
+                            'pretrain.early_stopping.patience=15' \
+                            'pretrain.head_layers=[512,256]' \
+                            'pretrain.frozen_layers="bn"' \
+                            'pretrain.num_parallel_calls=5' \
+                            'tags=["Baseline"]' \
+                            'pipeline.stage_0.params.fit_class_weights=False'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 python ~/projects/pyleaves/pyleaves/pipelines/WandB_baseline_finetuning_pipeline.py target_size=[299,299] batch_size=32 num_epochs=60 'frozen_layers=[0,-4]' num_parallel_calls=4
 
 
@@ -301,72 +340,83 @@ def data_df_2_tf_data(data,
             'data_table':data}
 
 
+def get_experiment_data(dataset_name='Fossil', threshold=4, test_size=0.3, version='latest', validation_split=0.1, seed=None,
+                        preprocess_input=lambda x: x, target_size=(256,256), batch_size=16, augmentations={}, num_parallel_calls=1, fit_class_weights=False, artifact_name=None):
+
+    from pyleaves.utils.WandB_artifact_utils import load_dataset_from_artifact, load_Leaves_Minus_PNAS_dataset, load_Leaves_Minus_PNAS_test_dataset
+
+    if dataset_name == "Leaves-PNAS":
+        train_df, val_df = load_dataset_from_artifact(dataset_name=dataset_name, threshold=threshold, test_size=test_size, version=version, artifact_name=None)
+        _, test_df = load_dataset_from_artifact(dataset_name='PNAS', threshold=100, test_size=0.5, version='latest')
+
+    else:
+        train_df, test_df = load_dataset_from_artifact(dataset_name=dataset_name, threshold=threshold, test_size=test_size, version=version, artifact_name=artifact_name)
+        train_df, val_df = train_test_split(train_df, test_size=validation_split, random_state=seed, shuffle=True, stratify=train_df.family)
+
+    train_data_info = data_df_2_tf_data(train_df,
+                                        x_col='archive_path',
+                                        y_col='family',
+                                        training=True,
+                                        preprocess_input=preprocess_input,
+                                        seed=seed,
+                                        target_size=target_size,
+                                        batch_size=batch_size,
+                                        augmentations=augmentations,
+                                        num_parallel_calls=num_parallel_calls,
+                                        cache=False,
+                                        shuffle_first=True,
+                                        fit_class_weights=fit_class_weights)
+
+    val_data_info = data_df_2_tf_data(val_df,
+                                        x_col='archive_path',
+                                        y_col='family',
+                                        training=False,
+                                        preprocess_input=preprocess_input,
+                                        seed=seed,
+                                        target_size=target_size,
+                                        batch_size=batch_size,
+                                        num_parallel_calls=num_parallel_calls,
+                                        cache=True,
+                                        shuffle_first=True,
+                                        class_encodings=train_data_info['encoder'])
+
+    test_data_info = data_df_2_tf_data(test_df,
+                                        x_col='archive_path',
+                                        y_col='family',
+                                        training=False,
+                                        preprocess_input=preprocess_input,
+                                        seed=seed,
+                                        target_size=target_size,
+                                        batch_size=batch_size,
+                                        num_parallel_calls=num_parallel_calls,
+                                        cache=True,
+                                        shuffle_first=True,
+                                        class_encodings=train_data_info['encoder'])
+    return train_data_info, val_data_info, test_data_info
+#section
+        # pnas_train_data_info = data_df_2_tf_data(pnas_train_df,
+        #                                          x_col='archive_path',
+        #                                          y_col='family',
+        #                                          training=True,
+        #                                          preprocess_input=preprocess_input,
+        #                                          seed=config.seed,
+        #                                          target_size=config.pretrain.target_size,
+        #                                          batch_size=config.pretrain.batch_size,
+        #                                          augmentations=config.pretrain.augmentations,
+        #                                          num_parallel_calls=config.pretrain.num_parallel_calls,
+        #                                          cache=True,
+        #                                          shuffle_first=True,
+        #                                          fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
+#endsection
+
+
+
+
+
+
 #%%
 #region
 
-# def load_WandB_data_by_subset(image_dir, subset='test', preprocess_input=None, class_encodings: Dict[str,int]=None,
-#                         fit_class_weights=False, validation_split=None, seed=None, target_size=(224,224), batch_size=16,
-#                         augmentations=[], num_parallel_calls=-1):
-
-#     import tensorflow as tf
-#     class_encodings = class_encodings or {}
-#     classes = list(class_encodings.keys())
-
-#     if subset=='train':
-
-
-#         datagen = tf.keras.preprocessing.image.ImageDataGenerator(validation_split=validation_split)
-#         train_iter = datagen.flow_from_directory(image_dir, classes=classes,
-#                                                  shuffle=True, seed=seed,
-#                                                  subset='training')
-#         data_info = img_data_gen_2_tf_data(train_iter,
-#                                             training=True,
-#                                             target_size=target_size,
-#                                             batch_size=batch_size,
-#                                             seed=seed,
-#                                             preprocess_input=preprocess_input,
-#                                             augmentations=augmentations,
-#                                             num_parallel_calls=num_parallel_calls,
-#                                             class_encodings=class_encodings,
-#                                             fit_class_weights=fit_class_weights)
-#         return data_info
-
-#     elif subset.startswith('val'):
-#         # image_dir = "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_4_2020-06/train"
-#         datagen = tf.keras.preprocessing.image.ImageDataGenerator(validation_split=validation_split)
-#         val_iter = datagen.flow_from_directory(image_dir, classes=classes,
-#                                                shuffle=False, seed=seed,
-#                                                subset='validation')
-
-#         data_info = img_data_gen_2_tf_data(val_iter,
-#                                             training=False,
-#                                             target_size=target_size,
-#                                             batch_size=batch_size,
-#                                             seed=seed,
-#                                             preprocess_input=preprocess_input,
-#                                             cache=True,
-#                                             class_encodings=class_encodings,
-#                                             fit_class_weights=fit_class_weights)
-#         return data_info
-
-#     elif subset=='test':
-#         # image_dir = "/media/data_cifs_lrs/projects/prj_fossils/data/processed_data/data_splits/Fossil_family_4_2020-06/test"
-#         test_datagen = tf.keras.preprocessing.image.ImageDataGenerator()
-#         test_iter = test_datagen.flow_from_directory(image_dir, classes=classes,
-#                                                      shuffle=False, seed=seed)
-
-#         data_info = img_data_gen_2_tf_data(test_iter,
-#                                            training=False,
-#                                            target_size=target_size,
-#                                            batch_size=batch_size,
-#                                            seed=seed,
-#                                            preprocess_input=preprocess_input,
-#                                            class_encodings=class_encodings,
-#                                            fit_class_weights=fit_class_weights)
-#         return data_info
-
-#endregion
-#%%
 
 #region
 # Image plotting utils
@@ -416,35 +466,6 @@ def summarize_sample(x, y):
 
 
 
-def parse_config(config: DictConfig):
-    # TODO clean up for WandB
-    config.regularization = config.regularization or {}
-    config.lr = float(config.lr)
-    config.data_augs.validation_split = float(config.data_augs.validation_split)
-    try:
-        config.data_augs.rescale = float(config.data_augs.rescale)
-    except:
-        config.data_augs.rescale = None
-    
-    data_augs = {k:v for k,v in OmegaConf.to_container(config.data_augs, resolve=True).items() if k != "preprocessing_function"}
-
-    return config, data_augs
-
-
-def log_experiment_config(config):
-    # TODO clean up for WandB
-    experiment_config = {}
-    for k,v in OmegaConf.to_container(config, resolve=True).items():
-        if type(v)==dict:
-            experiment_config[k] = str(v)
-        elif type(v)==ListConfig:
-            experiment_config[k] = list(v)
-        else:
-            experiment_config[k] = v
-
-    return experiment_config
-
-
 
 
 
@@ -480,117 +501,130 @@ def main(config):
         preprocess_input = None
         print("Using no preprocess_input function")
 
-    from pyleaves.utils.WandB_artifact_utils import load_Leaves_Minus_PNAS_dataset, load_Leaves_Minus_PNAS_test_dataset
+#region
+#     from pyleaves.utils.WandB_artifact_utils import load_Leaves_Minus_PNAS_dataset, load_Leaves_Minus_PNAS_test_dataset
 
-    if config.dataset_name["0"] == "Leaves_family_4-PNAS_family_100_test":
-        train_df, test_df, pnas_train_df = load_Leaves_Minus_PNAS_test_dataset()
+#     if config.dataset_name["0"] == "Leaves_family_4-PNAS_family_100_test":
+#         train_df, test_df, pnas_train_df = load_Leaves_Minus_PNAS_test_dataset()
 
-        if config.pretrain.validation_split:
-            train_df, val_df = train_test_split(train_df, test_size=config.pretrain.validation_split, random_state=config.seed, shuffle=True, stratify=train_df.family)
+#         if config.pretrain.validation_split:
+#             train_df, val_df = train_test_split(train_df, test_size=config.pretrain.validation_split, random_state=config.seed, shuffle=True, stratify=train_df.family)
 
-        train_data_info = data_df_2_tf_data(train_df,
-                                            x_col='archive_path',
-                                            y_col='family',
-                                            training=True,
-                                            preprocess_input=preprocess_input,
-                                            seed=config.seed,
-                                            target_size=config.pretrain.target_size,
-                                            batch_size=config.pretrain.batch_size,
-                                            augmentations=config.pretrain.augmentations,
-                                            num_parallel_calls=config.pretrain.num_parallel_calls,
-                                            cache=False,
-                                            shuffle_first=True,
-                                            fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
+#         train_data_info = data_df_2_tf_data(train_df,
+#                                             x_col='archive_path',
+#                                             y_col='family',
+#                                             training=True,
+#                                             preprocess_input=preprocess_input,
+#                                             seed=config.seed,
+#                                             target_size=config.pretrain.target_size,
+#                                             batch_size=config.pretrain.batch_size,
+#                                             augmentations=config.pretrain.augmentations,
+#                                             num_parallel_calls=config.pretrain.num_parallel_calls,
+#                                             cache=False,
+#                                             shuffle_first=True,
+#                                             fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
 
-        val_data_info = data_df_2_tf_data(val_df,
-                                          x_col='archive_path',
-                                          y_col='family',
-                                          training=False,
-                                          preprocess_input=preprocess_input,
-                                          seed=config.seed,
-                                          target_size=config.pretrain.target_size,
-                                          batch_size=config.pretrain.batch_size,
-                                          num_parallel_calls=config.pretrain.num_parallel_calls,
-                                          cache=True,
-                                          shuffle_first=True,
-                                          class_encodings=train_data_info['encoder'])
+#         val_data_info = data_df_2_tf_data(val_df,
+#                                           x_col='archive_path',
+#                                           y_col='family',
+#                                           training=False,
+#                                           preprocess_input=preprocess_input,
+#                                           seed=config.seed,
+#                                           target_size=config.pretrain.target_size,
+#                                           batch_size=config.pretrain.batch_size,
+#                                           num_parallel_calls=config.pretrain.num_parallel_calls,
+#                                           cache=True,
+#                                           shuffle_first=True,
+#                                           class_encodings=train_data_info['encoder'])
 
-        test_data_info = data_df_2_tf_data(test_df,
-                                           x_col='archive_path',
-                                           y_col='family',
-                                           training=False,
-                                           preprocess_input=preprocess_input,
-                                           seed=config.seed,
-                                           target_size=config.pretrain.target_size,
-                                           batch_size=config.pretrain.batch_size,
-                                           num_parallel_calls=config.pretrain.num_parallel_calls,
-                                           cache=True,
-                                           shuffle_first=True,
-                                           class_encodings=train_data_info['encoder'])
-#section
-        # pnas_train_data_info = data_df_2_tf_data(pnas_train_df,
-        #                                          x_col='archive_path',
-        #                                          y_col='family',
-        #                                          training=True,
-        #                                          preprocess_input=preprocess_input,
-        #                                          seed=config.seed,
-        #                                          target_size=config.pretrain.target_size,
-        #                                          batch_size=config.pretrain.batch_size,
-        #                                          augmentations=config.pretrain.augmentations,
-        #                                          num_parallel_calls=config.pretrain.num_parallel_calls,
-        #                                          cache=True,
-        #                                          shuffle_first=True,
-        #                                          fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
-#endsection
+#         test_data_info = data_df_2_tf_data(test_df,
+#                                            x_col='archive_path',
+#                                            y_col='family',
+#                                            training=False,
+#                                            preprocess_input=preprocess_input,
+#                                            seed=config.seed,
+#                                            target_size=config.pretrain.target_size,
+#                                            batch_size=config.pretrain.batch_size,
+#                                            num_parallel_calls=config.pretrain.num_parallel_calls,
+#                                            cache=True,
+#                                            shuffle_first=True,
+#                                            class_encodings=train_data_info['encoder'])
+#
+#         # pnas_train_data_info = data_df_2_tf_data(pnas_train_df,
+#         #                                          x_col='archive_path',
+#         #                                          y_col='family',
+#         #                                          training=True,
+#         #                                          preprocess_input=preprocess_input,
+#         #                                          seed=config.seed,
+#         #                                          target_size=config.pretrain.target_size,
+#         #                                          batch_size=config.pretrain.batch_size,
+#         #                                          augmentations=config.pretrain.augmentations,
+#         #                                          num_parallel_calls=config.pretrain.num_parallel_calls,
+#         #                                          cache=True,
+#         #                                          shuffle_first=True,
+#         #                                          fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
+# 
 
-    elif config.dataset_name["0"] == "PNAS_family_100":
-        _, test_df, train_df = load_Leaves_Minus_PNAS_test_dataset()
+#     elif config.dataset_name["0"] == "PNAS_family_100":
+#         _, test_df, train_df = load_Leaves_Minus_PNAS_test_dataset()
 
-        if config.pretrain.validation_split:
-            train_df, val_df = train_test_split(train_df, test_size=config.pretrain.validation_split, random_state=config.seed, shuffle=True, stratify=train_df.family)
+#         if config.pretrain.validation_split:
+#             train_df, val_df = train_test_split(train_df, test_size=config.pretrain.validation_split, random_state=config.seed, shuffle=True, stratify=train_df.family)
 
-        train_data_info = data_df_2_tf_data(train_df,
-                                            x_col='archive_path',
-                                            y_col='family',
-                                            training=True,
-                                            preprocess_input=preprocess_input,
-                                            seed=config.seed,
-                                            target_size=config.pretrain.target_size,
-                                            batch_size=config.pretrain.batch_size,
-                                            augmentations=config.pretrain.augmentations,
-                                            num_parallel_calls=config.pretrain.num_parallel_calls,
-                                            cache=False,
-                                            shuffle_first=True,
-                                            fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
+#         train_data_info = data_df_2_tf_data(train_df,
+#                                             x_col='archive_path',
+#                                             y_col='family',
+#                                             training=True,
+#                                             preprocess_input=preprocess_input,
+#                                             seed=config.seed,
+#                                             target_size=config.pretrain.target_size,
+#                                             batch_size=config.pretrain.batch_size,
+#                                             augmentations=config.pretrain.augmentations,
+#                                             num_parallel_calls=config.pretrain.num_parallel_calls,
+#                                             cache=False,
+#                                             shuffle_first=True,
+#                                             fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
 
-        val_data_info = data_df_2_tf_data(val_df,
-                                          x_col='archive_path',
-                                          y_col='family',
-                                          training=False,
-                                          preprocess_input=preprocess_input,
-                                          seed=config.seed,
-                                          target_size=config.pretrain.target_size,
-                                          batch_size=config.pretrain.batch_size,
-                                          num_parallel_calls=config.pretrain.num_parallel_calls,
-                                          cache=True,
-                                          shuffle_first=True,
-                                          class_encodings=train_data_info['encoder'])
+#         val_data_info = data_df_2_tf_data(val_df,
+#                                           x_col='archive_path',
+#                                           y_col='family',
+#                                           training=False,
+#                                           preprocess_input=preprocess_input,
+#                                           seed=config.seed,
+#                                           target_size=config.pretrain.target_size,
+#                                           batch_size=config.pretrain.batch_size,
+#                                           num_parallel_calls=config.pretrain.num_parallel_calls,
+#                                           cache=True,
+#                                           shuffle_first=True,
+#                                           class_encodings=train_data_info['encoder'])
 
-        test_data_info = data_df_2_tf_data(test_df,
-                                           x_col='archive_path',
-                                           y_col='family',
-                                           training=False,
-                                           preprocess_input=preprocess_input,
-                                           seed=config.seed,
-                                           target_size=config.pretrain.target_size,
-                                           batch_size=config.pretrain.batch_size,
-                                           num_parallel_calls=config.pretrain.num_parallel_calls,
-                                           cache=True,
-                                           shuffle_first=True,
-                                           class_encodings=train_data_info['encoder'])
+#         test_data_info = data_df_2_tf_data(test_df,
+#                                            x_col='archive_path',
+#                                            y_col='family',
+#                                            training=False,
+#                                            preprocess_input=preprocess_input,
+#                                            seed=config.seed,
+#                                            target_size=config.pretrain.target_size,
+#                                            batch_size=config.pretrain.batch_size,
+#                                            num_parallel_calls=config.pretrain.num_parallel_calls,
+#                                            cache=True,
+#                                            shuffle_first=True,
+#                                            class_encodings=train_data_info['encoder'])
+#endregion
 
-
-
+    train_data_info, val_data_info, test_data_info = get_experiment_data(dataset_name=config.pretrain.dataset_name,
+                                                                         threshold=config.pretrain.threshold,
+                                                                         test_size=config.pretrain.test_size,
+                                                                         version='latest',
+                                                                         validation_split=config.pretrain.validation_split, 
+                                                                         seed=config.seed,
+                                                                         preprocess_input=preprocess_input,
+                                                                         target_size=config.pretrain.target_size,
+                                                                         batch_size=config.pretrain.batch_size,
+                                                                         augmentations=config.pretrain.augmentations, 
+                                                                         num_parallel_calls=config.num_parallel_calls,
+                                                                         fit_class_weights=config.pipeline.stage_0.fit_class_weights,
+                                                                         artifact_name=config.pretrain.artifact_name)
 
     train_data = train_data_info['data']
     val_data = val_data_info['data']
@@ -617,7 +651,12 @@ def main(config):
     ################################################################################
     ################################################################################
     ################################################################################
-    run = wandb.init(entity=config.entity, project=config.project_name, name=config.run_name, job_type=config.job_type, tags=config.tags, sync_tensorboard=True)
+    run = wandb.init(entity=config.entity, 
+                     project=config.project_name,
+                     name=config.run_name,
+                     job_type=config.job_type,
+                     tags=config.tags,
+                     sync_tensorboard=True)
     run.config.update(OmegaConf.to_container(config, resolve=True))
 
     # id = wandb.util.generate_id()
@@ -625,27 +664,24 @@ def main(config):
     #     wandb.init(project="resuming", resume="must", id=id)
 
     class_names = train_data_info['encoder'].inv
-    train_cb = lambda : ((img, label) for img, label in iter(train_data.take(12).unbatch()))
+    # train_cb = lambda : ((img, label) for img, label in iter(train_data.take(12).unbatch()))
     val_cb = lambda : ((img, label) for img, label in iter(val_data.take(12).unbatch()))
 
-    train_imgs, train_labels = [], []
-    for img, lbl in train_cb():
-        train_imgs.append(img)
-        train_labels.append(lbl)
-
-
+    # train_imgs, train_labels = [], []
+    # for img, lbl in train_cb():
+    #     train_imgs.append(img)
+    #     train_labels.append(lbl)
     val_imgs, val_labels = [], []
     for img, lbl in val_cb():
         val_imgs.append(img)
         val_labels.append(lbl)
-
     val_imgs = np.stack([img for img in val_imgs])
     val_labels = np.stack([lbl for lbl in val_labels])
     callbacks = [TensorBoard(log_dir=config.log_dir, histogram_freq=2, write_images=True),
                  WandbCallback(log_gradients=False,#True,
                                data_type='image',#                               training_data=(train_imgs,train_labels),
                                labels=list(class_names.values()),
-                               predictions=36,
+                               predictions=64,
                                generator=tf.data.Dataset.from_generator(val_cb,
                                                                        (tf.float64, tf.float64),
                                                                        (tf.TensorShape(list(val_imgs.shape)), tf.TensorShape(list(val_labels.shape))))),
@@ -674,7 +710,7 @@ def main(config):
     wandb.log({'test_image_batch': [wandb.Image(fig)]})#, commit=False)
 
     print('[BEGINNING STAGE_0: PRE-TRAINING+VALIDATION]')
-    import pdb;pdb.set_trace()
+    # import pdb;pdb.set_trace()
     try:
         history = model.fit(train_data,
                             epochs=config.pretrain.num_epochs,
@@ -693,7 +729,10 @@ def main(config):
     model.save(config.pretrain.saved_model_path)
     
     artifact = wandb.Artifact(type='model', name=f'{config.pretrain.model_name}-{config.dataset_name["0"]}')
-    artifact.add_dir(config.pretrain.saved_model_path, name='trained_model')
+    if config.pretrain.saved_model_path.endswith('h5'):
+        artifact.add_file(config.pretrain.saved_model_path, name='trained_model')
+    else:
+        artifact.add_dir(config.pretrain.saved_model_path, name='trained_model')
     run.log_artifact(artifact)
 
     print('[STAGE_0 COMPLETED]')
