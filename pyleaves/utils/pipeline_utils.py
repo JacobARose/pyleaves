@@ -630,7 +630,7 @@ def build_base_vgg16_RGB(weights="imagenet", input_shape=(224,224,3), frozen_lay
 
 def build_head(base, num_classes=10, head_layers: List[int]=None, pool_size=(2,2), kernel_l2=1e-2):
     if head_layers is None:
-        global_average_layer = tf.keras.layers.GlobalAveragePooling2D(pool_size=pool_size)
+        global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
         dense1 = tf.keras.layers.Dense(2048,activation='relu',name='dense1')
         dense2 = tf.keras.layers.Dense(512,activation='relu',name='dense2')
         prediction_layer = tf.keras.layers.Dense(num_classes, activation='softmax')
@@ -643,7 +643,7 @@ def build_head(base, num_classes=10, head_layers: List[int]=None, pool_size=(2,2
     else:
         layers = [base] # ToDo try adding all base layers one by one
         # layers = [layer for layer in base.layers] # ToDo try adding all base layers one by one
-        layers.append(tf.keras.layers.GlobalAveragePooling2D(pool_size=pool_size))
+        layers.append(tf.keras.layers.GlobalAveragePooling2D())#pool_size=pool_size))
         for layer_num, layer_units in enumerate(head_layers):
             layers.append(tf.keras.layers.Dense(layer_units,activation='relu',name=f'dense{layer_num}', kernel_regularizer=tf.keras.regularizers.l2(kernel_l2)))
         
