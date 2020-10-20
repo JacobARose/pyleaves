@@ -332,7 +332,7 @@ def data_df_2_tf_data(data,
         tf_data = load_data_from_tensor_slices(data=prepped_data, training=training, seed=seed, x_col='path', y_col='label', dtype=tf.float32)
         
     ####################
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     if preprocess_input is not None:
         tf_data = tf_data.map(lambda x,y: (preprocess_input(x), K.cast(y, dtype='uint8')), num_parallel_calls=num_parallel_calls)
     
@@ -340,7 +340,7 @@ def data_df_2_tf_data(data,
     target_size = tuple(target_size)
     resize = partial(tf.image.resize, size=target_size)
     print('target_size = ', target_size)
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     tf_data = tf_data.map(lambda x,y: (resize(x), tf.one_hot(y, depth=num_classes)), num_parallel_calls=num_parallel_calls)
 
     tf_data = tf_data.repeat()
@@ -463,6 +463,7 @@ def get_experiment_data(dataset_name='Fossil', threshold=4, test_size=0.3, versi
 def show_batch(image_batch, label_batch, title='', class_names=None):
     fig = plt.figure(figsize=(15, 15))
 
+    import pdb;pdb.set_trace()
     if label_batch.ndim==2:
         label_batch = np.argmax(label_batch, axis=-1)
 
