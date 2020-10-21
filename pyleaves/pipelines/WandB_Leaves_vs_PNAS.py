@@ -243,6 +243,7 @@ def data_df_2_tf_data(data,
                       shuffle_first: bool=False,
                       fit_class_weights=False,
                       subset_key='train',
+                      repeat=True,
                       use_tfrecords=False,
                       samples_per_shard=400,
                       tfrecord_dir='.'):
@@ -343,7 +344,8 @@ def data_df_2_tf_data(data,
     # import pdb; pdb.set_trace()
     tf_data = tf_data.map(lambda x,y: (resize(x), tf.one_hot(y, depth=num_classes)), num_parallel_calls=num_parallel_calls)
 
-    tf_data = tf_data.repeat()
+    if repeat:
+        tf_data = tf_data.repeat()
     # TODO collect augmentation functions in a list and execute as a formal pipeline, abstracting away the logging & validation of results
     for aug in augmentations.keys():
         if 'flip' in aug:
