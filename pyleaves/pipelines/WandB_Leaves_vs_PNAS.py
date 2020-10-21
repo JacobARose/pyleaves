@@ -544,6 +544,9 @@ def main(config):
         preprocess_input = None
         print("Using no preprocess_input function")
 
+
+    os.makedirs(os.path.dirname(config.pretrain.saved_model_path), exist_ok=True)
+
 #region
 #     from pyleaves.utils.WandB_artifact_utils import load_Leaves_Minus_PNAS_dataset, load_Leaves_Minus_PNAS_test_dataset
 
