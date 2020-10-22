@@ -342,6 +342,7 @@ def data_df_2_tf_data(data,
         else:
             tfrecord_target_shape = (768,768,3)
         prepped_data = (paths, labels)
+        os.makedirs(tfrecord_dir, exist_ok=True)
         tf_data = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
                                            data=prepped_data,
                                            target_shape=tfrecord_target_shape,
@@ -393,6 +394,8 @@ def get_experiment_data(dataset_name='Fossil', threshold=4, test_size=0.3, versi
                         use_tfrecords=False, samples_per_shard=400, tfrecord_dir='.'):
 
     from pyleaves.utils.WandB_artifact_utils import load_dataset_from_artifact, load_Leaves_Minus_PNAS_dataset, load_Leaves_Minus_PNAS_test_dataset
+
+
 
     if dataset_name == "Leaves-PNAS":
         train_df, val_df = load_dataset_from_artifact(dataset_name=dataset_name, threshold=threshold, test_size=test_size, version=version, artifact_name=None)
