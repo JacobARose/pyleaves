@@ -109,19 +109,19 @@ def init_new_run(project, run_name, job_type):
     run = wandb.init(project=project, name=run_name, job_type=job_type)
     return run
 
-def create_dataset_artifact(run,name):
-    artifact = wandb.Artifact(name,type='dataset')
-    artifact.add_dir('data/custom/images')
-    artifact.add_dir('data/custom/labels')
-    artifact.add_file('data/custom/valid.txt')
-    artifact.add_file('data/custom/train.txt')
-    run.use_artifact(artifact)
+# def create_dataset_artifact(run,name):
+#     artifact = wandb.Artifact(name,type='dataset')
+#     artifact.add_dir('data/custom/images')
+#     artifact.add_dir('data/custom/labels')
+#     artifact.add_file('data/custom/valid.txt')
+#     artifact.add_file('data/custom/train.txt')
+#     run.use_artifact(artifact)
 
 
-def create_model_artifact(path,run,name):
-    artifact = wandb.Artifact(name,type='model')
-    artifact.add_file(path)
-    run.log_artifact(artifact)
+# def create_model_artifact(path,run,name):
+#     artifact = wandb.Artifact(name,type='model')
+#     artifact.add_file(path)
+#     run.log_artifact(artifact)
 
 
 

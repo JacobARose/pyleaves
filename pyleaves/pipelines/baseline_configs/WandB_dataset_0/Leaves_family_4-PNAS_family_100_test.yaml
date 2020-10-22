@@ -1,4 +1,4 @@
 # @package _group_
 
-dataset_name: "Leaves_family_4-PNAS_family_100_test"
+dataset_name: "Leaves-PNAS" # "Leaves_family_4-PNAS_family_100_test"
 validation_split: 0.1
