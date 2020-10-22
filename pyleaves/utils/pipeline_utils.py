@@ -51,7 +51,7 @@ from tensorflow.keras.applications.vgg16 import preprocess_input
 import tensorflow_datasets as tfds
 import tensorflow_addons as tfa
 from tensorflow.keras.callbacks import EarlyStopping, CSVLogger, LambdaCallback
-
+import wandb
 
 import importlib
 
@@ -716,45 +716,48 @@ def build_model(model_config, load_saved_model=False):
         # restore the best model
         model = tf.keras.models.load_model(wandb.restore("model-best.h5").name)
     else:
-
-    if load_saved_model and os.path.isfile(model_config['saved_model_path']):
-        print(f"Loading found saved model from {model_config['saved_model_path']}")
-        return tf.keras.models.load_model(model_config['saved_model_path'])
-
-    if model_config['model_name']=='vgg16':
-        if model_config['num_channels']==1:
-            model_builder = vgg16.VGG16GrayScale(model_config)
-            build_base = model_builder.build_base
+        if load_saved_model and os.path.isfile(model_config['saved_model_path']):
+            print(f"Loading found saved model from {model_config['saved_model_path']}")
+            model =  tf.keras.models.load_model(model_config['saved_model_path'])
         else:
-            build_base = partial(build_base_vgg16_RGB, weights=model_config.weights, input_shape=model_config.input_shape, frozen_layers=model_config.frozen_layers)
+            if model_config['model_name']=='vgg16':
+                if model_config['num_channels']==1:
+                    model_builder = vgg16.VGG16GrayScale(model_config)
+                    build_base = model_builder.build_base
+                else:
+                    build_base = partial(build_base_vgg16_RGB, weights=model_config.weights, input_shape=model_config.input_shape, frozen_layers=model_config.frozen_layers)
 
-    elif model_config['model_name'].startswith('resnet'):
-        model_builder = resnet.ResNet(model_config)
-        build_base = partial(model_builder.build_base, weights=model_config.weights, input_shape=model_config.input_shape)
+            elif model_config['model_name'].startswith('resnet'):
+                model_builder = resnet.ResNet(model_config)
+                build_base = partial(model_builder.build_base, weights=model_config.weights, input_shape=model_config.input_shape)
 
-    elif model_config['model_name'] in ["mobile_net_v2",
-                                        "inception_v3",
-                                        "xception"]:#,
-                        #   "efficient_net_B0",
-                        #   "efficient_net_B1",
-                        #   "efficient_net_B2",
-                        #   "efficient_net_B3",
-                        #   "efficient_net_B4",
-                        #   "efficient_net_B5"]:
-        build_base = partial(build_lightweight_nets,
-                             model_name=model_config.model_name,
-                             weights=model_config.weights,
-                             input_shape=model_config.input_shape,
-                             frozen_layers=model_config.frozen_layers)
+            elif model_config['model_name'] in ["mobile_net_v2",
+                                                "inception_v3",
+                                                "xception"]:#,
+                                #   "efficient_net_B0",
+                                #   "efficient_net_B1",
+                                #   "efficient_net_B2",
+                                #   "efficient_net_B3",
+                                #   "efficient_net_B4",
+                                #   "efficient_net_B5"]:
+                build_base = partial(build_lightweight_nets,
+                                    model_name=model_config.model_name,
+                                    weights=model_config.weights,
+                                    input_shape=model_config.input_shape,
+                                    frozen_layers=model_config.frozen_layers)
 
-    base = build_base()
+                base = build_base()
+                model = build_head(base, num_classes=model_config.num_classes, head_layers=model_config.head_layers, pool_size=model_config.pool_size, kernel_l2=model_config.kernel_l2)
 
+
+    base = model.layers[0]
     if model_config.frozen_layers=='bn':
         base, frozen_layers = freeze_batchnorm_layers(base, verbose=False)
         model_config.frozen_layers = frozen_layers
 
     base = base_model.Model.add_regularization(base, **model_config.regularization)
-    model = build_head(base, num_classes=model_config.num_classes, head_layers=model_config.head_layers, pool_size=model_config.pool_size, kernel_l2=model_config.kernel_l2)
+    model = base_model.Model.add_regularization(model, l2=model_config.kernel_l2)
+    
     
     # model = base_model.Model.add_regularization(model, **model_config.regularization)
 

@@ -30,7 +30,26 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
 
 
 
-
+python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
+                            'WandB_dataset_0@WandB_dataset_0=Leaves-PNAS' \
+                            'pretrain.model_name="resnet_50_v2"' \
+                            'pretrain.target_size=[512,512]' \
+                            'pretrain.num_epochs=120' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=0.0' \
+                            'pretrain.lr=3e-4' \
+                            'pretrain.batch_size=10' \
+                            'pretrain.regularization.l2=1e-3' \
+                            'pretrain.kernel_l2=1e-5' \
+                            'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
+                            'pretrain.early_stopping.patience=15' \
+                            'pretrain.head_layers=[512,256]' \
+                            'pretrain.frozen_layers="bn"' \
+                            'pretrain.num_parallel_calls=5' \
+                            'tags=["Baseline"]' \
+                            'pipeline.stage_0.params.fit_class_weights=False' \
+                            'use_tfrecords=True'
 
 
 
