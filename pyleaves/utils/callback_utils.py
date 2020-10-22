@@ -45,6 +45,9 @@ from typing import List
 from pyleaves.models.vgg16 import visualize_activations#, get_layers_by_index
 from pyleaves.utils.model_utils import WorkerTrainingState
 from pyleaves.utils.neptune_utils import neptune
+import wandb
+
+
 
 class BackupAndRestore(Callback):
 	"""
@@ -271,21 +274,6 @@ class NeptuneVisualizationCallback(Callback):
 		self.experiment = experiment or neptune
 		if isinstance(validation_data, tf.data.Dataset):
 			x_true, y_true = tf_data2np(data=validation_data, num_batches=steps)
-			# if steps:
-			# 	x_true,y_true=[],[]
-			# 	print(f'Instantiating {steps} batches into memory for use in NeptuneVisualizationcallback')
-			# 	for i, (x,y) in enumerate(validation_data):
-			# 		x_true.append(x.numpy())
-			# 		y_true.append(y.numpy())
-			# 		print('Finished batch',i)
-			# 		if i >= steps:
-			# 			break
-			# 	x_true = np.vstack(x_true)
-			# 	y_true = np.vstack(y_true)
-			# else:
-			# 	x_true, y_true = next(iter(validation_data))
-			# 	x_true = x_true.numpy()
-			# 	y_true = y_true.numpy()
 		elif type(validation_data)==tuple:
 			x_true, y_true = validation_data
 		else:
@@ -295,15 +283,10 @@ class NeptuneVisualizationCallback(Callback):
 			y_true = np.argmax(y_true, axis=1)
 
 		self.x_true = x_true
-		self.y_true = y_true
-			
+		self.y_true = y_true			
 		self.num_classes = num_classes or len(set(y_true))
 		self.labels = labels
 		self.text_labels = text_labels
-
-		# if subset_prefix is None:
-		# 	self.prefix = ''
-		# else:
 		self.prefix = subset_prefix or ''
 
 		self.validation_data = (x_true, y_true)
@@ -335,7 +318,6 @@ class NeptuneVisualizationCallback(Callback):
 		fig, ax = plt.subplots(figsize=(16, 12))
 		plot_confusion_matrix(y_true, y_pred, labels=labels, ax=ax)
 		self.experiment.log_image(f'{self.prefix}_confusion_matrix', fig)
-		
 
 		if self.num_classes == 2:
 			fig, ax = plt.subplots(figsize=(16, 12))
@@ -421,16 +403,19 @@ class NeptuneVisualizationCallback(Callback):
 
 
 
-
+from scikitplot.metrics import plot_confusion_matrix
 
 
 class ConfusionMatrixCallback(Callback):
 
-	def __init__(self, log_dir, val_imgs, val_labels, classes, freq=1, seed=None, neptune_experiment=None):
+	def __init__(self, log_dir, val_imgs, val_labels, classes, freq=1, seed=None, neptune_experiment=None, log_wandb=False, log_tensorboard=False):
 		super().__init__()
-		# self.file_writer = tf.contrib.summary.create_file_writer(log_dir)
-		self.file_writer = tf.summary.create_file_writer(log_dir)
+		
 		self.log_dir = log_dir
+		if log_tensorboard:
+			self.file_writer = tf.summary.create_file_writer(log_dir)
+		self.log_tensorboard = log_tensorboard
+		self.log_wandb = log_wandb
 		self.seed = seed
 		self._counter = 0
 		self.val_imgs = val_imgs
@@ -447,44 +432,44 @@ class ConfusionMatrixCallback(Callback):
 
 	def log_confusion_matrix(self, model, imgs, labels, epoch, norm_cm=False):
 
-		# pred_labels = model.predict_classes(imgs)
-		# pred_labels = pred_labels[:,None]
 		pred_labels = tf.argmax(model.predict(imgs), axis=-1)
-		# pred_labels = pred_labels[:,None]
 
-		con_mat = tf.math.confusion_matrix(labels=labels, predictions=pred_labels, num_classes=len(self.classes)).numpy()
-		if norm_cm:
-			con_mat = np.around(con_mat.astype('float') / (con_mat.sum(axis=1)+ 1e-15), decimals=2)
-		con_mat_df = pd.DataFrame(con_mat,
-						 index = self.classes,
-						 columns = self.classes)
+		if self.log_wandb:
+			figure, ax = plt.subplots(figsize=(16, 12))
+			plot_confusion_matrix(labels, pred_labels, ax=ax)
+			wandb.log({"val_confusion_matrix": wandb.Image(figure)}, commit=False)
 
-		figure = plt.figure(figsize=(16, 16))
-		sns.heatmap(con_mat_df, annot=True, cmap=plt.cm.Blues)
-		plt.tight_layout()
-		plt.ylabel('True label')
-		plt.xlabel('Predicted label')
+		if self.log_tensorboard or self.experiment:
+			# pred_labels = pred_labels[:,None]
+			con_mat = tf.math.confusion_matrix(labels=labels, predictions=pred_labels, num_classes=len(self.classes)).numpy()
+			if norm_cm:
+				con_mat = np.around(con_mat.astype('float') / (con_mat.sum(axis=1)+ 1e-15), decimals=2)
+			con_mat_df = pd.DataFrame(con_mat,
+							index = self.classes,
+							columns = self.classes)
 
-		buf = io.BytesIO()
-		plt.savefig(buf, format='png')
-		buf.seek(0)
+			figure = plt.figure(figsize=(16, 16))
+			sns.heatmap(con_mat_df, annot=True, cmap=plt.cm.Blues)
+			plt.tight_layout()
+			plt.ylabel('True label')
+			plt.xlabel('Predicted label')
 
-		image = tf.image.decode_png(buf.getvalue(), channels=4)
-		image = tf.expand_dims(image, 0)
+			buf = io.BytesIO()
+			plt.savefig(buf, format='png')
+			buf.seek(0)
 
-		# with self.file_writer.as_default(), tf.contrib.summary.always_record_summaries():
-		# 	tf.contrib.summary.image(name='val_confusion_matrix',
-		# 							 tensor=image,
-		# 							 step=self._counter)
-		with self.file_writer.as_default(): #, tf.summary.always_record_summaries():
-			tf.summary.image(name='val_confusion_matrix',
-							 data=image,
-							 step=epoch) #self._counter)
+			image = tf.image.decode_png(buf.getvalue(), channels=4)
+			image = tf.expand_dims(image, 0)
+			with self.file_writer.as_default(): #, tf.summary.always_record_summaries():
+				tf.summary.image(name='val_confusion_matrix',
+								data=image,
+								step=epoch) #self._counter)
 
-		if self.experiment:
-			self.experiment.log_image(log_name='val_confusion_matrix',
-				   					  x=epoch, #self._counter,
-									  y=figure)
+			if self.experiment:
+				self.experiment.log_image(log_name='val_confusion_matrix',
+										x=epoch, #self._counter,
+										y=figure)
+
 		plt.close(figure)
 
 		self._counter += 1

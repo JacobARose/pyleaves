@@ -515,13 +515,13 @@ def main(config):
         print("Using preprocessing function: tensorflow.keras.applications.resnet_v2.preprocess_input")
     elif config.pretrain.preprocess_input == "tf.keras.applications.mobilenet.preprocess_input":
         from tensorflow.keras.applications.mobilenet import preprocess_input
+        print("Using preprocessing function: tensorflow.keras.applications.mobilenet.preprocess_input")
     elif config.pretrain.preprocess_input == "tf.keras.applications.inception_v3.preprocess_input":
         from tensorflow.keras.applications.inception_v3 import preprocess_input
+        print("Using preprocessing function: tensorflow.keras.applications.inception_v3.preprocess_input")
     else:
         preprocess_input = None
         print("Using no preprocess_input function")
-
-
     os.makedirs(os.path.dirname(config.pretrain.saved_model_path), exist_ok=True)
 
 #region
@@ -677,6 +677,10 @@ def main(config):
     ################################################################################
     ################################################################################
     ################################################################################
+
+    id = config.run_id or wandb.util.generate_id()
+
+
     run = wandb.init(entity=config.entity, 
                      project=config.project_name,
                      name=config.run_name,
@@ -685,26 +689,31 @@ def main(config):
                      sync_tensorboard=True)
     run.config.update(OmegaConf.to_container(config, resolve=True))
 
-    # id = wandb.util.generate_id()
-    # try:
-    #     wandb.init(project="resuming", resume="must", id=id)
+    initial_epoch = wandb.run.step or 0
+    if wandb.run.resumed:
+        # restore the best model
+        print(f'Restoring model from checkpoint at epoch {initial_epoch}')
+        model = tf.keras.models.load_model(wandb.restore("model-best.h5").name)
+
+
+
+    reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
+                                                     patience=3, min_lr=1e-5)
 
     class_names = train_data_info['encoder'].inv
     # train_cb = lambda : ((img, label) for img, label in iter(train_data.take(12).unbatch()))
     val_cb = lambda : ((img, label) for img, label in iter(val_data.take(12).unbatch()))
 
-    # train_imgs, train_labels = [], []
-    # for img, lbl in train_cb():
-    #     train_imgs.append(img)
-    #     train_labels.append(lbl)
     val_imgs, val_labels = [], []
     for img, lbl in val_cb():
         val_imgs.append(img)
         val_labels.append(lbl)
     val_imgs = np.stack([img for img in val_imgs])
     val_labels = np.stack([lbl for lbl in val_labels])
-    callbacks = [TensorBoard(log_dir=config.log_dir, histogram_freq=2, write_images=True),
-                 WandbCallback(log_gradients=False,#True,
+    callbacks = [reduce_lr,
+                 TensorBoard(log_dir=config.log_dir, histogram_freq=2, write_images=True),
+                 WandbCallback(save_model=True,
+                               monitor='val_loss', #log_gradients=False,#True,
                                data_type='image',#                               training_data=(train_imgs,train_labels),
                                labels=list(class_names.values()),
                                predictions=64,
@@ -721,20 +730,25 @@ def main(config):
                                         val_labels=val_labels,
                                         classes=list(class_names.values()),
                                         freq=1,
-                                        seed=config.seed)]
+                                        seed=config.seed,
+                                        log_wandb=True)]
 
-    image_batch, label_batch = next(iter(train_data))
-    import pdb;pdb.set_trace()
-    fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='train', class_names=class_names)
-    wandb.log({'train_image_batch': [wandb.Image(fig)]}, commit=False)
+    # image_batch, label_batch = next(iter(train_data))
+    image_iters = [('train', iter(train_data)), ('val', iter(val_data)), ('test', iter(test_data))]
 
-    image_batch, label_batch = next(iter(val_data))
-    fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='val', class_names=class_names)
-    wandb.log({'val_image_batch': [wandb.Image(fig)]}, commit=False)
+    for subset_name, subset_iter in image_iters:
+        print(f'[INFO] logging images from {subset_name}.')
+        image_batch, label_batch = next(iter(subset_iter))
+        fig = show_batch(image_batch.numpy(), label_batch.numpy(), title=subset_name, class_names=class_names)
+        wandb.log({f'{subset_name}_image_batch': [wandb.Image(fig)]}, commit=False)
 
-    image_batch, label_batch = next(iter(test_data))
-    fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='test', class_names=class_names)
-    wandb.log({'test_image_batch': [wandb.Image(fig)]})#, commit=False)
+    # image_batch, label_batch = next(iter(val_data))
+    # fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='val', class_names=class_names)
+    # wandb.log({'val_image_batch': [wandb.Image(fig)]}, commit=False)
+
+    # image_batch, label_batch = next(iter(test_data))
+    # fig = show_batch(image_batch.numpy(), label_batch.numpy(), title='test', class_names=class_names)
+    # wandb.log({'test_image_batch': [wandb.Image(fig)]})#, commit=False)
 
     print('[BEGINNING STAGE_0: PRE-TRAINING+VALIDATION]')
     # import pdb;pdb.set_trace()
@@ -748,6 +762,7 @@ def main(config):
                             class_weight=class_weights,
                             steps_per_epoch=steps_per_epoch,
                             validation_steps=validation_steps,
+                            initial_epoch=initial_epoch,
                             verbose=1)
 
     except Exception as e:

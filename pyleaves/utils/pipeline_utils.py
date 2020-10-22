@@ -712,6 +712,11 @@ def build_model(model_config, load_saved_model=False):
                         'head_layers': [256,128]
                         }
     '''
+    if wandb.run.resumed:
+        # restore the best model
+        model = tf.keras.models.load_model(wandb.restore("model-best.h5").name)
+    else:
+
     if load_saved_model and os.path.isfile(model_config['saved_model_path']):
         print(f"Loading found saved model from {model_config['saved_model_path']}")
         return tf.keras.models.load_model(model_config['saved_model_path'])
@@ -764,9 +769,6 @@ def build_model(model_config, load_saved_model=False):
         loss = 'categorical_crossentropy'
     # elif model_config.loss=="weighted_categorical_crossentropy":
     #     loss = weighted_categorical_crossentropy(model_config.class_weights)
-
-
-
     METRICS = []
     if 'f1' in model_config['METRICS']:
         METRICS.append(tfa.metrics.F1Score(num_classes=model_config['num_classes'],
