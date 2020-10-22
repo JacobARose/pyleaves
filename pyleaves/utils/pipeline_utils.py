@@ -779,7 +779,9 @@ def build_model(model_config, load_saved_model=False):
                                            name='weighted_f1'))
     if 'accuracy' in model_config['METRICS']:
         METRICS.append(tf.keras.metrics.CategoricalAccuracy(name='accuracy'))
+    if 'top-3_accuracy' in model_config['METRICS']:
         METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=3, name='top-3_accuracy'))
+    if 'top-5_accuracy' in model_config['METRICS']:
         METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='top-5_accuracy'))
     if 'balanced_accuracy' in model_config['METRICS']:
         METRICS.append(BalancedAccuracyMetric(model_config.num_classes))
