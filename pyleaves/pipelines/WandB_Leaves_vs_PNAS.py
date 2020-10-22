@@ -707,7 +707,8 @@ def main(config):
                      name=config.run_name,
                      job_type=config.job_type,
                      tags=config.tags,
-                     sync_tensorboard=True)
+                     sync_tensorboard=True,
+                     resume=config.wandb_resume)
     run.config.update(OmegaConf.to_container(config, resolve=True))
 
     initial_epoch = wandb.run.step or 0
