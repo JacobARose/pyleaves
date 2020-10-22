@@ -705,7 +705,7 @@ def main(config):
     id = config.run_id or wandb.util.generate_id()
     config.run_id = id
 
-    run = wandb.init(entity=config.entity, 
+    run = wandb.init(entity=config.entity,
                      project=config.project_name,
                      name=config.run_name,
                      job_type=config.job_type,
@@ -726,7 +726,7 @@ def main(config):
 
 
     reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
-                                                     patience=3, min_lr=1e-5)
+                                                     patience=3, min_lr=1e-5, verbose=True)
 
     class_names = train_data_info['encoder'].inv
     # train_cb = lambda : ((img, label) for img, label in iter(train_data.take(12).unbatch()))

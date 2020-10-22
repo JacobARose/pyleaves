@@ -675,7 +675,7 @@ def build_lightweight_nets(model_name="mobile_net_v2", weights="imagenet", input
 
 
 
-def build_model(model_config, load_saved_model=False):
+def build_model(model_config, load_saved_model=False, model=None):
     '''
 
     Minimum config:
@@ -712,7 +712,9 @@ def build_model(model_config, load_saved_model=False):
                         'head_layers': [256,128]
                         }
     '''
-    if wandb.run.resumed:
+    if model:
+        pass
+    if load_saved_model and wandb.run.resumed:
         # restore the best model
         model = tf.keras.models.load_model(wandb.restore("model-best.h5").name)
     else:
