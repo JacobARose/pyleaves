@@ -39,7 +39,7 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.augmentations.rotate=1.0' \
                             'pretrain.augmentations.sbc=0.0' \
                             'pretrain.lr=3e-4' \
-                            'pretrain.batch_size=10' \
+                            'pretrain.batch_size=16' \
                             'pretrain.regularization.l2=1e-3' \
                             'pretrain.kernel_l2=1e-5' \
                             'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
@@ -49,7 +49,8 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.num_parallel_calls=5' \
                             'tags=["Baseline"]' \
                             'pipeline.stage_0.params.fit_class_weights=False' \
-                            'use_tfrecords=True'
+                            'use_tfrecords=True' \
+                            'wandb_resume=False'
 
 
 
@@ -707,7 +708,7 @@ def main(config):
                      name=config.run_name,
                      job_type=config.job_type,
                      tags=config.tags,
-                     sync_tensorboard=True,
+                     sync_tensorboard=False, #True,
                      resume=config.wandb_resume)
     run.config.update(OmegaConf.to_container(config, resolve=True))
 
@@ -735,8 +736,7 @@ def main(config):
         val_labels.append(lbl)
     val_imgs = np.stack([img for img in val_imgs])
     val_labels = np.stack([lbl for lbl in val_labels])
-    callbacks = [reduce_lr,
-                 TensorBoard(log_dir=config.log_dir, histogram_freq=2, write_images=True),
+    callbacks = [reduce_lr, #TensorBoard(log_dir=config.log_dir, histogram_freq=2, write_images=True),
                  WandbCallback(save_model=True,
                                monitor='val_loss', #log_gradients=False,#True,
                                data_type='image',#                               training_data=(train_imgs,train_labels),
