@@ -746,8 +746,8 @@ def build_model(model_config, load_saved_model=False):
                                     input_shape=model_config.input_shape,
                                     frozen_layers=model_config.frozen_layers)
 
-                base = build_base()
-                model = build_head(base, num_classes=model_config.num_classes, head_layers=model_config.head_layers, pool_size=model_config.pool_size, kernel_l2=model_config.kernel_l2)
+            base = build_base()
+            model = build_head(base, num_classes=model_config.num_classes, head_layers=model_config.head_layers, pool_size=model_config.pool_size, kernel_l2=model_config.kernel_l2)
 
 
     base = model.layers[0]
