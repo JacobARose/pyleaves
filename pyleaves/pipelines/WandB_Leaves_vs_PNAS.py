@@ -700,7 +700,7 @@ def main(config):
     ################################################################################
 
     id = config.run_id or wandb.util.generate_id()
-
+    config.run_id = id
 
     run = wandb.init(entity=config.entity, 
                      project=config.project_name,
@@ -712,6 +712,7 @@ def main(config):
     run.config.update(OmegaConf.to_container(config, resolve=True))
 
     initial_epoch = wandb.run.step or 0
+    print(f'Run ID: {id}')
     if wandb.run.resumed:
         # restore the best model
         print(f'Restoring model from checkpoint at epoch {initial_epoch}')
