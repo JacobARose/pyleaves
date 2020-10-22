@@ -691,7 +691,6 @@ def main(config):
     model_config = config.pretrain
     model_config.num_classes = stage_0_config.num_classes
     model_config.input_shape = (*config.pretrain.target_size,3)            
-    model = build_model(model_config)
 
     ################################################################################
     ################################################################################
@@ -714,6 +713,8 @@ def main(config):
         print(f'Restoring model from checkpoint at epoch {initial_epoch}')
         model = tf.keras.models.load_model(wandb.restore("model-best.h5").name)
 
+    else:
+        model = build_model(model_config)
 
 
     reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
