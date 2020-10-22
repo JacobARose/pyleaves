@@ -399,10 +399,12 @@ def get_experiment_data(dataset_name='Fossil', threshold=4, test_size=0.3, versi
 
 
     if dataset_name == "Leaves-PNAS":
-        train_df, val_df = load_dataset_from_artifact(dataset_name=dataset_name, threshold=threshold, test_size=test_size, version=version, artifact_name=None)
+        print('Loading Leaves-PNAS dataset for train/val, and loading PNAS_test for test')
+        train_df, val_df = load_dataset_from_artifact(dataset_name=dataset_name, threshold=threshold, test_size=test_size, version=version, artifact_name=artifact_name)
         _, test_df = load_dataset_from_artifact(dataset_name='PNAS', threshold=100, test_size=0.5, version='latest')
 
     else:
+        print(f'Loading {dataset_name} dataset for train and test, with train set split into {1-validation_split}:{validation_split} train:val subsets.')
         train_df, test_df = load_dataset_from_artifact(dataset_name=dataset_name, threshold=threshold, test_size=test_size, version=version, artifact_name=artifact_name)
         train_df, val_df = train_test_split(train_df, test_size=validation_split, random_state=seed, shuffle=True, stratify=train_df.family)
 
