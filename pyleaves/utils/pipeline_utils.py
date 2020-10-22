@@ -396,15 +396,6 @@ def load_data_from_tfrecords(tfrecord_dir: str,
 
 
 
-
-
-
-
-
-
-
-
-
 def load_data_from_tensor_slices(data: List[List], cache: Union[bool,str], training=False, seed=None):
 
     num_samples = len(data[0])

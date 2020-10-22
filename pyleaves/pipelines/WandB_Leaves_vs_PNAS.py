@@ -435,37 +435,13 @@ def get_experiment_data(dataset_name='Fossil', threshold=4, test_size=0.3, versi
                                         samples_per_shard=samples_per_shard,
                                         tfrecord_dir=tfrecord_dir)
     return train_data_info, val_data_info, test_data_info
-#section
-        # pnas_train_data_info = data_df_2_tf_data(pnas_train_df,
-        #                                          x_col='archive_path',
-        #                                          y_col='family',
-        #                                          training=True,
-        #                                          preprocess_input=preprocess_input,
-        #                                          seed=config.seed,
-        #                                          target_size=config.pretrain.target_size,
-        #                                          batch_size=config.pretrain.batch_size,
-        #                                          augmentations=config.pretrain.augmentations,
-        #                                          num_parallel_calls=config.pretrain.num_parallel_calls,
-        #                                          cache=True,
-        #                                          shuffle_first=True,
-        #                                          fit_class_weights=config.pipeline.stage_0.params.fit_class_weights)
-#endsection
-
-
-
-
-
-
-#%%
-#region
-
 
 #region
 # Image plotting utils
 def show_batch(image_batch, label_batch, title='', class_names=None):
     fig = plt.figure(figsize=(15, 15))
 
-    import pdb;pdb.set_trace()
+    # import pdb;pdb.set_trace()
     if label_batch.ndim==2:
         label_batch = np.argmax(label_batch, axis=-1)
 
@@ -489,7 +465,6 @@ def show_batch(image_batch, label_batch, title='', class_names=None):
         ax = plt.subplot(5, 5, n+1)
         plt.imshow(scaled_image_batch[n])
         plt.title(label_batch[n])
-        
         plt.axis('off')
     return fig
 
