@@ -438,6 +438,7 @@ class ConfusionMatrixCallback(Callback):
 			figure, ax = plt.subplots(figsize=(16, 12))
 			plot_confusion_matrix(labels, pred_labels, ax=ax)
 			wandb.log({"val_confusion_matrix": wandb.Image(figure)}, commit=False)
+			plt.close(figure)
 
 		if self.log_tensorboard or self.experiment:
 			# pred_labels = pred_labels[:,None]
@@ -470,11 +471,11 @@ class ConfusionMatrixCallback(Callback):
 										x=epoch, #self._counter,
 										y=figure)
 
-		plt.close(figure)
+			plt.close(figure)
 
 		self._counter += 1
 
-		return image
+		# return image
 
 	def on_epoch_end(self, epoch, logs={}):
 
