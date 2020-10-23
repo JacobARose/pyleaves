@@ -22,7 +22,7 @@ job_type: "train+validate"
 entity: "jrose"
 run_id: null
 wandb_resume: "allow"
-
+load_model_artifact: null #Replace with artifact_name for loading from WandB
 
 tags: []
 
@@ -70,6 +70,8 @@ pretrain:
         restore_best_weights: True
         
         
+
+
 use_tfrecords: false
 samples_per_shard: 400
 tfrecord_dir: "/media/data/jacob/tfrecords/${run_name}"

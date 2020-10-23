@@ -344,29 +344,25 @@ def data_df_2_tf_data(data,
     num_classes = len(class_list)
     class_encoder = OneToOne({label:i for i, label in enumerate(class_list)})
 
+    # TODO Remove this redundant label encoding/decoding/encoding
     labels = [class_encoder[l] for l in labels]
-    
-
     if class_encodings is not None:
         #Encode according to a previously established str<->int mapping in class_encodings
         text_labels = decode_int2str(labels=labels, class_decoder=class_encoder.inv)
         labels = encode_str2int(labels=text_labels, class_encoder=class_encodings)
 
     # class_weights = compute_class_weight('balanced', classes=np.unique(labels), y=labels)
-    class_weights = calc_class_weights(labels, balanced=fit_class_weights)        
+    class_weights = calc_class_weights(labels, balanced=fit_class_weights)
     # class_weights = {i:w for i,w in class_weights.items() if i in class_encodings.inv}
-    
     ####################
-
-    prepped_data = pd.DataFrame.from_records([{'path':path, 'label':label} for path, label in zip(paths, labels)])
-
+    prepped_data = pd.DataFrame.from_records([{'path':path, 'label':label, 'text_label':text_label} for path, label, text_label in zip(paths, labels, text_labels)])
     training = bool('train' in subset_key)
     if use_tfrecords:
         if target_size[0] > 768:
             tfrecord_target_shape = (*target_size,3)
         else:
             tfrecord_target_shape = (768,768,3)
-        prepped_data = (paths, labels)
+        prepped_data = (paths, labels, text_labels)
         os.makedirs(tfrecord_dir, exist_ok=True)
         tf_data = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
                                            data=prepped_data,
@@ -380,33 +376,33 @@ def data_df_2_tf_data(data,
     ####################
     # import pdb; pdb.set_trace()
     if preprocess_input is not None:
-        tf_data = tf_data.map(lambda x,y: (preprocess_input(x), K.cast(y, dtype='uint8')), num_parallel_calls=num_parallel_calls)
+        tf_data = tf_data.map(lambda x,y,family: (preprocess_input(x), K.cast(y, dtype='int32'), family), num_parallel_calls=num_parallel_calls)
     
     from functools import partial
     target_size = tuple(target_size)
     resize = partial(tf.image.resize, size=target_size)
     print('target_size = ', target_size)
-    # import pdb; pdb.set_trace()
-    tf_data = tf_data.map(lambda x,y: (resize(x), tf.one_hot(y, depth=num_classes)), num_parallel_calls=num_parallel_calls)
+    tf_data = tf_data.map(lambda x,y, family: (resize(x), tf.one_hot(y, depth=num_classes), family), num_parallel_calls=num_parallel_calls)
 
     if repeat:
         tf_data = tf_data.repeat()
     # TODO collect augmentation functions in a list and execute as a formal pipeline, abstracting away the logging & validation of results
     for aug in augmentations.keys():
         if 'flip' in aug:
-            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, flip, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)  
+            tf_data = tf_data.map(lambda x, y, family: (_cond_apply(x, func=flip, prob=augmentations[aug], seed=seed), y, family), num_parallel_calls=num_parallel_calls)  
         if 'rotate' in aug:
-            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, rotate, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)
+            tf_data = tf_data.map(lambda x, y, family: (_cond_apply(x, func=rotate, prob=augmentations[aug], seed=seed), y, family), num_parallel_calls=num_parallel_calls)
         if 'sbc' in aug:
             "sbc = saturation, brightness, contrast"
-            tf_data = tf_data.map(lambda x, y: _cond_apply(x, y, sat_bright_con, prob=augmentations[aug], seed=seed), num_parallel_calls=num_parallel_calls)
-    tf_data = tf_data.map(lambda x,y: rgb2gray_3channel(x, y), num_parallel_calls=-1)
+            tf_data = tf_data.map(lambda x, y, family: (_cond_apply(x, y, sat_bright_con, prob=augmentations[aug], seed=seed), y, family), num_parallel_calls=num_parallel_calls)
+    tf_data = tf_data.map(lambda x,y,family: (rgb2gray_3channel(x), y, family), num_parallel_calls=-1)
 
     tf_data = tf_data.batch(batch_size)
     tf_data = tf_data.prefetch(-1)
     return {'data':tf_data, 
             "x_true":paths,
             "y_true":labels,
+            "family":text_labels,
             'encoder':class_encoder,
             'num_samples':num_samples,
             'num_classes':num_classes,

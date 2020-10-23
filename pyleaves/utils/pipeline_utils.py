@@ -62,22 +62,22 @@ def load_img(image_path):
     return img
 
 
-def rgb2gray_3channel(img, label):
+def rgb2gray_3channel(img, label=None):
     '''
     Convert rgb image to grayscale, but keep num_channels=3
     '''
     img = tf.image.rgb_to_grayscale(img)
     img = tf.image.grayscale_to_rgb(img)
-    return img, label
+    return img
 
-def rgb2gray_1channel(img, label):
+def rgb2gray_1channel(img, label=None):
     '''
     Convert rgb image to grayscale, num_channels from 3 to 1
     '''
     img = tf.image.rgb_to_grayscale(img)
-    return img, label
+    return img
 
-def rotate(x, y, seed=None):
+def rotate(x, y=None, seed=None):
     """Rotation augmentation
 
     Args:
@@ -88,9 +88,9 @@ def rotate(x, y, seed=None):
         Augmented image, y
     """
     # Rotate 0, 90, 180, 270 degrees
-    return tf.image.rot90(x, tf.random.uniform(shape=[], minval=0, maxval=4, dtype=tf.int32,seed=seed)), y
+    return tf.image.rot90(x, tf.random.uniform(shape=[], minval=0, maxval=4, dtype=tf.int32,seed=seed))
 
-def flip(x, y, seed=None):
+def flip(x, y=None, seed=None):
     """Flip augmentation
 
     Args:
@@ -102,9 +102,9 @@ def flip(x, y, seed=None):
     x = tf.image.random_flip_left_right(x, seed=seed)
     x = tf.image.random_flip_up_down(x, seed=seed)
 
-    return x, y
+    return x
 
-def color(x, y, seed=None):
+def color(x, y=None, seed=None):
     """Color, Saturation, Brightness and Contrast augmentation
 
     Args:
@@ -118,10 +118,10 @@ def color(x, y, seed=None):
     x = tf.image.random_saturation(x, 0.6, 1.6, seed=seed)
     x = tf.image.random_brightness(x, 0.05, seed=seed)
     x = tf.image.random_contrast(x, 0.7, 1.3, seed=seed)
-    return x, y
+    return x
 
 
-def sat_bright_con(x, y, seed=None):
+def sat_bright_con(x, y=None, seed=None):
     """Saturation, Brightness and Contrast augmentation
 
     Args:
@@ -134,21 +134,21 @@ def sat_bright_con(x, y, seed=None):
     x = tf.image.random_saturation(x, 0.6, 1.6, seed=seed)
     x = tf.image.random_brightness(x, 0.05, seed=seed)
     x = tf.image.random_contrast(x, 0.7, 1.3, seed=seed)
-    return x, y
+    return x
 
 
 
 
 
-def _cond_apply(x, y, func, prob, seed=None):
+def _cond_apply(x, y=None, func, prob, seed=None):
     """Conditionally apply func to x and y with probability prob."""
     return tf.cond((tf.random.uniform([], 0, 1, seed=seed) >= (1.0 - prob)), lambda: func(x,y,seed=seed), lambda: (x,y))
 
-def augment_sample(x, y, prob=1.0, seed=None):
+def augment_sample(x, y=None, prob=1.0, seed=None):
     x, y = _cond_apply(x, y, flip, prob, seed=seed)
     x, y = _cond_apply(x, y, rotate, prob, seed=seed)
     x, y = _cond_apply(x, y, color, prob, seed=seed)
-    return x, y
+    return x
 
 def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=False, seed=None):
     """Short summary.
@@ -211,8 +211,7 @@ def get_preprocess_func(from_module: str="tensorflow.keras.applications.imagenet
 def apply_preprocess(dataset, num_classes, preprocessing_module):
     
     preprocess_input = get_preprocess_func(from_module=preprocessing_module)
-
-    dataset = dataset.map(lambda x,y: (preprocess_input(x), tf.one_hot(y, depth=num_classes)),
+    dataset = dataset.map(lambda x,y,family: (preprocess_input(x), tf.one_hot(y, depth=num_classes), family),
                           num_parallel_calls=-1)
     return dataset
 
@@ -371,7 +370,7 @@ def load_data_from_tfrecords(tfrecord_dir: str,
 
     assert isinstance(data, tuple)
 
-    data = pd.DataFrame({'source_path':data[0],'label':data[1]})
+    data = pd.DataFrame({'source_path':data[0],'label':data[1], 'text_label':data[2]})
 
     print(f'Creating TFRecordCoder with samples_per_shard={samples_per_shard}')
 
@@ -674,6 +673,34 @@ def build_lightweight_nets(model_name="mobile_net_v2", weights="imagenet", input
 
 
 
+def get_metrics(metrics_list):
+    METRICS = []
+    if 'f1' in model_config['METRICS']:
+        METRICS.append(tfa.metrics.F1Score(num_classes=model_config['num_classes'],
+                                        average='weighted',
+                                        name='weighted_f1'))
+    if 'accuracy' in model_config['METRICS']:
+        METRICS.append(tf.keras.metrics.CategoricalAccuracy(name='accuracy'))
+    if 'top-3_accuracy' in model_config['METRICS']:
+        METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=3, name='top-3_accuracy'))
+    if 'top-5_accuracy' in model_config['METRICS']:
+        METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='top-5_accuracy'))
+    if 'balanced_accuracy' in model_config['METRICS']:
+        METRICS.append(BalancedAccuracyMetric(model_config.num_classes))
+    if 'precision' in model_config['METRICS']:
+        METRICS.append(tf.keras.metrics.Precision())
+    if 'recall' in model_config['METRICS']:
+        METRICS.append(tf.keras.metrics.Recall())
+    return METRICS
+
+
+
+
+
+
+
+
+
 
 def build_model(model_config, load_saved_model=False, model=None):
     '''
@@ -774,23 +801,8 @@ def build_model(model_config, load_saved_model=False, model=None):
         loss = 'categorical_crossentropy'
     # elif model_config.loss=="weighted_categorical_crossentropy":
     #     loss = weighted_categorical_crossentropy(model_config.class_weights)
-    METRICS = []
-    if 'f1' in model_config['METRICS']:
-        METRICS.append(tfa.metrics.F1Score(num_classes=model_config['num_classes'],
-                                           average='weighted',
-                                           name='weighted_f1'))
-    if 'accuracy' in model_config['METRICS']:
-        METRICS.append(tf.keras.metrics.CategoricalAccuracy(name='accuracy'))
-    if 'top-3_accuracy' in model_config['METRICS']:
-        METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=3, name='top-3_accuracy'))
-    if 'top-5_accuracy' in model_config['METRICS']:
-        METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='top-5_accuracy'))
-    if 'balanced_accuracy' in model_config['METRICS']:
-        METRICS.append(BalancedAccuracyMetric(model_config.num_classes))
-    if 'precision' in model_config['METRICS']:
-        METRICS.append(tf.keras.metrics.Precision())
-    if 'recall' in model_config['METRICS']:
-        METRICS.append(tf.keras.metrics.Recall())
+
+    METRICS = get_metrics(metrics_list=model_config['METRICS'])
 
     model.compile(optimizer=optimizer,
                   loss=loss,
