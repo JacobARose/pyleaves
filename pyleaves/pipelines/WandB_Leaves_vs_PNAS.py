@@ -721,7 +721,12 @@ def main(config):
 
     model_config = config.pretrain
     model_config.num_classes = stage_0_config.num_classes
-    model_config.input_shape = (*config.pretrain.target_size,3)            
+    model_config.input_shape = (*config.pretrain.target_size,3)
+
+    from pyleaves.utils.tf_utils import BalancedAccuracyMetric
+
+    def get_custom_metric(*args, **kwargs):
+        return BalancedAccuracyMetric(num_classes=config.num_classes)
 
     ################################################################################
     ################################################################################
@@ -821,14 +826,24 @@ def main(config):
     except Exception as e:
         raise e
 
-    model.save(config.pretrain.saved_model_path)
-    
-    artifact = wandb.Artifact(type='model', name=f'{config.pretrain.model_name}-{config.dataset_name["0"]}')
-    if config.pretrain.saved_model_path.endswith('h5'):
-        artifact.add_file(config.pretrain.saved_model_path, name='trained_model.h5')
-    else:
-        artifact.add_dir(config.pretrain.saved_model_path, name='trained_model.h5')
-    run.log_artifact(artifact)
+    try:
+        model.save(config.pretrain.saved_model_path, custom_objects={'BalancedAccuracyMetric':get_custom_metric})
+    except Exception as e:
+        print(e)
+        print('Couldnt save the model with custom objects, attempting without them')
+        model.save(config.pretrain.saved_model_path)
+    except Exception as e:
+        print(e)
+        print('Couldnt save the model due to above error')
+
+    if os.path.isfile(config.pretrain.saved_model_path):
+        print(f'Logging model to WandB under name trained_model.h5')
+        artifact = wandb.Artifact(type='model', name=f'{config.pretrain.model_name}-{config.dataset_name["0"]}')
+        if config.pretrain.saved_model_path.endswith('h5'):
+            artifact.add_file(config.pretrain.saved_model_path, name='trained_model.h5')
+        else:
+            artifact.add_dir(config.pretrain.saved_model_path, name='trained_model.h5')
+        run.log_artifact(artifact)
 
     print('[STAGE_0 COMPLETED]')
     print(f'Saved trained model to {config.pretrain.saved_model_path}')
