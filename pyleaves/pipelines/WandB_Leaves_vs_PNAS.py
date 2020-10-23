@@ -40,13 +40,13 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'pretrain.augmentations.sbc=0.0' \
                             'pretrain.lr=3e-4' \
                             'pretrain.batch_size=16' \
-                            'pretrain.regularization.l2=1e-3' \
-                            'pretrain.kernel_l2=1e-5' \
+                            'pretrain.regularization.l2=1e-4' \
+                            'pretrain.kernel_l2=1e-6' \
                             'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
                             'pretrain.early_stopping.patience=15' \
                             'pretrain.head_layers=[512,256]' \
                             'pretrain.frozen_layers="bn"' \
-                            'pretrain.num_parallel_calls=5' \
+                            'pretrain.num_parallel_calls=-1' \
                             'tags=["Baseline"]' \
                             'pipeline.stage_0.params.fit_class_weights=False' \
                             'use_tfrecords=True' \
@@ -739,6 +739,7 @@ def main(config):
                      resume=config.wandb_resume)
     run.config.update(OmegaConf.to_container(config, resolve=True))
 
+    print(f'wandb dir: {run.dir}')
     initial_epoch = wandb.run.step or 0
     print(f'Run ID: {id}')
     if wandb.run.resumed:
