@@ -136,18 +136,14 @@ def sat_bright_con(x, y=None, seed=None):
     x = tf.image.random_contrast(x, 0.7, 1.3, seed=seed)
     return x
 
-
-
-
-
-def _cond_apply(x, y=None, func, prob, seed=None):
+def _cond_apply(x, func=None, prob=1.0, seed=None):
     """Conditionally apply func to x and y with probability prob."""
-    return tf.cond((tf.random.uniform([], 0, 1, seed=seed) >= (1.0 - prob)), lambda: func(x,y,seed=seed), lambda: (x,y))
+    return tf.cond((tf.random.uniform([], 0, 1, seed=seed) >= (1.0 - prob)), lambda: func(x,seed=seed), lambda: x)
 
-def augment_sample(x, y=None, prob=1.0, seed=None):
-    x, y = _cond_apply(x, y, flip, prob, seed=seed)
-    x, y = _cond_apply(x, y, rotate, prob, seed=seed)
-    x, y = _cond_apply(x, y, color, prob, seed=seed)
+def augment_sample(x, prob=1.0, seed=None):
+    x = _cond_apply(x, flip, prob, seed=seed)
+    x = _cond_apply(x, rotate, prob, seed=seed)
+    x = _cond_apply(x, color, prob, seed=seed)
     return x
 
 def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=False, seed=None):
@@ -197,9 +193,7 @@ def get_preprocess_func(from_module: str="tensorflow.keras.applications.imagenet
     preprocess_module = importlib.import_module(from_module)
     preprocess_input = preprocess_module.preprocess_input
     preprocess_input(tf.zeros([4, 32, 32, 3]))
-
     # preprocess_input = lambda x: x
-
     def preprocess_func(x):
         return preprocess_input(x)
     _temp = tf.zeros([4, 32, 32, 3])
