@@ -53,6 +53,30 @@ python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
                             'wandb_resume=False'
 
 
+python ~/projects/pyleaves/pyleaves/pipelines/WandB_Leaves_vs_PNAS.py \
+                            'WandB_dataset_0@WandB_dataset_0=PNAS_family_100' \
+                            'pretrain.model_name="resnet_50_v2"' \
+                            'pretrain.target_size=[768,768]' \
+                            'pretrain.num_epochs=120' \
+                            'pretrain.augmentations.flip=1.0' \
+                            'pretrain.augmentations.rotate=1.0' \
+                            'pretrain.augmentations.sbc=0.0' \
+                            'pretrain.lr=3e-4' \
+                            'pretrain.batch_size=10' \
+                            'pretrain.regularization.l2=1e-3' \
+                            'pretrain.kernel_l2=1e-5' \
+                            'pretrain.preprocess_input="tensorflow.keras.applications.resnet_v2.preprocess_input"' \
+                            'pretrain.early_stopping.patience=15' \
+                            'pretrain.head_layers=[512,256]' \
+                            'pretrain.frozen_layers="bn"' \
+                            'pretrain.num_parallel_calls=-1' \
+                            'tags=["Baseline"]' \
+                            'pipeline.stage_0.params.fit_class_weights=False' \
+                            'use_tfrecords=True' \
+                            'wandb_resume=False'
+
+
+
 
 
 
@@ -402,6 +426,7 @@ def get_experiment_data(dataset_name='Fossil', threshold=4, test_size=0.3, versi
         print('Loading Leaves-PNAS dataset for train/val, and loading PNAS_test for test')
         train_df, val_df = load_dataset_from_artifact(dataset_name=dataset_name, threshold=threshold, test_size=test_size, version=version, artifact_name=artifact_name)
         _, test_df = load_dataset_from_artifact(dataset_name='PNAS', threshold=100, test_size=0.5, version='latest')
+
 
     else:
         print(f'Loading {dataset_name} dataset for train and test, with train set split into {1-validation_split}:{validation_split} train:val subsets.')
@@ -799,9 +824,9 @@ def main(config):
     
     artifact = wandb.Artifact(type='model', name=f'{config.pretrain.model_name}-{config.dataset_name["0"]}')
     if config.pretrain.saved_model_path.endswith('h5'):
-        artifact.add_file(config.pretrain.saved_model_path, name='trained_model')
+        artifact.add_file(config.pretrain.saved_model_path, name='trained_model.h5')
     else:
-        artifact.add_dir(config.pretrain.saved_model_path, name='trained_model')
+        artifact.add_dir(config.pretrain.saved_model_path, name='trained_model.h5')
     run.log_artifact(artifact)
 
     print('[STAGE_0 COMPLETED]')
