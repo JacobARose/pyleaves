@@ -332,12 +332,12 @@ def data_df_2_tf_data(data,
 
     
     paths = data[x_col].values.tolist()
-    labels = data[y_col].values.tolist()
+    text_labels = data[y_col].values.tolist()
     
     if class_encodings:
         class_list = sorted(list(class_encodings.keys()))
     else:
-        class_list = sorted(list(set(labels)))
+        class_list = sorted(list(set(text_labels)))
     
     augmentations = augmentations or {}
     num_samples = len(paths)
@@ -345,10 +345,10 @@ def data_df_2_tf_data(data,
     class_encoder = OneToOne({label:i for i, label in enumerate(class_list)})
 
     # TODO Remove this redundant label encoding/decoding/encoding
-    labels = [class_encoder[l] for l in labels]
+    labels = [class_encoder[l] for l in text_labels]
     if class_encodings is not None:
         #Encode according to a previously established str<->int mapping in class_encodings
-        text_labels = decode_int2str(labels=labels, class_decoder=class_encoder.inv)
+        # text_labels = decode_int2str(labels=labels, class_decoder=class_encoder.inv)
         labels = encode_str2int(labels=text_labels, class_encoder=class_encodings)
 
     # class_weights = compute_class_weight('balanced', classes=np.unique(labels), y=labels)
