@@ -667,23 +667,23 @@ def build_lightweight_nets(model_name="mobile_net_v2", weights="imagenet", input
 
 
 
-def get_metrics(metrics_list):
+def get_metrics(metrics_list, num_classes=None):
     METRICS = []
-    if 'f1' in model_config['METRICS']:
-        METRICS.append(tfa.metrics.F1Score(num_classes=model_config['num_classes'],
+    if 'f1' in metrics_list:
+        METRICS.append(tfa.metrics.F1Score(num_classes=num_classes,
                                         average='weighted',
                                         name='weighted_f1'))
-    if 'accuracy' in model_config['METRICS']:
+    if 'accuracy' in metrics_list:
         METRICS.append(tf.keras.metrics.CategoricalAccuracy(name='accuracy'))
-    if 'top-3_accuracy' in model_config['METRICS']:
+    if 'top-3_accuracy' in metrics_list:
         METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=3, name='top-3_accuracy'))
-    if 'top-5_accuracy' in model_config['METRICS']:
+    if 'top-5_accuracy' in metrics_list:
         METRICS.append(tf.keras.metrics.TopKCategoricalAccuracy(k=5, name='top-5_accuracy'))
-    if 'balanced_accuracy' in model_config['METRICS']:
-        METRICS.append(BalancedAccuracyMetric(model_config.num_classes))
-    if 'precision' in model_config['METRICS']:
+    if 'balanced_accuracy' in metrics_list:
+        METRICS.append(BalancedAccuracyMetric(num_classes))
+    if 'precision' in metrics_list:
         METRICS.append(tf.keras.metrics.Precision())
-    if 'recall' in model_config['METRICS']:
+    if 'recall' in metrics_list:
         METRICS.append(tf.keras.metrics.Recall())
     return METRICS
 
@@ -796,7 +796,7 @@ def build_model(model_config, load_saved_model=False, model=None):
     # elif model_config.loss=="weighted_categorical_crossentropy":
     #     loss = weighted_categorical_crossentropy(model_config.class_weights)
 
-    METRICS = get_metrics(metrics_list=model_config['METRICS'])
+    METRICS = get_metrics(metrics_list=model_config['METRICS'], num_classes=model_config.num_classes)
 
     model.compile(optimizer=optimizer,
                   loss=loss,
