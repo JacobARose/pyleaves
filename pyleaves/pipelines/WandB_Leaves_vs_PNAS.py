@@ -714,11 +714,9 @@ def main(config):
     test_steps=int(np.ceil(stage_0_config.num_samples_test/config.pretrain.batch_size))
 
     ################################################################################
-
     model_config = config.pretrain
     model_config.num_classes = stage_0_config.num_classes
     model_config.input_shape = (*config.pretrain.target_size,3)
-
     from pyleaves.utils.tf_utils import BalancedAccuracyMetric
 
     def get_custom_metric(*args, **kwargs):

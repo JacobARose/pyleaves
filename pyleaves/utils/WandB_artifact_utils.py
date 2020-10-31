@@ -25,12 +25,12 @@ def load_Leaves_Minus_PNAS_test_dataset():
 
 def load_Leaves_Minus_PNAS_dataset():
     run = wandb.init(reinit=True)
-    with run:
-        artifact = run.use_artifact('jrose/uncategorized/Leaves-PNAS:v1', type='dataset')
-        artifact_dir = artifact.download()
-        print(artifact_dir)
-        train_df = pd.read_csv(os.path.join(artifact_dir,'train.csv'),index_col='id')
-        test_df = pd.read_csv(os.path.join(artifact_dir,'test.csv'),index_col='id')
+    # with run:
+    artifact = run.use_artifact('jrose/uncategorized/Leaves-PNAS:v1', type='dataset')
+    artifact_dir = artifact.download()
+    print(artifact_dir)
+    train_df = pd.read_csv(os.path.join(artifact_dir,'train.csv'),index_col='id')
+    test_df = pd.read_csv(os.path.join(artifact_dir,'test.csv'),index_col='id')
     
     return train_df, test_df
 
@@ -40,13 +40,12 @@ def load_train_test_artifact(artifact_uri='jrose/uncategorized/Leaves-PNAS:v1', 
     if run is None:
         run = wandb.init(reinit=True)
     
-
-    with run:
-        artifact = run.use_artifact(artifact_uri, type='dataset')
-        artifact_dir = artifact.download()
-        print('artifact_dir =',artifact_dir)
-        train_df = pd.read_csv(os.path.join(artifact_dir,'train.csv'),index_col='id')
-        test_df = pd.read_csv(os.path.join(artifact_dir,'test.csv'),index_col='id')
+    # with run:
+    artifact = run.use_artifact(artifact_uri, type='dataset')
+    artifact_dir = artifact.download()
+    print('artifact_dir =',artifact_dir)
+    train_df = pd.read_csv(os.path.join(artifact_dir,'train.csv'),index_col='id')
+    test_df = pd.read_csv(os.path.join(artifact_dir,'test.csv'),index_col='id')
     return train_df, test_df
 
 
