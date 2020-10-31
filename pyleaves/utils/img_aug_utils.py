@@ -162,8 +162,11 @@ def transform(image,label, target_size=None, aug_batch_size=1, num_classes=None)
     CUTMIX_PROB = 0.666
     MIXUP_PROB = 0.666
     # FOR SWITCH PERCENT OF TIME WE DO CUTMIX AND (1-SWITCH) WE DO MIXUP
-    image2, label2 = cutmix(image, label, CUTMIX_PROB)
-    image3, label3 = mixup(image, label, MIXUP_PROB)
+    _cutmix = partial(cutmix, aug_batch_size=aug_batch_size, num_classes=num_classes, target_size=target_size)
+    _mixup = partial(mixup, aug_batch_size=aug_batch_size, num_classes=num_classes, target_size=target_size)
+
+    image2, label2 = _cutmix(image, label, CUTMIX_PROB)
+    image3, label3 = _mixup(image, label, MIXUP_PROB)
     imgs = []; labs = []
     for j in range(aug_batch_size):
         P = tf.cast( tf.random.uniform([],0,1)<=SWITCH, tf.float32)
@@ -174,10 +177,11 @@ def transform(image,label, target_size=None, aug_batch_size=1, num_classes=None)
     label4 = tf.reshape(tf.stack(labs),(aug_batch_size,num_classes))
     return image4,label4
 
-
-def apply_cutmixup(dataset, do_aug=True, aug_batch_size=1, batch_size=1):
+from functools import partial
+def apply_cutmixup(dataset, do_aug=True, aug_batch_size=1, num_classes=None, target_size=None, batch_size=1):
     dataset = dataset.batch(aug_batch_size)
-    if do_aug: dataset = dataset.map(transform, num_parallel_calls=AUTO) # note we put AFTER batching
+    _transform = partial(transform, aug_batch_size=aug_batch_size, num_classes=num_classes, target_size=target_size)
+    if do_aug: dataset = dataset.map(_transform, num_parallel_calls=AUTO) # note we put AFTER batching
     dataset = dataset.unbatch()
     dataset = dataset.shuffle(2048)
     dataset = dataset.batch(batch_size)
