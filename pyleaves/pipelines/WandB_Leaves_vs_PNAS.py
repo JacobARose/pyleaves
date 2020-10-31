@@ -374,7 +374,11 @@ def data_df_2_tf_data(data,
         tf_data = load_data_from_tensor_slices(data=prepped_data, training=training, seed=seed, x_col='path', y_col='label', dtype=tf.float32)
         
     ####################
-    # import pdb; pdb.set_trace()
+    for i, _ in enumerate(iter(tf_data)):
+        if i > num_samples: print('fix cache iteration, ending it early.'); break
+        pass
+
+    
     if preprocess_input is not None:
         tf_data = tf_data.map(lambda x,y,family: (preprocess_input(x), K.cast(y, dtype='int32'), family), num_parallel_calls=num_parallel_calls)
     
@@ -394,7 +398,7 @@ def data_df_2_tf_data(data,
             tf_data = tf_data.map(lambda x, y, family: (_cond_apply(x, func=rotate, prob=augmentations[aug], seed=seed), y, family), num_parallel_calls=num_parallel_calls)
         if 'sbc' in aug:
             "sbc = saturation, brightness, contrast"
-            tf_data = tf_data.map(lambda x, y, family: (_cond_apply(x, y, sat_bright_con, prob=augmentations[aug], seed=seed), y, family), num_parallel_calls=num_parallel_calls)
+            tf_data = tf_data.map(lambda x, y, family: (_cond_apply(x, sat_bright_con, prob=augmentations[aug], seed=seed), y, family), num_parallel_calls=num_parallel_calls)
     tf_data = tf_data.map(lambda x,y,family: (rgb2gray_3channel(x), y, family), num_parallel_calls=-1)
 
     tf_data = tf_data.batch(batch_size)

@@ -22,9 +22,9 @@ www.robots.ox.ac.uk/~vgg/research/very_deep/
 
 import os
 import tensorflow as tf
+AUTO = tf.data.experimental.AUTOTUNE
 from PIL import Image
 import math
-
 
 _R_MEAN = 123.68
 _G_MEAN = 116.78
@@ -37,6 +37,168 @@ _RESIZE_SIDE_MAX = 512
 
 _ROTATION_ANGLE_MIN = 0
 _ROTATION_ANGLE_MAX = 4
+
+
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+def plot_top_k_batch(img, label, label_names=None, top_k=2, row=6, col=4):
+    img = (img + 1.0)/2.0
+    
+    plt.figure(figsize=(22,int(15*row/col)))
+    for j in range(row*col):
+        label_idx = np.argsort(label[j,:])[::-1]
+        top_k_idx = label_idx[:top_k].tolist()
+        top_k_names = [label_names[k] for k in top_k_idx]
+        top_k_weights = [label[j,k] for k in top_k_idx]
+
+        text_labels = [(name,weight) for name, weight in zip(top_k_names,top_k_weights)]
+        title = ',\n'.join([f'{name}={weight:.2f}' for name, weight in text_labels])
+
+        assert sum([w for _,w in text_labels]) == 1
+        
+        plt.subplot(row,col,j+1)
+        plt.axis('off')
+        plt.imshow(img[j])
+        plt.title(title)
+    plt.show()
+
+
+def display_batch_augmentation(data_iter: tf.data.Dataset, augmentation_function=None, label_names=None, aug_batch_size=24, top_k=2, row=6, col=4):
+
+    all_elements = data_iter.map(lambda x,y,_: (x,y)).unbatch()
+    augmented_element = all_elements.repeat().batch(aug_batch_size).map(augmentation_function)
+    row = min(row,aug_batch_size//col)
+    for (img,label) in augmented_element:
+        plot_top_k_batch(img, label, label_names=label_names, top_k=top_k, row=row, col=col)
+        break
+
+
+# num_classes = config.num_classes
+def cutmix(image, label, PROBABILITY = 1.0, target_size=None, aug_batch_size=1, num_classes=None):
+    # input image - is a batch of images of size [n,dim,dim,3] not a single image of [dim,dim,3]
+    # output - a batch of images with cutmix applied
+    DIM = target_size[0]
+    
+    imgs = []; labs = []
+    for j in range(aug_batch_size):
+        # DO CUTMIX WITH PROBABILITY DEFINED ABOVE
+        P = tf.cast( tf.random.uniform([],0,1)<=PROBABILITY, tf.int32)
+        # CHOOSE RANDOM IMAGE TO CUTMIX WITH
+        k = tf.cast( tf.random.uniform([],0,aug_batch_size),tf.int32)
+        # CHOOSE RANDOM LOCATION
+        x = tf.cast( tf.random.uniform([],0,DIM),tf.int32)
+        y = tf.cast( tf.random.uniform([],0,DIM),tf.int32)
+        b = tf.random.uniform([],0,1) # this is beta dist with alpha=1.0
+        WIDTH = tf.cast( DIM * tf.math.sqrt(1-b),tf.int32) * P
+        ya = tf.math.maximum(0,y-WIDTH//2)
+        yb = tf.math.minimum(DIM,y+WIDTH//2)
+        xa = tf.math.maximum(0,x-WIDTH//2)
+        xb = tf.math.minimum(DIM,x+WIDTH//2)
+        # MAKE CUTMIX IMAGE
+        one = image[j,ya:yb,0:xa,:]
+        two = image[k,ya:yb,xa:xb,:]
+        three = image[j,ya:yb,xb:DIM,:]
+        middle = tf.concat([one,two,three],axis=1)
+        img = tf.concat([image[j,0:ya,:,:],middle,image[j,yb:DIM,:,:]],axis=0)
+        imgs.append(img)
+        # MAKE CUTMIX LABEL
+        a = tf.cast(WIDTH*WIDTH/DIM/DIM,tf.float32)
+        if len(label.shape)==1:
+            lab1 = tf.one_hot(label[j],num_classes)
+            lab2 = tf.one_hot(label[k],num_classes)
+        else:
+            lab1 = label[j,]
+            lab2 = label[k,]
+        labs.append((1-a)*lab1 + a*lab2)
+            
+    # RESHAPE HACK SO TPU COMPILER KNOWS SHAPE OF OUTPUT TENSOR (maybe use Python typing instead?)
+    image2 = tf.reshape(tf.stack(imgs),(aug_batch_size,DIM,DIM,3))
+    label2 = tf.reshape(tf.stack(labs),(aug_batch_size,num_classes))
+    return image2,label2
+
+
+
+def mixup(image, label, PROBABILITY = 1.0, target_size=None, aug_batch_size=1, num_classes=None):
+    # input image - is a batch of images of size [n,dim,dim,3] not a single image of [dim,dim,3]
+    # output - a batch of images with mixup applied
+    DIM = target_size[0]
+    
+    imgs = []; labs = []
+    for j in range(aug_batch_size):
+        # DO MIXUP WITH PROBABILITY DEFINED ABOVE
+        P = tf.cast( tf.random.uniform([],0,1)<=PROBABILITY, tf.float32)
+        # CHOOSE RANDOM
+        k = tf.cast( tf.random.uniform([],0,aug_batch_size),tf.int32)
+        a = tf.random.uniform([],0,1)*P # this is beta dist with alpha=1.0
+        # MAKE MIXUP IMAGE
+        img1 = image[j,]
+        img2 = image[k,]
+        imgs.append((1-a)*img1 + a*img2)
+        # MAKE CUTMIX LABEL
+        if len(label.shape)==1:
+            lab1 = tf.one_hot(label[j],num_classes)
+            lab2 = tf.one_hot(label[k],num_classes)
+        else:
+            lab1 = label[j,]
+            lab2 = label[k,]
+        labs.append((1-a)*lab1 + a*lab2)
+            
+    # RESHAPE HACK SO TPU COMPILER KNOWS SHAPE OF OUTPUT TENSOR (maybe use Python typing instead?)
+    image2 = tf.reshape(tf.stack(imgs),(aug_batch_size,DIM,DIM,3))
+    label2 = tf.reshape(tf.stack(labs),(aug_batch_size,num_classes))
+    return image2,label2
+
+
+
+
+def transform(image,label, target_size=None, aug_batch_size=1, num_classes=None):
+    # THIS FUNCTION APPLIES BOTH CUTMIX AND MIXUP
+    DIM = target_size[0]
+    SWITCH = 0.5
+    CUTMIX_PROB = 0.666
+    MIXUP_PROB = 0.666
+    # FOR SWITCH PERCENT OF TIME WE DO CUTMIX AND (1-SWITCH) WE DO MIXUP
+    image2, label2 = cutmix(image, label, CUTMIX_PROB)
+    image3, label3 = mixup(image, label, MIXUP_PROB)
+    imgs = []; labs = []
+    for j in range(aug_batch_size):
+        P = tf.cast( tf.random.uniform([],0,1)<=SWITCH, tf.float32)
+        imgs.append(P*image2[j,]+(1-P)*image3[j,])
+        labs.append(P*label2[j,]+(1-P)*label3[j,])
+    # RESHAPE HACK SO TPU COMPILER KNOWS SHAPE OF OUTPUT TENSOR (maybe use Python typing instead?)
+    image4 = tf.reshape(tf.stack(imgs),(aug_batch_size,DIM,DIM,3))
+    label4 = tf.reshape(tf.stack(labs),(aug_batch_size,num_classes))
+    return image4,label4
+
+
+def apply_cutmixup(dataset, do_aug=True, aug_batch_size=1, batch_size=1):
+    dataset = dataset.batch(aug_batch_size)
+    if do_aug: dataset = dataset.map(transform, num_parallel_calls=AUTO) # note we put AFTER batching
+    dataset = dataset.unbatch()
+    dataset = dataset.shuffle(2048)
+    dataset = dataset.batch(batch_size)
+    dataset = dataset.prefetch(AUTO) 
+    return dataset
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def _crop(image, offset_height, offset_width, crop_height, crop_width):
@@ -273,97 +435,97 @@ def _aspect_preserving_resize(image, smallest_side):
 #     images = _mean_image_subtraction(images, [_R_MEAN , _G_MEAN, _B_MEAN])
 #     return images
 
-def preprocess_for_train(image,
-                         output_height,
-                         output_width,
-                         folder=None,
-                         resize_side_min=_RESIZE_SIDE_MIN,
-                         resize_side_max=_RESIZE_SIDE_MAX,
-                         rotation_angle_min=_ROTATION_ANGLE_MIN,
-                         rotation_angle_max=_ROTATION_ANGLE_MAX,
-                         preprocess_func='densenet'):
-  """Preprocesses the given image for training.
+# def preprocess_for_train(image,
+#                          output_height,
+#                          output_width,
+#                          folder=None,
+#                          resize_side_min=_RESIZE_SIDE_MIN,
+#                          resize_side_max=_RESIZE_SIDE_MAX,
+#                          rotation_angle_min=_ROTATION_ANGLE_MIN,
+#                          rotation_angle_max=_ROTATION_ANGLE_MAX,
+#                          preprocess_func='densenet'):
+#   """Preprocesses the given image for training.
 
-  Note that the actual resizing scale is sampled from
-    [`resize_size_min`, `resize_size_max`].
+#   Note that the actual resizing scale is sampled from
+#     [`resize_size_min`, `resize_size_max`].
 
-  Args:
-    image: A `Tensor` representing an image of arbitrary size.
-    output_height: The height of the image after preprocessing.
-    output_width: The width of the image after preprocessing.
-    resize_side_min: The lower bound for the smallest side of the image for
-      aspect-preserving resizing.
-    resize_side_max: The upper bound for the smallest side of the image for
-      aspect-preserving resizing.
+#   Args:
+#     image: A `Tensor` representing an image of arbitrary size.
+#     output_height: The height of the image after preprocessing.
+#     output_width: The width of the image after preprocessing.
+#     resize_side_min: The lower bound for the smallest side of the image for
+#       aspect-preserving resizing.
+#     resize_side_max: The upper bound for the smallest side of the image for
+#       aspect-preserving resizing.
 
-  Returns:
-    A preprocessed image.
-  """
+#   Returns:
+#     A preprocessed image.
+#   """
 
-  if preprocess_func in ['inception_leaves','inception_leaves_color']:
-      resize_side = tf.random_uniform([], minval=int(output_height*1.05), maxval=int(output_height*2), dtype=tf.int32)
-      rotation_angle = tf.random_uniform([], minval=rotation_angle_min, maxval=rotation_angle_max, dtype=tf.int32)
-      image = tf.image.rot90(image, rotation_angle)
-      image = _aspect_preserving_resize(image, resize_side)
-      image = _central_crop([image], output_height, output_width)[0]
-  else:
-      resize_side = tf.random_uniform(
-          [], minval=resize_side_min, maxval=resize_side_max+1, dtype=tf.int32)
-      rotation_angle = tf.random_uniform(
-      [], minval=0, maxval=0, dtype=tf.int32)
-      image = _aspect_preserving_resize(image, resize_side)
-      image = _random_crop([image], output_height, output_width)[0]
-  image.set_shape([output_height, output_width, 3])
-  image = tf.to_float(image)
-  image = tf.image.random_flip_left_right(image)
+#   if preprocess_func in ['inception_leaves','inception_leaves_color']:
+#       resize_side = tf.random_uniform([], minval=int(output_height*1.05), maxval=int(output_height*2), dtype=tf.int32)
+#       rotation_angle = tf.random_uniform([], minval=rotation_angle_min, maxval=rotation_angle_max, dtype=tf.int32)
+#       image = tf.image.rot90(image, rotation_angle)
+#       image = _aspect_preserving_resize(image, resize_side)
+#       image = _central_crop([image], output_height, output_width)[0]
+#   else:
+#       resize_side = tf.random_uniform(
+#           [], minval=resize_side_min, maxval=resize_side_max+1, dtype=tf.int32)
+#       rotation_angle = tf.random_uniform(
+#       [], minval=0, maxval=0, dtype=tf.int32)
+#       image = _aspect_preserving_resize(image, resize_side)
+#       image = _random_crop([image], output_height, output_width)[0]
+#   image.set_shape([output_height, output_width, 3])
+#   image = tf.to_float(image)
+#   image = tf.image.random_flip_left_right(image)
 
-  if preprocess_func == 'inception_v1':
-      print('Inception Format Augmentation')
-      image = inception_preprocess(image)
-  elif preprocess_func == 'densenet':
-      print('DenseNet Format Augmentation')
-      image = denseNet_preprocess(image)
-  elif preprocess_func == 'vgg':
-      print('VGG Format Augmentation')
-      image = vgg_preprocess(image)
-  elif preprocess_func == 'inception_leaves':
-      print('Leaves preprocessing')
-      image = inception_preprocess_leaves(image)
-  elif preprocess_func == 'inception_leaves_color':
-      print('Leaves color preprocessing')
-      image = inception_preprocess_leaves_color(image)
-  return image
+#   if preprocess_func == 'inception_v1':
+#       print('Inception Format Augmentation')
+#       image = inception_preprocess(image)
+#   elif preprocess_func == 'densenet':
+#       print('DenseNet Format Augmentation')
+#       image = denseNet_preprocess(image)
+#   elif preprocess_func == 'vgg':
+#       print('VGG Format Augmentation')
+#       image = vgg_preprocess(image)
+#   elif preprocess_func == 'inception_leaves':
+#       print('Leaves preprocessing')
+#       image = inception_preprocess_leaves(image)
+#   elif preprocess_func == 'inception_leaves_color':
+#       print('Leaves color preprocessing')
+#       image = inception_preprocess_leaves_color(image)
+#   return image
 
 
-def preprocess_for_eval(image, output_height, output_width, resize_side=_RESIZE_SIDE_MIN,preprocess_func='densenet'):
-  """Preprocesses the given image for evaluation.
+# def preprocess_for_eval(image, output_height, output_width, resize_side=_RESIZE_SIDE_MIN,preprocess_func='densenet'):
+#   """Preprocesses the given image for evaluation.
 
-  Args:
-    image: A `Tensor` representing an image of arbitrary size.
-    output_height: The height of the image after preprocessing.
-    output_width: The width of the image after preprocessing.
-    resize_side: The smallest side of the image for aspect-preserving resizing.
+#   Args:
+#     image: A `Tensor` representing an image of arbitrary size.
+#     output_height: The height of the image after preprocessing.
+#     output_width: The width of the image after preprocessing.
+#     resize_side: The smallest side of the image for aspect-preserving resizing.
 
-  Returns:
-    A preprocessed image.
-  """
-  image = _aspect_preserving_resize(image, resize_side+10)
-  image = _central_crop([image], output_height, output_width)[0]
-  image.set_shape([output_height, output_width, 3])
-  image = tf.to_float(image)
+#   Returns:
+#     A preprocessed image.
+#   """
+#   image = _aspect_preserving_resize(image, resize_side+10)
+#   image = _central_crop([image], output_height, output_width)[0]
+#   image.set_shape([output_height, output_width, 3])
+#   image = tf.to_float(image)
 
-  if preprocess_func =='inception_leaves':
-      print('Inception Leaves')
-      image = inception_preprocess_leaves(image)
+#   if preprocess_func =='inception_leaves':
+#       print('Inception Leaves')
+#       image = inception_preprocess_leaves(image)
 
-  if preprocess_func == 'inception_v1':
-      print('Inception Format Augmentation')
-      image = inception_preprocess(image)
-  elif preprocess_func == 'densenet':
-      print('DenseNet Format Augmentation')
-      image = denseNet_preprocess(image)
-  elif preprocess_func == 'vgg':
-      print('VGG Format Augmentation')
-      image = vgg_preprocess(image)
+#   if preprocess_func == 'inception_v1':
+#       print('Inception Format Augmentation')
+#       image = inception_preprocess(image)
+#   elif preprocess_func == 'densenet':
+#       print('DenseNet Format Augmentation')
+#       image = denseNet_preprocess(image)
+#   elif preprocess_func == 'vgg':
+#       print('VGG Format Augmentation')
+#       image = vgg_preprocess(image)
 
-  return image
+#   return image
