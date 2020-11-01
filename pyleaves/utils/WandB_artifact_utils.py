@@ -146,13 +146,19 @@ import tensorflow as tf
 
 class WandBImagePredictionCallback(tf.keras.callbacks.Callback):
 
-    def __init__(self, x, y, class_labels, example_ids=None):
+    def __init__(self, validation_data = None, class_labels=None, example_ids=None, generator=None, validation_steps=None):
         super().__init__(self)
 
+        if isinstance(validation_data, tuple):
+            x, y = validation_data
+        else:
+            x, y = None, None
         self.x = x
         self.y = y
         self.class_labels = class_labels
         self.example_ids = example_ids
+        self.generator = generator
+        self.validation_steps = validation_steps
 
 
     def on_train_end(self, logs=None):
@@ -164,8 +170,27 @@ class WandBImagePredictionCallback(tf.keras.callbacks.Callback):
     def _log_dataframe(self):
         x, y_true, y_pred = None, None, None
 
-        x, y_true = self.x, self.y
-        y_pred = self.model.predict(x)
+        if self.generator:
+            if not self.validation_steps:
+                wandb.termwarn(
+                    "when using a generator for validation data with dataframes, you must pass validation_steps. skipping"
+                )
+                return None
+
+            for i in range(self.validation_steps):
+                bx, by_true = next(self.generator)
+                by_pred = self.model.predict(bx)
+                if x is None:
+                    x, y_true, y_pred = bx, by_true, by_pred
+                else:
+                    x, y_true, y_pred = (
+                        np.append(x, bx, axis=0),
+                        np.append(y_true, by_true, axis=0),
+                        np.append(y_pred, by_pred, axis=0),
+                    )
+        else:
+            x, y_true = self.x, self.y
+            y_pred = self.model.predict(x)
         try:
             return image_categorizer_dataframe(
                                     x=x, y_true=y_true, y_pred=y_pred, labels=self.class_labels, example_ids=self.example_ids
