@@ -7,7 +7,7 @@ Logging utils for working with mlflow
 import os
 import pandas as pd
 import wandb
-
+import numpy as np
 
 
 
@@ -147,7 +147,7 @@ import tensorflow as tf
 class WandBImagePredictionCallback(tf.keras.callbacks.Callback):
 
     def __init__(self, validation_data = None, class_labels=None, example_ids=None, generator=None, validation_steps=None):
-        super().__init__(self)
+        super().__init__()
 
         if isinstance(validation_data, tuple):
             x, y = validation_data
