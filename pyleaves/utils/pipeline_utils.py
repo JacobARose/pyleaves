@@ -146,7 +146,7 @@ def augment_sample(x, prob=1.0, seed=None):
     x = _cond_apply(x, color, prob, seed=seed)
     return x
 
-def resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=False, seed=None):
+def smart_resize_image(image, shape=(512,512,3), resize_buffer_size=128, training=False, seed=None):
     """Short summary.
 
     Parameters
@@ -231,7 +231,7 @@ def prep_dataset(dataset,
 
     
     
-    resize = partial(resize_image, shape=(*target_size, num_channels), training=training, seed=seed)
+    resize = partial(smart_resize_image, shape=(*target_size, num_channels), training=training, seed=seed)
     dataset = dataset.map(lambda x,y: (resize(x), y),
                           num_parallel_calls=-1)
 

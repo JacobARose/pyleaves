@@ -78,15 +78,15 @@ def display_batch_augmentation(data_iter: tf.data.Dataset, augmentation_function
 
 
 # num_classes = config.num_classes
-def cutmix(image, label, PROBABILITY = 1.0, target_size=None, aug_batch_size=1, num_classes=None):
+def cutmix(image, label, probability = 1.0, target_size=None, aug_batch_size=1, num_classes=None):
     # input image - is a batch of images of size [n,dim,dim,3] not a single image of [dim,dim,3]
     # output - a batch of images with cutmix applied
     DIM = target_size[0]
     
     imgs = []; labs = []
     for j in range(aug_batch_size):
-        # DO CUTMIX WITH PROBABILITY DEFINED ABOVE
-        P = tf.cast( tf.random.uniform([],0,1)<=PROBABILITY, tf.int32)
+        # DO CUTMIX WITH probability DEFINED ABOVE
+        P = tf.cast( tf.random.uniform([],0,1)<=probability, tf.int32)
         # CHOOSE RANDOM IMAGE TO CUTMIX WITH
         k = tf.cast( tf.random.uniform([],0,aug_batch_size),tf.int32)
         # CHOOSE RANDOM LOCATION
@@ -122,15 +122,15 @@ def cutmix(image, label, PROBABILITY = 1.0, target_size=None, aug_batch_size=1, 
 
 
 
-def mixup(image, label, PROBABILITY = 1.0, target_size=None, aug_batch_size=1, num_classes=None):
+def mixup(image, label, probability = 1.0, target_size=None, aug_batch_size=1, num_classes=None):
     # input image - is a batch of images of size [n,dim,dim,3] not a single image of [dim,dim,3]
     # output - a batch of images with mixup applied
     DIM = target_size[0]
     
     imgs = []; labs = []
     for j in range(aug_batch_size):
-        # DO MIXUP WITH PROBABILITY DEFINED ABOVE
-        P = tf.cast( tf.random.uniform([],0,1)<=PROBABILITY, tf.float32)
+        # DO MIXUP WITH probability DEFINED ABOVE
+        P = tf.cast( tf.random.uniform([],0,1)<=probability, tf.float32)
         # CHOOSE RANDOM
         k = tf.cast( tf.random.uniform([],0,aug_batch_size),tf.int32)
         a = tf.random.uniform([],0,1)*P # this is beta dist with alpha=1.0
@@ -155,21 +155,20 @@ def mixup(image, label, PROBABILITY = 1.0, target_size=None, aug_batch_size=1, n
 
 
 
-def transform(image,label, target_size=None, aug_batch_size=1, num_classes=None):
+def transform(image,label, switch = 0.5, cutmix_prob = 0.666, mixup_prob = 0.666,
+              target_size=None, aug_batch_size=1, num_classes=None):
     # THIS FUNCTION APPLIES BOTH CUTMIX AND MIXUP
     DIM = target_size[0]
-    SWITCH = 0.5
-    CUTMIX_PROB = 0.666
-    MIXUP_PROB = 0.666
-    # FOR SWITCH PERCENT OF TIME WE DO CUTMIX AND (1-SWITCH) WE DO MIXUP
+    
+    # FOR switch PERCENT OF TIME WE DO CUTMIX AND (1-switch) WE DO MIXUP
     _cutmix = partial(cutmix, aug_batch_size=aug_batch_size, num_classes=num_classes, target_size=target_size)
     _mixup = partial(mixup, aug_batch_size=aug_batch_size, num_classes=num_classes, target_size=target_size)
 
-    image2, label2 = _cutmix(image, label, CUTMIX_PROB)
-    image3, label3 = _mixup(image, label, MIXUP_PROB)
+    image2, label2 = _cutmix(image, label, cutmix_prob)
+    image3, label3 = _mixup(image, label, mixup_prob)
     imgs = []; labs = []
     for j in range(aug_batch_size):
-        P = tf.cast( tf.random.uniform([],0,1)<=SWITCH, tf.float32)
+        P = tf.cast( tf.random.uniform([],0,1)<=switch, tf.float32)
         imgs.append(P*image2[j,]+(1-P)*image3[j,])
         labs.append(P*label2[j,]+(1-P)*label3[j,])
     # RESHAPE HACK SO TPU COMPILER KNOWS SHAPE OF OUTPUT TENSOR (maybe use Python typing instead?)

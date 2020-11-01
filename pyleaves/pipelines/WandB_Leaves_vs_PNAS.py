@@ -277,6 +277,8 @@ def data_df_2_tf_data(data,
                       y_col='family',
                       training=False,
                       target_size=(256,256),
+                      resize_mode='tf.image.resize',
+                      resize_buffer_size=128,
                       batch_size=16,
                       seed=None,
                       preprocess_input=None,
@@ -299,6 +301,8 @@ def data_df_2_tf_data(data,
         y_col (str): Defaults to 'family'
         training (bool, optional): Defaults to False.
         target_size (tuple, optional): Defaults to (256,256).
+        resize_mode (str, optional): [description]. Defaults to 'tf.image.resize'.
+        resize_buffer_size (int, optional): [description]. Defaults to 128.
         batch_size (int, optional): Defaults to 16.
         seed ([type], optional): Defaults to None.
         preprocess_input ([type], optional): Defaults to None.
@@ -317,7 +321,7 @@ def data_df_2_tf_data(data,
     Returns:
         [type]: [description]
     """        
-    from pyleaves.utils.pipeline_utils import flip, rotate, rgb2gray_1channel, rgb2gray_3channel, sat_bright_con, _cond_apply, load_data_from_tfrecords
+    from pyleaves.utils.pipeline_utils import flip, rotate, rgb2gray_1channel, rgb2gray_3channel, sat_bright_con, _cond_apply, load_data_from_tfrecords, smart_resize_image
     import tensorflow as tf
     from tensorflow.keras import backend as K
 
@@ -383,8 +387,13 @@ def data_df_2_tf_data(data,
         tf_data = tf_data.map(lambda x,y,family: (preprocess_input(x), K.cast(y, dtype='int32'), family), num_parallel_calls=num_parallel_calls)
     
     from functools import partial
-    target_size = tuple(target_size)
-    resize = partial(tf.image.resize, size=target_size)
+    if resize_mode == "tf.image.resize":
+        target_size = tuple(target_size)
+        resize = partial(tf.image.resize, size=target_size)
+    elif resize_mode == "smart_resize_image":
+        resize = partial(smart_resize_image, shape=(*target_size,3), resize_buffer_size=resize_buffer_size, training=training, seed=seed)
+
+
     print('target_size = ', target_size)
     tf_data = tf_data.map(lambda x,y, family: (resize(x), tf.one_hot(y, depth=num_classes), family), num_parallel_calls=num_parallel_calls)
 
@@ -400,6 +409,9 @@ def data_df_2_tf_data(data,
             "sbc = saturation, brightness, contrast"
             tf_data = tf_data.map(lambda x, y, family: (_cond_apply(x, sat_bright_con, prob=augmentations[aug], seed=seed), y, family), num_parallel_calls=num_parallel_calls)
     tf_data = tf_data.map(lambda x,y,family: (rgb2gray_3channel(x), y, family), num_parallel_calls=-1)
+
+    # if 'cutmixup' in augmentations.keys():
+    #     tf_data = 
 
     tf_data = tf_data.batch(batch_size)
     tf_data = tf_data.prefetch(-1)
