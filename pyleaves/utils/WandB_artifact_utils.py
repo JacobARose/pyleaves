@@ -105,12 +105,16 @@ def image_categorizer_dataframe(x, y_true, y_pred, labels, example_ids=None):
     for i in range(len(labels)):
         class_preds.append(y_pred[:,i])
 
-    images = [Image(img) for img in x]
     true_class = labels[y_true.argmax(axis=-1)]
     true_prob = y_pred[np.arange(y_pred.shape[0]), y_true.argmax(axis=-1)]
     pred_class = labels[y_pred.argmax(axis=-1)]
     pred_prob = y_pred[np.arange(y_pred.shape[0]), y_pred.argmax(axis=-1)]
     correct = true_class == pred_class
+
+
+    images = []
+    for i in range(x.shape[0]):
+        images.append(Image(x[i,...], caption=f'true={true_class[i]},pred={pred_class[i]}'))
 
     if example_ids is None:
         example_ids = ['example_' + str(i) for i in range(len(x))]
