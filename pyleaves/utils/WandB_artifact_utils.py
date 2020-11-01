@@ -74,6 +74,109 @@ def load_dataset_from_artifact(dataset_name='Fossil', threshold=4, test_size=0.3
 
 
 
+from wandb import util, Image, Error, termwarn
+
+# assums X represents images and y_true/y_pred are logits for each class
+def image_categorizer_dataframe(x, y_true, y_pred, labels, example_ids=None):
+    np = util.get_module('numpy', required='dataframes require numpy')
+    pd = util.get_module('pandas', required='dataframes require pandas')
+
+    x, y_true, y_pred, labels = np.array(x), np.array(y_true), np.array(y_pred), np.array(labels)
+
+    # If there is only one output value of true_prob, convert to 2 class false_prob, true_prob
+    if y_true[0].shape[-1] == 1 and y_pred[0].shape[-1] == 1:
+        y_true = np.concatenate((1-y_true, y_true), axis=-1)
+        y_pred = np.concatenate((1-y_pred, y_pred), axis=-1)
+
+    if x.shape[0] != y_true.shape[0]:
+        termwarn('Sample count mismatch: x(%d) != y_true(%d). skipping evaluation' % (x.shape[0], y_true.shape[0]))
+        return
+    if x.shape[0] != y_pred.shape[0]:
+        termwarn('Sample count mismatch: x(%d) != y_pred(%d). skipping evaluation' % (x.shape[0], y_pred.shape[0]))
+        return
+    if y_true.shape[-1] != len(labels):
+        termwarn('Label count mismatch: y_true(%d) != labels(%d). skipping evaluation' % (y_true.shape[-1], len(labels)))
+        return
+    if y_pred.shape[-1] != len(labels):
+        termwarn('Label count mismatch: y_pred(%d) != labels(%d). skipping evaluation' % (y_pred.shape[-1], len(labels)))
+        return
+
+    class_preds = []
+    for i in range(len(labels)):
+        class_preds.append(y_pred[:,i])
+
+    images = [Image(img) for img in x]
+    true_class = labels[y_true.argmax(axis=-1)]
+    true_prob = y_pred[np.arange(y_pred.shape[0]), y_true.argmax(axis=-1)]
+    pred_class = labels[y_pred.argmax(axis=-1)]
+    pred_prob = y_pred[np.arange(y_pred.shape[0]), y_pred.argmax(axis=-1)]
+    correct = true_class == pred_class
+
+    if example_ids is None:
+        example_ids = ['example_' + str(i) for i in range(len(x))]
+
+    dfMap = {
+        'wandb_example_id': example_ids,
+        'image': images,
+        'true_class': true_class,
+        'true_prob': true_prob,
+        'pred_class': pred_class,
+        'pred_prob': pred_prob,
+        'correct': correct,
+    }
+
+    for i in range(len(labels)):
+        dfMap['prob_{}'.format(labels[i])] = class_preds[i]
+
+    all_columns = [
+        'wandb_example_id',
+        'image',
+        'true_class',
+        'true_prob',
+        'pred_class',
+        'pred_prob',
+        'correct',
+    ] + ['prob_{}'.format(l) for l in labels]
+
+    return pd.DataFrame(dfMap, columns=all_columns)
+
+
+
+import tensorflow as tf
+
+class WandBImagePredictionCallback(tf.keras.callbacks.Callback):
+
+    def __init__(self, x, y, class_labels, example_ids=None):
+        super().__init__(self)
+
+        self.x = x
+        self.y = y
+        self.class_labels = class_labels
+        self.example_ids = example_ids
+
+
+    def on_train_end(self, logs=None):
+        if self.log_evaluation:
+            wandb.run.summary["results"] = self._log_dataframe()
+        pass
+
+
+    def _log_dataframe(self):
+        x, y_true, y_pred = None, None, None
+
+        x, y_true = self.x, self.y
+        y_pred = self.model.predict(x)
+        try:
+            return image_categorizer_dataframe(
+                                    x=x, y_true=y_true, y_pred=y_pred, labels=self.class_labels, example_ids=self.example_ids
+                                    )
+        except:
+            print('WARNING: Fix WandB prediction callback')
+            return None
+
+
+
+
 
 
 
@@ -104,9 +207,9 @@ def load_dataset_from_artifact(dataset_name='Fossil', threshold=4, test_size=0.3
 
 
 
-def init_new_run(project, run_name, job_type):
-    run = wandb.init(project=project, name=run_name, job_type=job_type)
-    return run
+# def init_new_run(project, run_name, job_type):
+#     run = wandb.init(project=project, name=run_name, job_type=job_type)
+#     return run
 
 # def create_dataset_artifact(run,name):
 #     artifact = wandb.Artifact(name,type='dataset')
