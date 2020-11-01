@@ -362,10 +362,12 @@ def data_df_2_tf_data(data,
     prepped_data = pd.DataFrame.from_records([{'path':path, 'label':label, 'text_label':text_label} for path, label, text_label in zip(paths, labels, text_labels)])
     training = bool('train' in subset_key)
     if use_tfrecords:
-        if target_size[0] > 768:
+        if target_size[0] > 1024:
             tfrecord_target_shape = (*target_size,3)
         else:
-            tfrecord_target_shape = (768,768,3)
+            tfrecord_target_shape = (1024,1024,3)
+        
+        tfrecord_dir = tfrecord_dir + f'_res={target_size[0]}'
         prepped_data = (paths, labels, text_labels)
         os.makedirs(tfrecord_dir, exist_ok=True)
         tf_data = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
