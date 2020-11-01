@@ -367,7 +367,7 @@ def data_df_2_tf_data(data,
         else:
             tfrecord_target_shape = (1024,1024,3)
         
-        tfrecord_dir = tfrecord_dir + f'_res={tfrecord_target_shape[0]}'
+        # tfrecord_dir = tfrecord_dir + f'_res={tfrecord_target_shape[0]}'
         prepped_data = (paths, labels, text_labels)
         os.makedirs(tfrecord_dir, exist_ok=True)
         tf_data = load_data_from_tfrecords(tfrecord_dir=tfrecord_dir,
