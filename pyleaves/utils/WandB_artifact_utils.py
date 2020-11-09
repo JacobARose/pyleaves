@@ -150,7 +150,7 @@ import tensorflow as tf
 
 class WandBImagePredictionCallback(tf.keras.callbacks.Callback):
 
-    def __init__(self, validation_data = None, class_labels=None, example_ids=None, generator=None, validation_steps=None):
+    def __init__(self, validation_data = None, class_labels=None, example_ids=None, generator=None, validation_steps=None, log_evaluation=True):
         super().__init__()
 
         if isinstance(validation_data, tuple):
@@ -163,6 +163,7 @@ class WandBImagePredictionCallback(tf.keras.callbacks.Callback):
         self.example_ids = example_ids
         self.generator = generator
         self.validation_steps = validation_steps
+        self.log_evaluation = log_evaluation
 
 
     def on_train_end(self, logs=None):

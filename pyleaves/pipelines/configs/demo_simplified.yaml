@@ -1,0 +1,5 @@
+defaults:
+
+    - dataset/base
+    - dataset2: ${defaults.0.dataset}
+
