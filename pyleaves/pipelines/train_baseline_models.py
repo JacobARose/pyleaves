@@ -7,7 +7,7 @@
 
 # In[2]:
 
-
+import sys
 import os
 import subprocess
 import warnings
@@ -410,7 +410,7 @@ def get_config(**kwargs):
                                     'tags':[f'{k}:{v}' for k,v in kwargs.items()]}#,'precision','recall']}
                                  )
 
-    config = OmegaConf.merge(base_config, OmegaConf.create(kwargs), OmegaConf.from_cli())
+    config = OmegaConf.merge(base_config, OmegaConf.create(kwargs), OmegaConf.create(sys.argv))# OmegaConf.from_cli())
         
     if 'dataset_name' not in config:
         kwargs['dataset_name'] = 'PNAS'
