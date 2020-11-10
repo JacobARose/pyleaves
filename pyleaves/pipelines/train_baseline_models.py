@@ -377,7 +377,7 @@ def load_data_splits(config, run=None):
     return train_df, val_df, test_df
 
 
-def get_config(**kwargs, cli_args=None):
+def get_config(cli_args=None, **kwargs):
 
     base_config = OmegaConf.create({'model_weights':None, #'imagenet',
                                     'frozen_layers':None, #(0,-1)
