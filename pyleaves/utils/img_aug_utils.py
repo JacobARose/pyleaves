@@ -226,7 +226,7 @@ def resize_repeat(target_size: Tuple[int], training: bool):
             new_img = tf.concat((new_img, img), axis=0) 
       else:
         new_img = img      
-      img = tf.image.resize(new_img, target_size)
+      img = tf.image.resize(new_img, tuple(target_size))
       return img
   else:
     @tf.function
@@ -246,8 +246,8 @@ def resize_repeat(target_size: Tuple[int], training: bool):
           for i in range(int(repeat)):
             new_img = tf.concat((new_img, img), axis=0) 
       else:
-        new_img = img      
-      img = tf.image.resize(new_img, target_size)
+        new_img = img
+      img = tf.image.resize(new_img, tuple(target_size))
       return img
   return _map_fn
 
