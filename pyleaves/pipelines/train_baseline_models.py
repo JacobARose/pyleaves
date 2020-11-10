@@ -377,7 +377,7 @@ def load_data_splits(config, run=None):
     return train_df, val_df, test_df
 
 
-def get_config(**kwargs):
+def get_config(**kwargs, cli_args=None):
 
     base_config = OmegaConf.create({'model_weights':None, #'imagenet',
                                     'frozen_layers':None, #(0,-1)
@@ -410,7 +410,7 @@ def get_config(**kwargs):
                                     'tags':[f'{k}:{v}' for k,v in kwargs.items()]}#,'precision','recall']}
                                  )
 
-    config = OmegaConf.merge(base_config, OmegaConf.create(kwargs), OmegaConf.create(sys.argv))# OmegaConf.from_cli())
+    config = OmegaConf.merge(base_config, OmegaConf.create(kwargs), OmegaConf.from_cli(cli_args))
         
     if 'dataset_name' not in config:
         kwargs['dataset_name'] = 'PNAS'
@@ -692,30 +692,30 @@ def fit_one_cycle(config, model=None):
 
 
 
-def random_initialization_trial():
+def random_initialization_trial(cli_args=None):
     model_weights = None
     K.clear_session()
     print(f'Beginning training from scratch')
-    config = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=None, head_layer_units=[512,256], num_epochs=100, WarmUpCosineDecayScheduler=True)
+    config = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=None, head_layer_units=[512,256], num_epochs=100, WarmUpCosineDecayScheduler=True, cli_args=cli_args)
     model = fit_one_cycle(config)
     model.save(config.model_path+'_final')
     return model
 
 
-def finetune_trial():
+def finetune_trial(cli_args=None):
 
     model_weights = 'imagenet'
     K.clear_session()
     print(f'Beginning stage 1 of finetune trial')
-    config_1 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=2, WarmUpCosineDecayScheduler=False)
+    config_1 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=2, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
     model = fit_one_cycle(config_1)
 
     print(f'Beginning stage 2 of finetune trial')
-    config_2 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-4, frozen_layers=(0,-4), head_layer_units=[512,256], num_epochs=75)
+    config_2 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-4, frozen_layers=(0,-4), head_layer_units=[512,256], num_epochs=75, cli_args=cli_args)
     model = fit_one_cycle(config_2, model=model)
 
     print(f'Beginning stage 3 of finetune trial')
-    config_3 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-4, frozen_layers=(0,-12), head_layer_units=[512,256], num_epochs=50)
+    config_3 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-4, frozen_layers=(0,-12), head_layer_units=[512,256], num_epochs=50, cli_args=cli_args)
     model = fit_one_cycle(config_3, model=model)
 
     model.save(config_3.model_path+'_final')
@@ -727,11 +727,12 @@ if __name__=='__main__':
     #     config = get_config(dataset_name='Leaves-PNAS', model_weights=model_weights, frozen_layers=None, head_layer_units=[1024,512])
     #     model = fit_one_cycle(config)
     import sys
+    cli_args = sys.argv[1:]
     if '--random_initialization_trial' in sys.argv:
-        random_initialization_trial()
+        random_initialization_trial(cli_args)
 
     if '--finetune_imagenet' in sys.argv:
-        finetune_trial()
+        finetune_trial(cli_args)
 
 
 # %%
