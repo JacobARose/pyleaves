@@ -727,7 +727,7 @@ if __name__=='__main__':
     #     config = get_config(dataset_name='Leaves-PNAS', model_weights=model_weights, frozen_layers=None, head_layer_units=[1024,512])
     #     model = fit_one_cycle(config)
     import sys
-    cli_args = omegaconf.from_cli()
+    cli_args = OmegaConf.from_cli()
     if '--random_initialization_trial' in sys.argv:
         random_initialization_trial(cli_args)
 
