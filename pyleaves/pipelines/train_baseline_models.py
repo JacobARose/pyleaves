@@ -421,6 +421,7 @@ def get_config(cli_args=None, **kwargs):
                                     'samples_per_shard':300,
                                     'metrics':['f1','accuracy','top-3_accuracy','balanced_accuracy'],
                                     'WarmUpCosineDecayScheduler':True,
+                                    'early_stopping_patience':10,
                                     'run_id':None,
                                     'tags':[f'{k}:{v}' for k,v in kwargs.items()]}#,'precision','recall']}
                                  )
@@ -540,7 +541,7 @@ def get_callbacks(config, initial_epoch=0, train_data=None, val_data=None, test_
         callbacks.append(warm_up_lr)
 
     early_stop = EarlyStopping(monitor='val_loss',
-                  patience=10,
+                  patience=config.early_stopping_patience,
                   min_delta=1e-5, 
                   verbose=1,
                   restore_best_weights=True)
@@ -728,7 +729,7 @@ def finetune_trial(cli_args=None):
     model_weights = 'imagenet'
     K.clear_session()
     print(f'Beginning stage 1 of finetune trial')
-    config_1 = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=15, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
+    config_1 = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=40, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
     model = fit_one_cycle(config_1)
 
     print(f'Beginning stage 2 of finetune trial')
