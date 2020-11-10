@@ -413,7 +413,7 @@ def get_config(cli_args=None, **kwargs):
     config = OmegaConf.merge(base_config, OmegaConf.create(kwargs), cli_args)
         
     if 'dataset_name' not in config:
-        kwargs['dataset_name'] = 'PNAS'
+        kwargs['dataset_name'] = 'Leaves-PNAS'
     config.tags.append(kwargs['dataset_name'])
     if kwargs['dataset_name'] == 'Leaves-PNAS':
         config.dataset_name = kwargs['dataset_name']
@@ -707,15 +707,15 @@ def finetune_trial(cli_args=None):
     model_weights = 'imagenet'
     K.clear_session()
     print(f'Beginning stage 1 of finetune trial')
-    config_1 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=2, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
+    config_1 = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=2, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
     model = fit_one_cycle(config_1)
 
     print(f'Beginning stage 2 of finetune trial')
-    config_2 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-4, frozen_layers=(0,-4), head_layer_units=[512,256], num_epochs=75, cli_args=cli_args)
+    config_2 = get_config(warmup_learning_rate=1e-4, frozen_layers=(0,-4), head_layer_units=[512,256], num_epochs=75, cli_args=cli_args)
     model = fit_one_cycle(config_2, model=model)
 
     print(f'Beginning stage 3 of finetune trial')
-    config_3 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-4, frozen_layers=(0,-12), head_layer_units=[512,256], num_epochs=50, cli_args=cli_args)
+    config_3 = get_config(warmup_learning_rate=1e-4, frozen_layers=(0,-12), head_layer_units=[512,256], num_epochs=50, cli_args=cli_args)
     model = fit_one_cycle(config_3, model=model)
 
     model.save(config_3.model_path+'_final')
