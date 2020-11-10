@@ -31,20 +31,34 @@ from pyleaves.utils.WandB_artifact_utils import load_Leaves_Minus_PNAS_dataset, 
 import wandb
 from wandb.keras import WandbCallback
     
-def random_resample_dataset(data: pd.DataFrame, y_col='family', target_class_population: int=None):
+def random_resample_dataset(data: pd.DataFrame, y_col='family', target_class_population: int=None, set_class_floor: int=None, set_class_ceil: int=None):
     
     y = data[y_col].values
     counter = Counter(y)
-    
+  
     min_pop = min(list(counter.values()))
     max_pop = max(list(counter.values()))
     mean_pop = np.mean(list(counter.values()))
 
-    target_class_population = target_class_population or max_pop
+
+    if target_class_population:
+        target_class_population = target_class_population or max_pop
+    if set_class_ceil:
+        for family_name, fam in data.groupby(y_col):
+            if fam.shape[0] > set_class_ceil:
+                oversampled.append(fam.sample(set_class_ceil, replace=True))
+        oversampled = pd.concat(oversampled)
+
+    if set_class_floor:
+        for family_name, fam in data.groupby(y_col):
+            if fam.shape[0] < set_class_floor:
+                oversampled.append(fam.sample(set_class_floor, replace=True))
+        oversampled = pd.concat(oversampled)        
+
     oversampled = []
     print(f'[INFO] Current class population min={min_pop}|max={max_pop}|mean={mean_pop:.1f}')
     print(f'[INFO] Resampling data to a uniform class population of {target_class_population} samples/class')
-    for family_name, fam in train_df.groupby('family'):
+    for family_name, fam in data.groupby(y_col):
         oversampled.append(fam.sample(target_class_population, replace=True))
     oversampled = pd.concat(oversampled)
     print(f'[INFO] Random resampling complete. Previous num_samples={y.shape[0]}, new num_samples={oversampled.shape[0]}')   
@@ -379,7 +393,8 @@ def load_data_splits(config, run=None):
 
 def get_config(cli_args=None, **kwargs):
 
-    base_config = OmegaConf.create({'model_weights':None, #'imagenet',
+    base_config = OmegaConf.create({'model_name':'resnet50v2',
+                                    'model_weights':None, #'imagenet',
                                     'frozen_layers':None, #(0,-1)
                                     'frozen_top_layers':None, #(0,-3),
                                     'label_type':'family',
@@ -433,7 +448,7 @@ def get_config(cli_args=None, **kwargs):
     trial_id = hash_config(config)
     config.trial_id = trial_id
 
-    config.model_path = f'{config.model_name}-{config.dataset_name}_{config.target_size[0]}_{config.trial_id}'
+    config.model_path = f'{config.model_name}-{config.dataset_name}_{config.target_size[0]}'
 
     return config
 
