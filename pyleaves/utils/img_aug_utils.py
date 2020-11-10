@@ -194,7 +194,7 @@ def apply_cutmixup(dataset, do_aug=True, aug_batch_size=1, num_classes=None, tar
 
 def resize_repeat(target_size: Tuple[int], training: bool):
   """ Adapted from Ivan's code located at
-  https://github.com/serre-lab/tripletcyclegan/blob/1b192a631a28b03304980060057843996e5a4b14/tf2lib/data/dataset.py#L81
+  https://github.com/serre-lab/tripletcyclegan/blob/master/data.py#L281
 
   Resize function that creates repetitions along the shortest image side to resize without aspect ratio distortion.
 
@@ -224,6 +224,7 @@ def resize_repeat(target_size: Tuple[int], training: bool):
         if tf.math.equal(tf.shape(img)[0],minside):
           for i in range(int(repeat)):
             new_img = tf.concat((new_img, img), axis=0) 
+          new_img = tf.image.rot90(new_img)
       else:
         new_img = img      
       img = tf.image.resize(new_img, tuple(target_size))
@@ -245,6 +246,7 @@ def resize_repeat(target_size: Tuple[int], training: bool):
         if tf.math.equal(tf.shape(img)[0],minside):
           for i in range(int(repeat)):
             new_img = tf.concat((new_img, img), axis=0) 
+          new_img = tf.image.rot90(new_img) 
       else:
         new_img = img
       img = tf.image.resize(new_img, tuple(target_size))
