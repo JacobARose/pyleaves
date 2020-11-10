@@ -322,6 +322,7 @@ def data_df_2_tf_data(data,
         [type]: [description]
     """        
     from pyleaves.utils.pipeline_utils import flip, rotate, rgb2gray_1channel, rgb2gray_3channel, sat_bright_con, _cond_apply, load_data_from_tfrecords, smart_resize_image
+    from pyleaves.utils.img_aug_utils import resize_repeat
     import tensorflow as tf
     from tensorflow.keras import backend as K
 
@@ -394,6 +395,8 @@ def data_df_2_tf_data(data,
         resize = partial(tf.image.resize, size=target_size)
     elif resize_mode == "smart_resize_image":
         resize = partial(smart_resize_image, shape=(*target_size,3), resize_buffer_size=resize_buffer_size, training=training, seed=seed)
+    elif resize_mode == "resize_repeat":
+        resize = resize_repeat(target_size=target_size, training=training)
 
 
     print('target_size = ', target_size)
