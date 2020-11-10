@@ -405,6 +405,7 @@ def get_config(**kwargs):
                                     'use_tfrecords':True,
                                     'samples_per_shard':300,
                                     'metrics':['f1','accuracy','top-3_accuracy','balanced_accuracy'],
+                                    'WarmUpCosineDecayScheduler':True,
                                     'run_id':None,
                                     'tags':[f'{k}:{v}' for k,v in kwargs.items()]}#,'precision','recall']}
                                  )
@@ -504,26 +505,31 @@ def load_trainvaltest_data(config, run=None):
 
 def get_callbacks(config, initial_epoch=0, train_data=None, val_data=None, test_data=None, class_labels=None):
 
-    num_samples_train = config.num_samples.train
-    reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
-                                                    patience=4, min_lr=1e-5, verbose=True)
+    callbacks = [tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
+                                                    patience=4, min_lr=1e-5, verbose=True)]
 
-    total_steps = int(config.num_epochs * num_samples_train / config.batch_size) # total iteration batch steps
-    warmup_steps = int(config.lr_attack * num_samples_train / config.batch_size) # total number of warmup batches
-    warm_up_lr = WarmUpCosineDecayScheduler(learning_rate_base=config.base_lr,
-                                            total_steps=total_steps,
-                                            global_step_init=initial_epoch,
-                                            warmup_learning_rate=config.warmup_learning_rate,
-                                            warmup_steps=warmup_steps,
-                                            hold_base_rate_steps=config.lr_sustain,
-                                            verbose=1
-                                            )
+
+    if config.WarmUpCosineDecayScheduler:
+
+        num_samples_train = config.num_samples.train
+        total_steps = int(config.num_epochs * num_samples_train / config.batch_size) # total iteration batch steps
+        warmup_steps = int(config.lr_attack * num_samples_train / config.batch_size) # total number of warmup batches
+        warm_up_lr = WarmUpCosineDecayScheduler(learning_rate_base=config.base_lr,
+                                                total_steps=total_steps,
+                                                global_step_init=initial_epoch,
+                                                warmup_learning_rate=config.warmup_learning_rate,
+                                                warmup_steps=warmup_steps,
+                                                hold_base_rate_steps=config.lr_sustain,
+                                                verbose=1
+                                                )
+        callbacks.append(warm_up_lr)
 
     early_stop = EarlyStopping(monitor='val_loss',
                   patience=10,
                   min_delta=1e-5, 
                   verbose=1,
                   restore_best_weights=True)
+    callbacks.append(early_stop)
 
     visualize_train_data = [(batch[0].numpy(), batch[1].numpy()) for batch in next(iter(train_data.take(1)))][0]
     visualize_test_data = ((batch[0].numpy(), batch[1].numpy()) for batch in next(iter(test_data.take(10))))
@@ -535,17 +541,8 @@ def get_callbacks(config, initial_epoch=0, train_data=None, val_data=None, test_
                             labels=class_labels,
                             predictions=64,
                             generator = visualize_test_data)
-
-    callbacks=[warm_up_lr, reduce_lr, early_stop, wandb_cb]
-
+    callbacks.append(wandb_cb)
     return callbacks
-
-
-
-
-
-
-
 
 
 
@@ -697,7 +694,7 @@ def finetune_trial():
     for model_weights in [None, 'imagenet']:
         K.clear_session()
         print(f'Beginning stage 1 of finetune trial')
-        config_1 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=2)
+        config_1 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=2, WarmUpCosineDecayScheduler=False)
         model = fit_one_cycle(config_1)
 
         print(f'Beginning stage 2 of finetune trial')
