@@ -1126,19 +1126,15 @@ def evaluate(model, data_iter, y_true, steps: int, output_dict: bool=True, class
         import pdb; pdb.set_trace()
         print(e)
 
-
     # from pyleaves.utils.callback_utils import NeptuneVisualizationCallback
     # callbacks = [NeptuneMonitor()]
     # NeptuneVisualizationCallback(test_data, num_classes=num_classes, text_labels=target_names, steps=steps, subset_prefix=subset, experiment=experiment),
-    test_results = model.evaluate(data_iter, steps=steps, verbose=1)
+    test_results = model.evaluate(data_iter, steps=steps, verbose=1, return_dict=True)
 
+    for m, result in test_results.items():
+        print(f'test_{m}: {result}')
+        wandb.log({f'test_{m}': result})
     print('TEST RESULTS:\n',test_results)
-
-    print('Results:')
-    for m, result in zip(model.metrics_names, test_results):
-        print(f'{m}: {result}')
-        wandb.log({f'{subset}_{m}': result})
-
     return y_true, y_hat, y_prob
 
 

@@ -25,7 +25,7 @@ import tensorflow as tf
 AUTO = tf.data.experimental.AUTOTUNE
 from PIL import Image
 import math
-
+from typing import Tuple
 _R_MEAN = 123.68
 _G_MEAN = 116.78
 _B_MEAN = 103.94
@@ -189,9 +189,71 @@ def apply_cutmixup(dataset, do_aug=True, aug_batch_size=1, num_classes=None, tar
 
 
 
+###################################################################
 
 
+def resize_repeat(target_size: Tuple[int], training: bool):
+  """ Adapted from Ivan's code located at
+  https://github.com/serre-lab/tripletcyclegan/blob/1b192a631a28b03304980060057843996e5a4b14/tf2lib/data/dataset.py#L81
 
+  Resize function that creates repetitions along the shortest image side to resize without aspect ratio distortion.
+
+
+  Args:
+      target_size ([type]): [description]
+      training ([type]): [description]
+
+  Returns:
+      [type]: [description]
+  """  
+  if training:
+    @tf.function
+    def _map_fn(img,label):  # preprocessing
+      img = tf.image.random_flip_left_right(img)
+      maxside = tf.math.maximum(tf.shape(img)[0],tf.shape(img)[1])
+      minside = tf.math.minimum(tf.shape(img)[0],tf.shape(img)[1])
+      new_img = img
+        
+      if tf.math.divide(maxside,minside) > 1.3:
+        repeat = tf.math.floor(tf.math.divide(maxside,minside))  
+        new_img = img
+        if tf.math.equal(tf.shape(img)[1],minside):
+          for i in range(int(repeat)):
+            new_img = tf.concat((new_img, img), axis=1) 
+
+        if tf.math.equal(tf.shape(img)[0],minside):
+          for i in range(int(repeat)):
+            new_img = tf.concat((new_img, img), axis=0) 
+      else:
+        new_img = img      
+      img = tf.image.resize(new_img, target_size)
+      return img, label
+  else:
+    @tf.function
+    def _map_fn(img,label):  # preprocessing
+      maxside = tf.math.maximum(tf.shape(img)[0],tf.shape(img)[1])
+      minside = tf.math.minimum(tf.shape(img)[0],tf.shape(img)[1])
+      new_img = img
+        
+      if tf.math.divide(maxside,minside) > 1.3:
+        repeat = tf.math.floor(tf.math.divide(maxside,minside))  
+        new_img = img
+        if tf.math.equal(tf.shape(img)[1],minside):
+          for i in range(int(repeat)):
+            new_img = tf.concat((new_img, img), axis=1) 
+
+        if tf.math.equal(tf.shape(img)[0],minside):
+          for i in range(int(repeat)):
+            new_img = tf.concat((new_img, img), axis=0) 
+      else:
+        new_img = img      
+      img = tf.image.resize(new_img, target_size)
+      return img, label
+
+  return _map_fn
+
+#######################################################################
+#######################################################################
 
 
 

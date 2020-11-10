@@ -223,17 +223,10 @@ def cosine_decay_with_warmup(global_step,
 
 from tensorflow.python.keras.layers import Dropout, Input, Conv2D, MaxPooling2D
 
-def build_model(model_params, config: DictConfig, dropout_rate: float, channels: int):
-    resnet50_pretrained     = tf.keras.applications.ResNet50V2(**model_params)
-    headless_models = [resnet50_pretrained]#, resnet50]
-    model_names     = ['ResNet50_pretrained']#, 'ResNet50'] 
-
-    models = []
-    for headless_model in headless_models:
-        headless_model.trainable = True #
-        if config.frozen_layers:
-            for l in headless_model.layers[config.frozen_layers[0]:config.frozen_layers[-1]]:
-                l.trainable = False
+def build_model(model_params, config: DictConfig, dropout_rate: float, channels: int, model=None):
+    if model is None:
+        print('Building model')
+        headless_model     = tf.keras.applications.ResNet50V2(**model_params)
         headless_model = tf.keras.Model(headless_model.input, headless_model.layers[-2].output)
         model_input    = tf.keras.Input(shape=(*config.target_size, channels))
         model          = headless_model(model_input)#, training=False)
@@ -248,15 +241,52 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
             model     = tf.keras.layers.ReLU()(model)              
         model_output = tf.keras.layers.Dense(config.num_classes, kernel_regularizer=tf.keras.regularizers.l2(config.kernel_l2))(model)
         model = tf.keras.Model(model_input, model_output)
-        metrics = get_metrics(config.metrics, num_classes=config.num_classes)
-        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config.warmup_learning_rate),
-                    loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
-                    metrics=metrics)
 
-        models.append(model)
-    models[0].summary()
+    else:
+        print('Recompiling previous model.')
+        headless_model = model.layers[1]
+        if config.frozen_top_layers:
+            for l in model.layers[config.frozen_top_layers[0]:config.frozen_top_layers[-1]]:
+                l.trainable = False
+
+    model_name     = 'ResNet50_pretrained'
+    headless_model.trainable = True #
+    if config.frozen_layers:
+        for l in headless_model.layers[config.frozen_layers[0]:config.frozen_layers[-1]]:
+            l.trainable = False
+    # model_input    = tf.keras.Input(shape=(*config.target_size, channels))
+    # model          = headless_model(model_input)#, training=False)
+    # model          = tf.keras.layers.GlobalAveragePooling2D()(model)
+    # if config.num_dropout_layers>0:
+    #     model = tf.keras.layers.Dropout(dropout_rate)(model)
+
+    # for i in range(len(config.head_layer_units)):
+    #     model     = tf.keras.layers.Dense(config.head_layer_units[i], kernel_regularizer=tf.keras.regularizers.l2(config.kernel_l2))(model)
+    #     if config.num_dropout_layers > i+1:
+    #         model = tf.keras.layers.Dropout(dropout_rate)(model)
+    #     model     = tf.keras.layers.ReLU()(model)              
+    # model_output = tf.keras.layers.Dense(config.num_classes, kernel_regularizer=tf.keras.regularizers.l2(config.kernel_l2))(model)
+    # model = tf.keras.Model(model_input, model_output)
+    metrics = get_metrics(config.metrics, num_classes=config.num_classes)
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config.warmup_learning_rate),
+                loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
+                metrics=metrics)
+    # models.append(model)
+    model.summary()
     
-    return models, model_names
+    return model, model_name
+
+
+
+# def load_and_compile_model(model_path):
+
+
+#     metrics = get_metrics(config.metrics, num_classes=config.num_classes)
+#     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config.warmup_learning_rate),
+#                 loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
+#                 metrics=metrics)
+
+
 
 # config = OmegaConf.create({'seed':49, #237,
 #                            'target_size':(768,768), #(1024,1024),#(512,512),
@@ -352,6 +382,7 @@ def get_config(**kwargs):
     base_config = OmegaConf.create({'model_weights':None, #'imagenet',
                                     'frozen_layers':None, #(0,-1)
                                     'frozen_top_layers':None, #(0,-3),
+                                    'label_type':'family',
                                     'seed':49, #237,
                                     'target_size':(768,768), #(1024,1024),#(512,512),
                                     'resize_mode':'smart_resize_image',
@@ -374,12 +405,13 @@ def get_config(**kwargs):
                                     'use_tfrecords':True,
                                     'samples_per_shard':300,
                                     'metrics':['f1','accuracy','top-3_accuracy','balanced_accuracy'],
-                                     'tags':[f'{k}:{v}' for k,v in kwargs.items()]}#,'precision','recall']}
+                                    'run_id':None,
+                                    'tags':[f'{k}:{v}' for k,v in kwargs.items()]}#,'precision','recall']}
                                  )
 
     config = OmegaConf.merge(base_config, OmegaConf.create(kwargs), OmegaConf.from_cli())
         
-    if 'dataset_name' not in kwargs:
+    if 'dataset_name' not in config:
         kwargs['dataset_name'] = 'PNAS'
     config.tags.append(kwargs['dataset_name'])
     if kwargs['dataset_name'] == 'Leaves-PNAS':
@@ -400,26 +432,18 @@ def get_config(**kwargs):
     trial_id = hash_config(config)
     config.trial_id = trial_id
 
+    config.model_path = f'{config.model_name}-{config.dataset_name}_{config.target_size[0]}_{config.trial_id}'
+
     return config
 
 
 from tensorflow.keras.applications.resnet_v2 import preprocess_input
 
-def fit_one_cycle(config):
-
-    WANDB_CREDENTIALS = {"entity":"jrose",
-                         "project":"Leaves_vs_PNAS",
-                         "dir":"/media/data_cifs_lrs/projects/prj_fossils/users/jacob/WandB_artifacts"}
-    run = wandb.init(**WANDB_CREDENTIALS, id=config.run_id, tags=config.tags)#, resume="allow")#reinit=True)
-    config.run_id = run.id
-
-    ###########################################   
-
+def load_trainvaltest_data(config, run=None):
     train_df, val_df, test_df = load_data_splits(config, run=run)
-
     train_data_info = data_df_2_tf_data(train_df,
                                         x_col='archive_path',
-                                        y_col='family',
+                                        y_col=config.label_type,
                                         training=True,
                                         preprocess_input=preprocess_input,
                                         seed=config.seed,
@@ -439,7 +463,7 @@ def fit_one_cycle(config):
 
     val_data_info = data_df_2_tf_data(val_df,
                                       x_col='archive_path',
-                                      y_col='family',
+                                      y_col=config.label_type,
                                       training=False,
                                       preprocess_input=preprocess_input,
                                       seed=config.seed,
@@ -458,7 +482,7 @@ def fit_one_cycle(config):
 
     test_data_info = data_df_2_tf_data(test_df,
                                        x_col='archive_path',
-                                       y_col='family',
+                                       y_col=config.label_type,
                                        training=False,
                                        preprocess_input=preprocess_input,
                                        seed=config.seed,
@@ -475,41 +499,140 @@ def fit_one_cycle(config):
                                        samples_per_shard=config.samples_per_shard,
                                        tfrecord_dir=config.tfrecord_dir)
 
+    return train_data_info, val_data_info, test_data_info
 
+
+def get_callbacks(config, initial_epoch=0, train_data=None, val_data=None, test_data=None, class_labels=None):
+
+    num_samples_train = config.num_samples.train
+    reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
+                                                    patience=4, min_lr=1e-5, verbose=True)
+
+    total_steps = int(config.num_epochs * num_samples_train / config.batch_size) # total iteration batch steps
+    warmup_steps = int(config.lr_attack * num_samples_train / config.batch_size) # total number of warmup batches
+    warm_up_lr = WarmUpCosineDecayScheduler(learning_rate_base=config.base_lr,
+                                            total_steps=total_steps,
+                                            global_step_init=initial_epoch,
+                                            warmup_learning_rate=config.warmup_learning_rate,
+                                            warmup_steps=warmup_steps,
+                                            hold_base_rate_steps=config.lr_sustain,
+                                            verbose=1
+                                            )
+
+    early_stop = EarlyStopping(monitor='val_loss',
+                  patience=10,
+                  min_delta=1e-5, 
+                  verbose=1,
+                  restore_best_weights=True)
+
+    visualize_train_data = [(batch[0].numpy(), batch[1].numpy()) for batch in next(iter(train_data.take(1)))][0]
+    visualize_test_data = ((batch[0].numpy(), batch[1].numpy()) for batch in next(iter(test_data.take(10))))
+
+    wandb_cb = WandbCallback(save_model=True,
+                            monitor='val_loss',
+                            training_data=visualize_train_data,
+                            data_type='image',
+                            labels=class_labels,
+                            predictions=64,
+                            generator = visualize_test_data)
+
+    callbacks=[warm_up_lr, reduce_lr, early_stop, wandb_cb]
+
+    return callbacks
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def fit_one_cycle(config, model=None):
+
+    WANDB_CREDENTIALS = {"entity":"jrose",
+                         "project":"Leaves_vs_PNAS",
+                         "dir":"/media/data_cifs_lrs/projects/prj_fossils/users/jacob/WandB_artifacts"}
+
+    run = wandb.init(**WANDB_CREDENTIALS, id=config.run_id, tags=config.tags, resume="allow", reinit=True)
+    config.run_id = run.id
+
+    ###########################################   
+    #region
+    # train_df, val_df, test_df = load_data_splits(config, run=run)
+    # train_data_info = data_df_2_tf_data(train_df,
+    #                                     x_col='archive_path',
+    #                                     y_col='family',
+    #                                     training=True,
+    #                                     preprocess_input=preprocess_input,
+    #                                     seed=config.seed,
+    #                                     target_size=config.target_size,
+    #                                     resize_mode=config.resize_mode,
+    #                                     resize_buffer_size=config.resize_buffer_size,
+    #                                     batch_size=config.batch_size,
+    #                                     augmentations=config.augmentations,
+    #                                     num_parallel_calls=config.num_parallel_calls,
+    #                                     cache=False,
+    #                                     shuffle_first=True,
+    #                                     fit_class_weights=config.fit_class_weights,
+    #                                     subset_key='train',
+    #                                     use_tfrecords=config.use_tfrecords,
+    #                                     samples_per_shard=config.samples_per_shard,
+    #                                     tfrecord_dir=config.tfrecord_dir)
+
+    # val_data_info = data_df_2_tf_data(val_df,
+    #                                   x_col='archive_path',
+    #                                   y_col='family',
+    #                                   training=False,
+    #                                   preprocess_input=preprocess_input,
+    #                                   seed=config.seed,
+    #                                   target_size=config.target_size,
+    #                                   resize_mode=config.resize_mode,
+    #                                   resize_buffer_size=config.resize_buffer_size,
+    #                                   batch_size=config.batch_size,
+    #                                   num_parallel_calls=config.num_parallel_calls,
+    #                                   cache=True,
+    #                                   shuffle_first=True,
+    #                                   class_encodings=train_data_info['encoder'],
+    #                                   subset_key='val',
+    #                                   use_tfrecords=config.use_tfrecords,
+    #                                   samples_per_shard=config.samples_per_shard,
+    #                                   tfrecord_dir=config.tfrecord_dir)
+
+    # test_data_info = data_df_2_tf_data(test_df,
+    #                                    x_col='archive_path',
+    #                                    y_col='family',
+    #                                    training=False,
+    #                                    preprocess_input=preprocess_input,
+    #                                    seed=config.seed,
+    #                                    target_size=config.target_size,
+    #                                    resize_mode=config.resize_mode,
+    #                                    resize_buffer_size=config.resize_buffer_size,
+    #                                    batch_size=config.batch_size,
+    #                                    num_parallel_calls=config.num_parallel_calls,
+    #                                    cache=True,
+    #                                    shuffle_first=True,
+    #                                    class_encodings=train_data_info['encoder'],
+    #                                    subset_key='test',
+    #                                    use_tfrecords=config.use_tfrecords,
+    #                                    samples_per_shard=config.samples_per_shard,
+    #                                    tfrecord_dir=config.tfrecord_dir)
+    #endregion
+
+    ###########################################
+    # DATA #
+    ###########################################
+    train_data_info, val_data_info, test_data_info = load_trainvaltest_data(config, run=run)
     class_labels = list(train_data_info['encoder'])
-    # class_to_id = train_data_info['encoder']
-    # id_to_class = {v: k for k, v in class_to_id.items()}
     train_iter = train_data_info['data']
     val_iter = val_data_info['data']
     test_iter = test_data_info['data']
 
-    num_classes = len(class_labels)
-    config.num_samples = {}
-    config.num_samples.train = train_data_info['num_samples']
-    config.num_samples.val = val_data_info['num_samples']
-    config.num_samples.test = test_data_info['num_samples']
-    config.num_classes = train_data_info['num_classes']
-    steps_per_epoch=int(np.ceil(config.num_samples.train/config.batch_size))
-    validation_steps=int(np.ceil(config.num_samples.val/config.batch_size))
-    test_steps=int(np.ceil(config.num_samples.test/config.batch_size))
-
-    num_samples_train = config.num_samples.train
-    num_epochs = config.num_epochs
-
-    batch_size = config.batch_size # batch size
-    learning_rate_base = config.base_lr # Initial learning rate after warmup
-    warmup_learning_rate=config.warmup_learning_rate
-    hold_base_rate_steps = config.lr_sustain
-    warmup_epoch = config.lr_attack # number of warmup iterations
-
-    total_steps = int(num_epochs * num_samples_train / batch_size) # total iteration batch steps
-    warmup_steps = int(warmup_epoch * num_samples_train / batch_size) # total number of warmup batches
-
-    model_params = {'input_shape' : (*config.target_size, config.channels), 'include_top': False, 'weights':config.model_weights}
-
-    models, model_names = build_model(model_params, config=config, dropout_rate=config.dropout_rate, channels=config.channels)
-
-    run = wandb.init(**WANDB_CREDENTIALS, id=config.run_id, tags=config.tags, resume="allow")
     train_data = train_iter.unbatch().map(lambda x,y,_: (x,y))
     val_data = val_iter.map(lambda x,y,_: (x,y))#.repeat()
     test_data = test_iter.map(lambda x,y,_: (x,y))
@@ -518,51 +641,37 @@ def fit_one_cycle(config):
         train_data = apply_cutmixup(dataset=train_data, aug_batch_size=config.batch_size, num_classes=config.num_classes, target_size=config.target_size, batch_size=config.batch_size)
     else:
         train_data = train_data.batch(config.batch_size)
-    early_stop = EarlyStopping(monitor='val_loss',
-                  patience=15,
-                  min_delta=1e-5, 
-                  verbose=1,
-                  restore_best_weights=True)
 
-    dataset_name = config.dataset_name
+    config.num_samples = {}
+    config.num_samples.train = train_data_info['num_samples']
+    config.num_samples.val = val_data_info['num_samples']
+    config.num_samples.test = test_data_info['num_samples']
+    config.num_classes = train_data_info['num_classes']
+    steps_per_epoch=int(np.ceil(config.num_samples.train/config.batch_size))
+    validation_steps=int(np.ceil(config.num_samples.val/config.batch_size))
+    # test_steps=int(np.ceil(config.num_samples.test/config.batch_size))
+
+    ###########################################
+    # MODEL #
+    ###########################################
+    model_params = {'input_shape' : (*config.target_size, config.channels), 'include_top': False, 'weights':config.model_weights}
+    model, _ = build_model(model_params, config=config, dropout_rate=config.dropout_rate, channels=config.channels, model=model)
+
     histories = []
-    model, model_name = models[0], model_names[0]
+    # model, model_name = models[0], model_names[0]
     initial_epoch = wandb.run.step or 0
-
-    if wandb.run.resumed:
-        # restore the best model
-        print(f'Restoring model from checkpoint at epoch {initial_epoch}')
-        model = tf.keras.models.load_model(wandb.restore("model-best.h5").name)
+    # if wandb.run.resumed:
+    #     print(f'Restoring model from checkpoint at epoch {initial_epoch}')
+    #     model = tf.keras.models.load_model(wandb.restore("model-best.h5").name)
 
     run.config.update(OmegaConf.to_container(config, resolve=True))
     if model.history is None:
         initial_epoch = initial_epoch  or 0
 
-    reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2,
-                                                     patience=4, min_lr=1e-5, verbose=True)
-
-    warm_up_lr = WarmUpCosineDecayScheduler(learning_rate_base=learning_rate_base,
-                                total_steps=total_steps,
-                                global_step_init=initial_epoch,
-                                warmup_learning_rate=warmup_learning_rate, # warmup start learning rate
-                                warmup_steps=warmup_steps,
-                                hold_base_rate_steps=hold_base_rate_steps,
-                                verbose=1
-                                )
-
-
-    visualize_train_data = [(batch[0].numpy(), batch[1].numpy()) for batch in next(iter(train_data.take(1)))][0]
-    visualize_test_data = ((batch[0].numpy(), batch[1].numpy()) for batch in next(iter(test_data.take(10))))
-
-    wandb_cb = WandbCallback(save_model=True,
-                             monitor='val_loss', #log_gradients=False,#True,
-                             training_data=visualize_train_data,
-                             data_type='image',
-                             labels=class_labels,
-                             predictions=64,
-                             generator = visualize_test_data)
-
-    callbacks=[warm_up_lr,reduce_lr, early_stop, wandb_cb] #, WandbCallback(save_model=True, monitor='val_loss')]
+    callbacks = get_callbacks(config,
+                              initial_epoch=initial_epoch,
+                              train_data=train_data, val_data=val_data, test_data=test_data,
+                              class_labels=class_labels)
     history = model.fit(train_data,
                         epochs=config.num_epochs,
                         steps_per_epoch=steps_per_epoch,
@@ -572,26 +681,42 @@ def fit_one_cycle(config):
                         callbacks=callbacks)
 
     histories.append(history)
-    model_path = f'{model_name}-{dataset_name}_{config.target_size[0]}_baseline.h5'
-    model.save(model_path)
-    artifact = wandb.Artifact(type='model', name=model_path)
-    artifact.add_file(model_path, name=model_path)
+    model.save(config.model_path)
+    artifact = wandb.Artifact(type='model', name=config.model_path)
+    artifact.add_file(config.model_path, name=config.model_path)
     run.log_artifact(artifact)
-
     print('INITIATING MODEL EVALUATION ON TEST SET')
     test_data_info['data'] = test_data
-    test_results = model.evaluate(test_data, steps=test_steps, verbose=1, return_dict=True)
-    for m, result in test_results.items():
-        print(f'test_{m}: {result}')
-        wandb.log({f'test_{m}': result})
     perform_evaluation_stage(model, test_data_info, class_encoder=train_data_info['encoder'], batch_size=config.batch_size, subset='test')
     run.join()
     
     return model
 
+def finetune_trial():
 
-for model_weights in ['imagenet', None]:
-    K.clear_session()
-    config = get_config(dataset_name='Leaves-PNAS', model_weights=model_weights, frozen_layers=None, head_layer_units=[1024,512])
-    model = fit_one_cycle(config)
+    for model_weights in [None, 'imagenet']:
+        K.clear_session()
+        print(f'Beginning stage 1 of finetune trial')
+        config_1 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=2)
+        model = fit_one_cycle(config_1)
 
+        print(f'Beginning stage 2 of finetune trial')
+        config_2 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-4, frozen_layers=(0,-4), head_layer_units=[512,256], num_epochs=75)
+        model = fit_one_cycle(config_2, model=model)
+
+        print(f'Beginning stage 3 of finetune trial')
+        config_3 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-4, frozen_layers=(0,-12), head_layer_units=[512,256], num_epochs=50)
+        model = fit_one_cycle(config_3, model=model)
+
+        model.save(config_3.model_path+'_final')
+
+if __name__=='__main__':
+    # for model_weights in ['imagenet', None]:
+    #     K.clear_session()
+    #     config = get_config(dataset_name='Leaves-PNAS', model_weights=model_weights, frozen_layers=None, head_layer_units=[1024,512])
+    #     model = fit_one_cycle(config)
+
+    finetune_trial()
+
+
+# %%
