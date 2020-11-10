@@ -428,7 +428,7 @@ def get_config(**kwargs):
         
     print(OmegaConf.to_yaml(config))
 
-    config.tfrecord_dir = f'/media/data/jacob/tfrecords/{config.dataset_name}_resampled-{config.target_class_population}'
+    config.tfrecord_dir = f'/media/data/jacob/tfrecords/{config.dataset_name}/{config.label_type}_resampled-{config.target_class_population}'
     os.makedirs(config.tfrecord_dir, exist_ok=True)    
     trial_id = hash_config(config)
     config.trial_id = trial_id
@@ -689,31 +689,49 @@ def fit_one_cycle(config, model=None):
     
     return model
 
+
+
+
+def random_initialization_trial():
+    model_weights = None
+    K.clear_session()
+    print(f'Beginning training from scratch')
+    config = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=None, head_layer_units=[512,256], num_epochs=100, WarmUpCosineDecayScheduler=True)
+    model = fit_one_cycle(config)
+    model.save(config.model_path+'_final')
+    return model
+
+
 def finetune_trial():
 
-    for model_weights in [None, 'imagenet']:
-        K.clear_session()
-        print(f'Beginning stage 1 of finetune trial')
-        config_1 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=2, WarmUpCosineDecayScheduler=False)
-        model = fit_one_cycle(config_1)
+    model_weights = 'imagenet'
+    K.clear_session()
+    print(f'Beginning stage 1 of finetune trial')
+    config_1 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=2, WarmUpCosineDecayScheduler=False)
+    model = fit_one_cycle(config_1)
 
-        print(f'Beginning stage 2 of finetune trial')
-        config_2 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-4, frozen_layers=(0,-4), head_layer_units=[512,256], num_epochs=75)
-        model = fit_one_cycle(config_2, model=model)
+    print(f'Beginning stage 2 of finetune trial')
+    config_2 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-4, frozen_layers=(0,-4), head_layer_units=[512,256], num_epochs=75)
+    model = fit_one_cycle(config_2, model=model)
 
-        print(f'Beginning stage 3 of finetune trial')
-        config_3 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-4, frozen_layers=(0,-12), head_layer_units=[512,256], num_epochs=50)
-        model = fit_one_cycle(config_3, model=model)
+    print(f'Beginning stage 3 of finetune trial')
+    config_3 = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-4, frozen_layers=(0,-12), head_layer_units=[512,256], num_epochs=50)
+    model = fit_one_cycle(config_3, model=model)
 
-        model.save(config_3.model_path+'_final')
+    model.save(config_3.model_path+'_final')
+    return model
 
 if __name__=='__main__':
     # for model_weights in ['imagenet', None]:
     #     K.clear_session()
     #     config = get_config(dataset_name='Leaves-PNAS', model_weights=model_weights, frozen_layers=None, head_layer_units=[1024,512])
     #     model = fit_one_cycle(config)
+    import sys
+    if 'random_initialization_trial' in sys.argv:
+        random_initialization_trial()
 
-    finetune_trial()
+    if '--finetune_imagenet' in sys.argv:
+        finetune_trial()
 
 
 # %%
