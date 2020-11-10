@@ -740,7 +740,7 @@ def random_initialization_trial(cli_args=None):
     model_weights = None
     K.clear_session()
     print(f'Beginning training from scratch')
-    config = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=None, head_layer_units=[512,256], num_epochs=100, WarmUpCosineDecayScheduler=True, cli_args=cli_args)
+    config = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=None, head_layer_units=[512,256], num_epochs=100, cli_args=cli_args)
     model = fit_one_cycle(config)
     model.save(config.model_path+'_final')
     return model
