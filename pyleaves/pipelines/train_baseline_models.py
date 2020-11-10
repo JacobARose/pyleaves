@@ -414,14 +414,14 @@ def get_config(cli_args=None, **kwargs):
         
     if 'dataset_name' not in config:
         kwargs['dataset_name'] = 'Leaves-PNAS'
-    config.tags.append(kwargs['dataset_name'])
-    if kwargs['dataset_name'] == 'Leaves-PNAS':
-        config.dataset_name = kwargs['dataset_name']
+    config.tags.append(config['dataset_name'])
+    if config['dataset_name'] == 'Leaves-PNAS':
+        config.dataset_name = config['dataset_name']
         config.threshold = 4
         config.test_size = 0.3
         config.validation_split = 0.0
-    if kwargs['dataset_name'] == 'PNAS':
-        config.dataset_name = kwargs['dataset_name']
+    if config['dataset_name'] == 'PNAS':
+        config.dataset_name = config['dataset_name']
         config.threshold = 100
         config.test_size = 0.5
         config.validation_split = 0.1
