@@ -695,7 +695,10 @@ def fit_one_cycle(config, model=None):
     histories.append(history)
     model.save(config.model_path)
     artifact = wandb.Artifact(type='model', name=config.model_path)
-    artifact.add_file(config.model_path, name=config.model_path)
+    if os.path.isfile(config.model_path):
+        artifact.add_file(config.model_path, name=config.model_path)
+    elif os.path.isdir(config.model_path):
+        artifact.add_dir(config.model_path, name=config.model_path)
     run.log_artifact(artifact)
     print('INITIATING MODEL EVALUATION ON TEST SET')
     test_data_info['data'] = test_data
@@ -722,7 +725,7 @@ def finetune_trial(cli_args=None):
     model_weights = 'imagenet'
     K.clear_session()
     print(f'Beginning stage 1 of finetune trial')
-    config_1 = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=2, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
+    config_1 = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=15, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
     model = fit_one_cycle(config_1)
 
     print(f'Beginning stage 2 of finetune trial')
