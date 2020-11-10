@@ -39,29 +39,42 @@ def random_resample_dataset(data: pd.DataFrame, y_col='family', target_class_pop
     min_pop = min(list(counter.values()))
     max_pop = max(list(counter.values()))
     mean_pop = np.mean(list(counter.values()))
+    num_samples = data.shape[0]
 
 
     if target_class_population:
         target_class_population = target_class_population or max_pop
-    if set_class_ceil:
+        resampled = []
+        print(f'[INFO] Current class population min={min_pop}|max={max_pop}|mean={mean_pop:.1f}')
+        print(f'[INFO] Resampling data to a uniform class population of {target_class_population} samples/class')
         for family_name, fam in data.groupby(y_col):
+            resampled.append(fam.sample(target_class_population, replace=True))
+        data = pd.concat(resampled)
+        print(f'[INFO] Random resampling complete. Previous num_samples={y.shape[0]}, new num_samples={data.shape[0]}')
+
+
+    if set_class_ceil:
+        undersampled = []
+        for _, fam in data.groupby(y_col):
             if fam.shape[0] > set_class_ceil:
-                oversampled.append(fam.sample(set_class_ceil, replace=True))
-        oversampled = pd.concat(oversampled)
+                undersampled.append(fam.sample(set_class_ceil, replace=True))
+            else:
+                undersampled.append(fam)
+        data = pd.concat(undersampled)
+        print(f'[INFO] Random undersampling complete. Previous num_samples={y.shape[0]}, new num_samples={data.shape[0]}')
+        print(f'[INFO] Random undersampling complete. Previous max_pop={max_pop}, new max_pop={set_class_ceil}')
 
     if set_class_floor:
-        for family_name, fam in data.groupby(y_col):
+        oversampled = []
+        for _, fam in data.groupby(y_col):
             if fam.shape[0] < set_class_floor:
                 oversampled.append(fam.sample(set_class_floor, replace=True))
-        oversampled = pd.concat(oversampled)        
+            else:
+                oversampled.append(fam)
+        data = pd.concat(oversampled)
+        print(f'[INFO] Random oversampling complete. Previous num_samples={num_samples}, new num_samples={data.shape[0]}')
+        print(f'[INFO] Random oversampling complete. Previous min_pop={min_pop}, new min_pop={set_class_floor}')
 
-    oversampled = []
-    print(f'[INFO] Current class population min={min_pop}|max={max_pop}|mean={mean_pop:.1f}')
-    print(f'[INFO] Resampling data to a uniform class population of {target_class_population} samples/class')
-    for family_name, fam in data.groupby(y_col):
-        oversampled.append(fam.sample(target_class_population, replace=True))
-    oversampled = pd.concat(oversampled)
-    print(f'[INFO] Random resampling complete. Previous num_samples={y.shape[0]}, new num_samples={oversampled.shape[0]}')   
     return oversampled
 
 os.environ['WANDB_NOTEBOOK_NAME'] = 'baseline_models' 
@@ -386,7 +399,7 @@ def load_data_splits(config, run=None):
         train_df, val_df = train_test_split(train_df, test_size=config.validation_split, random_state=config.seed, shuffle=True, stratify=train_df.family)
 
     if config.target_class_population:
-        train_df = random_resample_dataset(data=train_df, y_col='family', target_class_population=config.target_class_population)
+        train_df = random_resample_dataset(data=train_df, y_col=config.label_type, target_class_population=config.target_class_population, set_class_floor=config.set_class_floor, set_class_ceil=config.set_class_ceil)
     
     return train_df, val_df, test_df
 
@@ -417,6 +430,8 @@ def get_config(cli_args=None, **kwargs):
                                     'num_dropout_layers':1,
                                     'head_layer_units':[1024,512], #[512,256],
                                     'target_class_population':False, #100,
+                                    'set_class_floor':None,
+                                    'set_class_ceil':None,
                                     'use_tfrecords':True,
                                     'samples_per_shard':300,
                                     'metrics':['f1','accuracy','top-3_accuracy','balanced_accuracy'],
