@@ -678,7 +678,7 @@ def fit_one_cycle(config, model=None):
 
     run.config.update(OmegaConf.to_container(config, resolve=True))
     if model.history is None:
-        initial_epoch = initial_epoch  or 0
+        initial_epoch = initial_epoch or 0
 
     callbacks = get_callbacks(config,
                               initial_epoch=initial_epoch,
@@ -703,7 +703,10 @@ def fit_one_cycle(config, model=None):
     print('INITIATING MODEL EVALUATION ON TEST SET')
     test_data_info['data'] = test_data
     perform_evaluation_stage(model, test_data_info, class_encoder=train_data_info['encoder'], batch_size=config.batch_size, subset='test')
-    run.join()
+    try:
+        run.join()
+    finally:
+        print('Finished')
     
     return model
 
