@@ -208,7 +208,7 @@ def resize_repeat(target_size: Tuple[int], training: bool):
   """  
   if training:
     @tf.function
-    def _map_fn(img,label):  # preprocessing
+    def _map_fn(img):  # preprocessing
       img = tf.image.random_flip_left_right(img)
       maxside = tf.math.maximum(tf.shape(img)[0],tf.shape(img)[1])
       minside = tf.math.minimum(tf.shape(img)[0],tf.shape(img)[1])
@@ -227,10 +227,10 @@ def resize_repeat(target_size: Tuple[int], training: bool):
       else:
         new_img = img      
       img = tf.image.resize(new_img, target_size)
-      return img, label
+      return img
   else:
     @tf.function
-    def _map_fn(img,label):  # preprocessing
+    def _map_fn(img):  # preprocessing
       maxside = tf.math.maximum(tf.shape(img)[0],tf.shape(img)[1])
       minside = tf.math.minimum(tf.shape(img)[0],tf.shape(img)[1])
       new_img = img
@@ -248,8 +248,7 @@ def resize_repeat(target_size: Tuple[int], training: bool):
       else:
         new_img = img      
       img = tf.image.resize(new_img, target_size)
-      return img, label
-
+      return img
   return _map_fn
 
 #######################################################################
