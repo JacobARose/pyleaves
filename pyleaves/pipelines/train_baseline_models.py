@@ -461,12 +461,12 @@ def get_config(cli_args=None, **kwargs):
 
     config.tfrecord_dir = f'/media/data/jacob/tfrecords/{config.dataset_name}/{config.label_type}'
     if config.target_class_population:
-        config.tfrecord_dir += f'resampled-{config.target_class_population}'
+        config.tfrecord_dir += f'_resampled-{config.target_class_population}'
     if config.set_class_floor:
-        config.tfrecord_dir += f'oversampled-{config.set_class_floor}'
+        config.tfrecord_dir += f'_oversampled-{config.set_class_floor}'
     if config.set_class_ceil:
-        config.tfrecord_dir += f'undersampled-{config.set_class_ceil}'
-        
+        config.tfrecord_dir += f'_undersampled-{config.set_class_ceil}'
+
     os.makedirs(config.tfrecord_dir, exist_ok=True)    
     trial_id = hash_config(config)
     config.trial_id = trial_id
