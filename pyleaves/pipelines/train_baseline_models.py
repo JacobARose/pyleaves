@@ -828,7 +828,7 @@ def finetune_trial(cli_args=None):
     model = fit_one_cycle(config_1, run=run, initial_epoch=initial_epoch)
 
     print(f'Beginning stage 2 of finetune trial')
-    initial_epoch += model.history.params['epochs']+1 #config_1.num_epochs
+    initial_epoch = model.history.params['epochs']+1 #config_1.num_epochs
     config_2 = get_config(warmup_learning_rate=config_1.warmup_learning_rate/2, model_weights=model_weights, 
                           frozen_layers=(0,frozen_layer_sequence[1]), head_layer_units=config_1.head_layer_units,
                           num_epochs=initial_epoch+num_epochs_sequence[1], cli_args=cli_args)
@@ -836,7 +836,7 @@ def finetune_trial(cli_args=None):
     model = fit_one_cycle(config_2, model=model, run=run, initial_epoch=initial_epoch, rebuild_head=False)
 
     print(f'Beginning stage 3 of finetune trial')
-    initial_epoch += model.history.params['epochs']+1 #config_2.num_epochs
+    initial_epoch = model.history.params['epochs']+1 #config_2.num_epochs
     config_3 = get_config(warmup_learning_rate=config_2.warmup_learning_rate/2, model_weights=model_weights,
                           frozen_layers=(0,frozen_layer_sequence[2]), head_layer_units=config_2.head_layer_units, 
                           num_epochs=initial_epoch+num_epochs_sequence[2], cli_args=cli_args)
