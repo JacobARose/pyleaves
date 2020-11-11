@@ -95,6 +95,7 @@ def using_tensorflow2() -> bool:
 
 
 from boltons.dictutils import OneToOne
+import pandas as pd
 ### Class label encoder save
 def save_class_labels(class_labels: OneToOne, label_path: str):
     '''

@@ -304,18 +304,7 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
     
     return model, model_name
 
-
-
-# def load_and_compile_model(model_path):
-
-
-#     metrics = get_metrics(config.metrics, num_classes=config.num_classes)
-#     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config.warmup_learning_rate),
-#                 loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
-#                 metrics=metrics)
-
-
-
+#region
 # config = OmegaConf.create({'seed':49, #237,
 #                            'target_size':(768,768), #(1024,1024),#(512,512),
 #                            'resize_mode':'smart_resize',
@@ -373,6 +362,7 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
 #                            'frozen_layers':False, #(0,-1)
 #                            'metrics':['f1','accuracy','top-3_accuracy','balanced_accuracy']}#,'precision','recall']}
 #                          )
+#endregion
 
 from omegaconf import OmegaConf
 from sklearn.model_selection import train_test_split
@@ -422,7 +412,7 @@ def get_config(cli_args=None, **kwargs):
                                     'num_parallel_calls':-1,
                                     'fit_class_weights':False,
                                     'num_epochs':150,
-                                    'base_lr':6e-4,
+                                    'base_lr':1e-3,
                                     'warmup_learning_rate':3e-04,
                                     'lr_attack':8,
                                     'lr_sustain':1,
@@ -437,7 +427,7 @@ def get_config(cli_args=None, **kwargs):
                                     'samples_per_shard':300,
                                     'metrics':['f1','accuracy','top-3_accuracy','balanced_accuracy'],
                                     'WarmUpCosineDecayScheduler':True,
-                                    'early_stopping_patience':10,
+                                    'early_stopping_patience':5,
                                     'run_id':None,
                                     'group':None,
                                     'tags':[f'{k}:{v}' for k,v in kwargs.items()]}#,'precision','recall']}
@@ -460,6 +450,7 @@ def get_config(cli_args=None, **kwargs):
         config.threshold = 100
         config.test_size = 0.5
         config.validation_split = 0.1
+        config.augmentations = {'flip':1.0}
         
     print(OmegaConf.to_yaml(config))
 
