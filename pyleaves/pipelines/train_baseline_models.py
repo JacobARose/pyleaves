@@ -27,6 +27,7 @@ import seaborn as sns
 from scipy.stats import norm, spearmanr, wasserstein_distance
 from skimage.metrics import structural_similarity
 from omegaconf import OmegaConf
+from pyleaves.utils import save_class_labels
 from pyleaves.utils.WandB_artifact_utils import load_Leaves_Minus_PNAS_dataset, load_dataset_from_artifact
 import wandb
 from wandb.keras import WandbCallback
@@ -438,6 +439,7 @@ def get_config(cli_args=None, **kwargs):
                                     'WarmUpCosineDecayScheduler':True,
                                     'early_stopping_patience':10,
                                     'run_id':None,
+                                    'group':None,
                                     'tags':[f'{k}:{v}' for k,v in kwargs.items()]}#,'precision','recall']}
                                  )
 
@@ -473,8 +475,8 @@ def get_config(cli_args=None, **kwargs):
     trial_id = hash_config(config)
     config.trial_id = trial_id
 
-    config.model_path = f'{config.model_name}-{config.dataset_name}_{config.target_size[0]}'
-
+    config.model_path = f'{config.model_name}-weights={config.model_weights}-{config.dataset_name}_{config.target_size[0]}'
+    config.class_label_path = f'{config.dataset_name}-class_labels.csv'
     return config
 
 
@@ -665,6 +667,7 @@ def fit_one_cycle(config, model=None, run=None):
     # DATA #
     ###########################################
     train_data_info, val_data_info, test_data_info = load_trainvaltest_data(config, run=run)
+    encoder = train_data_info['encoder']
     class_labels = list(train_data_info['encoder'])
     train_iter = train_data_info['data']
     val_iter = val_data_info['data']
@@ -719,15 +722,20 @@ def fit_one_cycle(config, model=None, run=None):
 
     histories.append(history)
     model.save(config.model_path)
+    save_class_labels(class_labels=encoder, label_path=config.class_label_path)
+
+
     artifact = wandb.Artifact(type='model', name=config.model_path)
     if os.path.isfile(config.model_path):
         artifact.add_file(config.model_path, name=config.model_path)
     elif os.path.isdir(config.model_path):
         artifact.add_dir(config.model_path, name=config.model_path)
+
+    artifact.add_file(config.class_label_path, name=str(Path(config.class_label_path).name))
     run.log_artifact(artifact)
     print('INITIATING MODEL EVALUATION ON TEST SET')
     test_data_info['data'] = test_data
-    perform_evaluation_stage(model, test_data_info, class_encoder=train_data_info['encoder'], batch_size=config.batch_size, subset='test')
+    perform_evaluation_stage(model, test_data_info, class_encoder=encoder, batch_size=config.batch_size, subset='test')
     # try:
     #     run.join()
     # finally:
@@ -735,12 +743,12 @@ def fit_one_cycle(config, model=None, run=None):
     
     return model
 
-def init_wandb_run(config):
+def init_wandb_run(config, group=None):
     WANDB_CREDENTIALS = {"entity":"jrose",
                          "project":"Leaves_vs_PNAS",
                          "dir":"/media/data_cifs_lrs/projects/prj_fossils/users/jacob/WandB_artifacts"}
 
-    run = wandb.init(**WANDB_CREDENTIALS, id=config.run_id, tags=config.tags, resume="allow", reinit=True)
+    run = wandb.init(**WANDB_CREDENTIALS, group=group, id=config.run_id, tags=config.tags, resume="allow", reinit=True)
     config.run_id = run.id
     return run
 
@@ -749,7 +757,6 @@ def random_initialization_trial(cli_args=None):
     K.clear_session()
     print(f'Beginning training from scratch')
     config = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=None, head_layer_units=[512,256], num_epochs=100, cli_args=cli_args)
-
 
     run = init_wandb_run(config)
     model = fit_one_cycle(config, run=run)
@@ -764,16 +771,18 @@ def finetune_trial(cli_args=None):
     model_weights = 'imagenet'
     K.clear_session()
     print(f'Beginning stage 1 of finetune trial')
-    config_1 = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=75, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
-    run = init_wandb_run(config_1)
+    config_1 = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[1024,512], num_epochs=40, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
+    run = init_wandb_run(config_1, group=group)
     model = fit_one_cycle(config_1, run=run)
 
     print(f'Beginning stage 2 of finetune trial')
-    config_2 = get_config(warmup_learning_rate=1e-4, frozen_layers=(0,-4), head_layer_units=[512,256], num_epochs=75, cli_args=cli_args)
+    config_2 = get_config(warmup_learning_rate=1e-4, model_weights=model_weights, frozen_layers=(0,-4), head_layer_units=[1024,512], num_epochs=75, cli_args=cli_args)
+    run = init_wandb_run(config_2, group=group)
     model = fit_one_cycle(config_2, model=model, run=run)
 
     print(f'Beginning stage 3 of finetune trial')
-    config_3 = get_config(warmup_learning_rate=1e-4, frozen_layers=(0,-12), head_layer_units=[512,256], num_epochs=50, cli_args=cli_args)
+    config_3 = get_config(warmup_learning_rate=1e-4, model_weights=model_weights, frozen_layers=(0,-12), head_layer_units=[1024,512], num_epochs=50, cli_args=cli_args)
+    run = init_wandb_run(config_3, group=group)
     model = fit_one_cycle(config_3, model=model, run=run)
 
     model.save(config_3.model_path+'_final')

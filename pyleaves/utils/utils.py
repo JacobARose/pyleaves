@@ -94,6 +94,38 @@ def using_tensorflow2() -> bool:
     return StrictVersion(tf.__version__).version >= StrictVersion('2.0.0').version
 
 
+from boltons.dictutils import OneToOne
+### Class label encoder save
+def save_class_labels(class_labels: OneToOne, label_path: str):
+    '''
+    Save dictionary of str:int class labels as a csv file containing just the str labels in the order they're provided. Use load_class_labels() with the same filepath to load them back.
+    
+    '''
+    assert isinstance(class_labels, (dict,OneToOne))
+    
+#     assert isinstance(class_labels, list)
+#     encoder = pd.DataFrame([(text_label, int_label) for text_label, int_label in encoder.items()]).sort_values(1).iloc[:,0]
+    data = pd.DataFrame(list(class_labels.keys()))
+    data.to_csv(label_path, index=None, header=False)
+    
+def load_class_labels(label_path: str):
+
+    data = pd.read_csv(label_path, header=None, squeeze=True).values.tolist()
+    loaded = OneToOne({label:i for i, label in enumerate(data)})
+    return loaded    
+
+
+def test_save_load_class_labels():
+    
+    test_encoder = OneToOne({'Anacardiaceae': 0, 'Annonaceae': 1, 'Apocynaceae': 2, 'Betulaceae': 3, 'Celastraceae': 4, 'Combretaceae': 5, 'Ericaceae': 6})
+    label_path = os.path.expanduser('~/test_labels.csv')
+    
+    save_class_labels(class_labels=test_encoder, label_path=label_path)
+    loaded = load_class_labels(label_path=label_path)
+    
+    assert np.all(loaded == test_encoder)
+    
+    os.remove(label_path)
 
 
 # def create_session(target='', gpus='0,1,2,3', timeout_sec=10):
