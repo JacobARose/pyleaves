@@ -1103,15 +1103,22 @@ def plot_confusion_matrix(cm,normalize=False,title='Confusion matrix',annot=Fals
     ax.set(xlabel='Predict', ylabel='Actual')
     return fig, ax
 
-def plot_per_class_metrics(cm):
+def plot_per_class_metrics(cm, class_populations=None):
     acc = pd.DataFrame([{'class_label':k,'score':v} for k,v in cm.ACC.items()])
     f1 = pd.DataFrame([{'class_label':k,'score':v} for k,v in cm.F1.items()])
 
-    fig, axes = plt.subplots(2,1,figsize=(20,8))
+    num_plots=2
+    if class_populations is not None:
+        num_plots=3
+
+    fig, axes = plt.subplots(num_plots,1,figsize=(20,8))
     sns.barplot(x=acc['class_label'],y=acc['score'], ax=axes[0])
     axes[0].set_title("Per-class accuracy")
     sns.barplot(x=f1['class_label'],y=f1['score'], ax=axes[1])
     axes[1].set_title("Per-class F1-score")
+    if class_populations is not None:
+        sns.barplot(x=class_populations['label'],y=class_populations['population'], ax=axes[2])
+        axes[2].set_title("Per-class sample count")
     for ax in axes:
         ax.set_ylim(0.0,1.0)
 
@@ -1147,7 +1154,9 @@ def evaluate(model, data_iter, y_true, steps: int, output_dict: bool=True, class
         fig, ax = plot_confusion_matrix(cm,normalize=True,title=f'{subset}_confusion_matrix',annot=False,cmap="YlGnBu")
         wandb.log({f'{subset}_cm':fig}, commit=False)
 
-        fig, ax = plot_per_class_metrics(cm)
+
+        class_populations = pd.DataFrame([{'label':k,'population':v} for k,v in class_counts(y_true).items()])
+        fig, ax = plot_per_class_metrics(cm, class_populations=class_populations)
         wandb.log({f'{subset}_per_class_metrics':fig}, commit=False)
 
         # print('ACC:',cm.ACC)
