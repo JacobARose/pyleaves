@@ -764,7 +764,7 @@ def finetune_trial(cli_args=None):
     model_weights = 'imagenet'
     K.clear_session()
     print(f'Beginning stage 1 of finetune trial')
-    config_1 = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=40, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
+    config_1 = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=75, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
     run = init_wandb_run(config_1)
     model = fit_one_cycle(config_1, run=run)
 
