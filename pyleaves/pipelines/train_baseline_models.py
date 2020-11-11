@@ -668,6 +668,7 @@ def fit_one_cycle(config, model=None, run=None):
     ###########################################
     train_data_info, val_data_info, test_data_info = load_trainvaltest_data(config, run=run)
     encoder = train_data_info['encoder']
+    class_weights = train_data_info['class_weights']
     class_labels = list(train_data_info['encoder'])
     train_iter = train_data_info['data']
     val_iter = val_data_info['data']
@@ -718,6 +719,7 @@ def fit_one_cycle(config, model=None, run=None):
                         validation_data=val_data,
                         validation_steps=validation_steps,
                         initial_epoch=initial_epoch,
+                        class_weights=class_weights,
                         callbacks=callbacks)
 
     histories.append(history)
@@ -772,17 +774,17 @@ def finetune_trial(cli_args=None):
     K.clear_session()
     print(f'Beginning stage 1 of finetune trial')
     config_1 = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[1024,512], num_epochs=40, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
-    run = init_wandb_run(config_1, group=group)
+    run = init_wandb_run(config_1, group=config_1.group)
     model = fit_one_cycle(config_1, run=run)
 
     print(f'Beginning stage 2 of finetune trial')
     config_2 = get_config(warmup_learning_rate=1e-4, model_weights=model_weights, frozen_layers=(0,-4), head_layer_units=[1024,512], num_epochs=75, cli_args=cli_args)
-    run = init_wandb_run(config_2, group=group)
+    run = init_wandb_run(config_2, group=config_2.group)
     model = fit_one_cycle(config_2, model=model, run=run)
 
     print(f'Beginning stage 3 of finetune trial')
     config_3 = get_config(warmup_learning_rate=1e-4, model_weights=model_weights, frozen_layers=(0,-12), head_layer_units=[1024,512], num_epochs=50, cli_args=cli_args)
-    run = init_wandb_run(config_3, group=group)
+    run = init_wandb_run(config_3, group=config_3.group)
     model = fit_one_cycle(config_3, model=model, run=run)
 
     model.save(config_3.model_path+'_final')
