@@ -719,7 +719,7 @@ def fit_one_cycle(config, model=None, run=None):
                         validation_data=val_data,
                         validation_steps=validation_steps,
                         initial_epoch=initial_epoch,
-                        class_weights=class_weights,
+                        class_weight=class_weights,
                         callbacks=callbacks)
 
     histories.append(history)
