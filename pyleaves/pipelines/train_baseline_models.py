@@ -452,6 +452,12 @@ def get_config(cli_args=None, **kwargs):
     if cli_args is not None:
         config = OmegaConf.merge(config, cli_args)
         
+    if config.WarmUpCosineDecayScheduler:
+        if config.num_epochs <= config.lr_attack + config.lr_sustain:
+            config.lr_attack = config.num_epochs - 1 - config.lr_sustain
+            if not config.lr_attack+config.lr_sustain > config.num_epochs:
+                config.lr_sustain=0
+
     if 'dataset_name' not in config:
         config['dataset_name'] = 'Leaves-PNAS'
     config.tags.append(config['dataset_name'])
