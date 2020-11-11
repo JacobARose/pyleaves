@@ -466,7 +466,7 @@ def get_config(cli_args=None, **kwargs):
     trial_id = hash_config(config)
     config.trial_id = trial_id
 
-    config.model_path = f'{config.model_name}-weights={config.model_weights}-{config.dataset_name}_{config.target_size[0]}'
+    config.model_path = f'{config.model_name}-weights_{config.model_weights}-{config.dataset_name}_{config.target_size[0]}'
     config.class_label_path = f'{config.dataset_name}-class_labels.csv'
     return config
 
@@ -760,21 +760,29 @@ def random_initialization_trial(cli_args=None):
 
 
 def finetune_trial(cli_args=None):
-
+    cli_args = cli_args or {}
     model_weights = 'imagenet'
+
+    if 'frozen_layer_sequence' in cli_args:
+        frozen_layer_sequence = cli_args.pop('frozen_layer_sequence')
+    else:
+        frozen_layer_sequence = [(0,-1), (0,-4), (0,-12)]
+
     K.clear_session()
     print(f'Beginning stage 1 of finetune trial')
-    config_1 = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[1024,512], num_epochs=40, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
+    default_kwargs = OmegaConf.create(dict(model_weights=model_weights, frozen_layers=frozen_layer_sequence[0], num_epochs=40, WarmUpCosineDecayScheduler=False))
+    kwargs = OmegaConf.merge(default_kwargs, cli_args)
+    config_1 = get_config(**kwargs, cli_args=cli_args)
     run = init_wandb_run(config_1, group=config_1.group)
     model = fit_one_cycle(config_1, run=run)
 
     print(f'Beginning stage 2 of finetune trial')
-    config_2 = get_config(warmup_learning_rate=1e-4, model_weights=model_weights, frozen_layers=(0,-4), head_layer_units=[1024,512], num_epochs=75, cli_args=cli_args)
+    config_2 = get_config(warmup_learning_rate=config_1.warmup_learning_rate/2, model_weights=model_weights, frozen_layers=frozen_layer_sequence[1], head_layer_units=config_1.head_layer_units, num_epochs=75, cli_args=cli_args)
     run = init_wandb_run(config_2, group=config_2.group)
     model = fit_one_cycle(config_2, model=model, run=run)
 
     print(f'Beginning stage 3 of finetune trial')
-    config_3 = get_config(warmup_learning_rate=1e-4, model_weights=model_weights, frozen_layers=(0,-12), head_layer_units=[1024,512], num_epochs=50, cli_args=cli_args)
+    config_3 = get_config(warmup_learning_rate=config_2.warmup_learning_rate/2, model_weights=model_weights, frozen_layers=frozen_layer_sequence[2], head_layer_units=config_2.head_layer_units, num_epochs=75, cli_args=cli_args)
     run = init_wandb_run(config_3, group=config_3.group)
     model = fit_one_cycle(config_3, model=model, run=run)
 
