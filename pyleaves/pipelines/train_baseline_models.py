@@ -453,7 +453,7 @@ def get_config(cli_args=None, **kwargs):
         config = OmegaConf.merge(config, cli_args)
         
     if 'dataset_name' not in config:
-        kwargs['dataset_name'] = 'Leaves-PNAS'
+        config['dataset_name'] = 'Leaves-PNAS'
     config.tags.append(config['dataset_name'])
     if config['dataset_name'] == 'Leaves-PNAS':
         config.dataset_name = config['dataset_name']
