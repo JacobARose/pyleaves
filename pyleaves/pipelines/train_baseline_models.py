@@ -837,6 +837,45 @@ def finetune_trial(cli_args=None):
     run.join()
     return model
 
+
+def Leaves_finetune_trials(cli_args=None):
+    cli_args = cli_args or {}
+    model_weights = 'imagenet'
+
+    if 'frozen_layer_sequence' in cli_args:
+        frozen_layer_sequence = cli_args.pop('frozen_layer_sequence')
+    else:
+        frozen_layer_sequence = [-36, -12]
+
+    if 'num_epochs_sequence' in cli_args:
+        num_epochs_sequence = cli_args.pop('num_epochs_sequence')
+    else:
+        num_epochs_sequence = [120,100]
+
+    K.clear_session()
+    initial_epoch = 0
+    print(f'Beginning stage 1 of finetune trial on Leaves-PNAS')
+    default_kwargs = OmegaConf.create(dict(dataset_name="Leaves-PNAS", model_weights=model_weights, frozen_layers=(0,frozen_layer_sequence[0]), 
+                                      num_epochs=num_epochs_sequence[0], WarmUpCosineDecayScheduler=False))
+    kwargs = OmegaConf.merge(default_kwargs, cli_args)
+    config_1 = get_config(**kwargs, cli_args=cli_args)
+
+    run = init_wandb_run(config_1, group=config_1.group)
+    model = fit_one_cycle(config_1, run=run, initial_epoch=initial_epoch)
+
+    print(f'Beginning stage 2 of finetune trial on PNAS')
+    initial_epoch += config_1.num_epochs
+    config_2 = get_config(dataset_name="PNAS", warmup_learning_rate=config_1.warmup_learning_rate/2, model_weights=model_weights, 
+                          frozen_layers=(0,frozen_layer_sequence[1]), head_layer_units=config_1.head_layer_units,
+                          num_epochs=initial_epoch+num_epochs_sequence[1], cli_args=cli_args)
+    model = fit_one_cycle(config_2, model=model, run=run, initial_epoch=initial_epoch)
+
+    model.save(config_2.model_path+'_final')
+    run.join()
+    return model
+
+
+
 if __name__=='__main__':
     # for model_weights in ['imagenet', None]:
     #     K.clear_session()
@@ -849,6 +888,9 @@ if __name__=='__main__':
 
     if '--finetune_imagenet' in sys.argv:
         finetune_trial(cli_args)
+
+    if '--finetune_Leaves' in sys.argv:
+        Leaves_finetune_trials(cli_args=None)
 
 
 # %%
