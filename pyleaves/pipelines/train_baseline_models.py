@@ -890,7 +890,7 @@ if __name__=='__main__':
         finetune_trial(cli_args)
 
     if '--finetune_Leaves' in sys.argv:
-        Leaves_finetune_trials(cli_args=None)
+        Leaves_finetune_trials(cli_args)
 
 
 # %%
