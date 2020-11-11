@@ -1083,14 +1083,41 @@ def perform_evaluation_stage(model, test_data_info, class_encoder, batch_size, s
     wandb.run.use_artifact(artifact)
     wandb.run.log_artifact(artifact)
 
-    wandb.sklearn.plot_confusion_matrix(y, y_hat, class_list)
+    # wandb.sklearn.plot_confusion_matrix(y, y_hat, class_list)
 
     return y, y_hat, y_prob
 
 
+from pycm import ConfusionMatrix
+import seaborn as sns
+import pandas as pd
 
+def plot_confusion_matrix(cm,normalize=False,title='Confusion matrix',annot=False,cmap="YlGnBu"):
+    if normalize == True:
+        df = pd.DataFrame(cm.normalized_matrix).T.fillna(0)
+    else:
+        df = pd.DataFrame(cm.matrix).T.fillna(0)
+    fig, ax = plt.subplots(1)
+    ax = sns.heatmap(df,annot=annot,cmap=cmap, ax=ax)
+    ax.set_title(title)
+    ax.set(xlabel='Predict', ylabel='Actual')
+    return fig, ax
 
+def plot_per_class_metrics(cm):
+    acc = pd.DataFrame([{'class_label':k,'score':v} for k,v in cm.ACC.items()])
+    f1 = pd.DataFrame([{'class_label':k,'score':v} for k,v in cm.F1.items()])
 
+    fig, axes = plt.subplots(2,1,figsize=(20,8))
+    sns.barplot(x=acc['class_label'],y=acc['score'], ax=axes[0])
+    axes[0].set_title("Per-class accuracy")
+    sns.barplot(x=f1['class_label'],y=f1['score'], ax=axes[1])
+    axes[1].set_title("Per-class F1-score")
+    for ax in axes:
+        ax.set_ylim(0.0,1.0)
+
+    plt.tight_layout()
+    
+    return fig
 
 
 
@@ -1113,8 +1140,27 @@ def evaluate(model, data_iter, y_true, steps: int, output_dict: bool=True, class
         data_table = data_table.assign(y_pred=y_hat)
 
         table = wandb.Table(dataframe=data_table)
-        wandb.log({"test_data_with_probabilities" : table}) #wandb.plot.bar(table, "label", "value", title="Custom Bar Chart")
+        wandb.log({"test_data_with_probabilities" : table}, commit=False) #wandb.plot.bar(table, "label", "value", title="Custom Bar Chart")
 
+    try:
+        cm = ConfusionMatrix(actual_vector=y_true, predict_vector=y_hat)
+        fig, ax = plot_confusion_matrix(cm,normalize=True,title=f'{subset}_confusion_matrix',annot=False,cmap="YlGnBu")
+        wandb.log({f'{subset}_cm':fig}, commit=False)
+
+        fig, ax = plot_per_class_metrics(cm)
+        wandb.log({f'{subset}_per_class_metrics':fig}, commit=False)
+
+        # print('ACC:',cm.ACC)
+        # print('MCC:',cm.MCC)
+        # print('CEN:',cm.CEN)
+        # print('MCEN:',cm.MCEN)
+        # print('DP:',cm.DP)
+        # print('Kappa:',cm.Kappa)
+        # print('RCI:',cm.RCI)
+        # print('SOA1:',cm.SOA1)
+    except Exception as e:
+        import pdb; pdb.set_trace()
+        print(e)
 
     try:
         report = classification_report(y_true, y_hat, labels=labels, target_names=target_names, output_dict=output_dict)
@@ -1123,7 +1169,7 @@ def evaluate(model, data_iter, y_true, steps: int, output_dict: bool=True, class
 
         report.to_csv(f'{subset}_classification_report.csv')
         report_table = wandb.Table(dataframe=report)
-        wandb.log({f'{subset}_classification_report':report_table})
+        wandb.log({f'{subset}_classification_report':report_table}, commit=False)
 
     except Exception as e:
         import pdb; pdb.set_trace()
