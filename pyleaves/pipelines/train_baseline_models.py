@@ -476,6 +476,12 @@ def get_config(cli_args=None, **kwargs):
     print(OmegaConf.to_yaml(config))
 
     config.tfrecord_dir = f'/media/data/jacob/tfrecords/{config.dataset_name}/{config.label_type}'
+    if config.dataset_name=="Leaves-PNAS":
+        if config.combined_train:
+            config.tfrecord_dir += '/with_PNAS_train'
+        else:
+            config.tfrecord_dir += '/without_PNAS_train'
+
     if config.target_class_population:
         config.tfrecord_dir += f'_resampled-{config.target_class_population}'
     if config.set_class_floor:
