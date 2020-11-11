@@ -281,7 +281,8 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
     headless_model.trainable = True #
     if config.frozen_layers:
         for l in headless_model.layers[config.frozen_layers[0]:config.frozen_layers[-1]]:
-            l.trainable = False
+            if not 'bn' in l.name:
+                l.trainable = False
     # model_input    = tf.keras.Input(shape=(*config.target_size, channels))
     # model          = headless_model(model_input)#, training=False)
     # model          = tf.keras.layers.GlobalAveragePooling2D()(model)
@@ -746,12 +747,12 @@ def fit_one_cycle(config, model=None, run=None):
     
     return model
 
-def init_wandb_run(config, group=None):
+def init_wandb_run(config, group=None, resume="allow", reinit=True):
     WANDB_CREDENTIALS = {"entity":"jrose",
                          "project":"Leaves_vs_PNAS",
                          "dir":"/media/data_cifs_lrs/projects/prj_fossils/users/jacob/WandB_artifacts"}
 
-    run = wandb.init(**WANDB_CREDENTIALS, group=group, id=config.run_id, tags=config.tags, resume="allow", reinit=True)
+    run = wandb.init(**WANDB_CREDENTIALS, group=group, id=config.run_id, tags=config.tags, resume=resume, reinit=reinit)
     config.run_id = run.id
     return run
 
