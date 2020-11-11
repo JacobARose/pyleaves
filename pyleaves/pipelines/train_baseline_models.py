@@ -441,7 +441,9 @@ def get_config(cli_args=None, **kwargs):
                                     'tags':[f'{k}:{v}' for k,v in kwargs.items()]}#,'precision','recall']}
                                  )
 
-    config = OmegaConf.merge(base_config, OmegaConf.create(kwargs), cli_args)
+    config = OmegaConf.merge(base_config, OmegaConf.create(kwargs))
+    if cli_args is not None:
+        config = OmegaConf.merge(config, cli_args)
         
     if 'dataset_name' not in config:
         kwargs['dataset_name'] = 'Leaves-PNAS'
