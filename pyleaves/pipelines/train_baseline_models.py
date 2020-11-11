@@ -387,7 +387,10 @@ def load_data_splits(config, run=None):
     if config.dataset_name == "Leaves-PNAS":
         print('Loading Leaves-PNAS dataset for train/val, and loading PNAS_test for test')
         train_df, val_df = load_dataset_from_artifact(dataset_name=config.dataset_name, threshold=config.threshold, test_size=config.test_size, version='latest', artifact_name=None, run=run)
-        _, test_df = load_dataset_from_artifact(dataset_name='PNAS', threshold=100, test_size=0.5, version='latest', run=run)
+        pnas_train_df, test_df = load_dataset_from_artifact(dataset_name='PNAS', threshold=100, test_size=0.5, version='latest', run=run)
+
+        if config.combined_train:
+            train_df = pd.concat([train_df, pnas_train_df])
 
     else:
         print(f'Loading {config.dataset_name} dataset for train and test, with train set split into {1-config.validation_split}:{config.validation_split} train:val subsets.')
@@ -432,6 +435,7 @@ def get_config(cli_args=None, **kwargs):
                                     'set_class_ceil':None,
                                     'use_tfrecords':True,
                                     'samples_per_shard':300,
+                                    'combined_train':False,
                                     'metrics':['f1','accuracy','top-3_accuracy','balanced_accuracy'],
                                     'WarmUpCosineDecayScheduler':True,
                                     'early_stopping_patience':5,
