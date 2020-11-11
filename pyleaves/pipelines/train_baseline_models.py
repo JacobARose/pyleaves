@@ -251,10 +251,14 @@ def cosine_decay_with_warmup(global_step,
 
 from tensorflow.python.keras.layers import Dropout, Input, Conv2D, MaxPooling2D
 
-def build_model(model_params, config: DictConfig, dropout_rate: float, channels: int, model=None):
+def build_model(model_params, config: DictConfig, dropout_rate: float, channels: int, model=None, rebuild_head=True):
     if model is None:
         print('Building model')
         headless_model     = tf.keras.applications.ResNet50V2(**model_params)
+    else:
+        headless_model = model.layers[1]
+
+    if rebuild_head or model is None:
         headless_model = tf.keras.Model(headless_model.input, headless_model.layers[-2].output)
         model_input    = tf.keras.Input(shape=(*config.target_size, channels))
         model          = headless_model(model_input, training=False)
@@ -270,12 +274,6 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
         model_output = tf.keras.layers.Dense(config.num_classes, kernel_regularizer=tf.keras.regularizers.l2(config.kernel_l2))(model)
         model = tf.keras.Model(model_input, model_output)
 
-    else:
-        print('Recompiling previous model.')
-        headless_model = model.layers[1]
-        if config.frozen_top_layers:
-            for l in model.layers[config.frozen_top_layers[0]:config.frozen_top_layers[-1]]:
-                l.trainable = False
 
     model_name     = 'ResNet50_pretrained'
     headless_model.trainable = True #
@@ -283,10 +281,15 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
         for l in headless_model.layers[config.frozen_layers[0]:config.frozen_layers[-1]]:
             l.trainable = False
 
+    if config.frozen_top_layers:
+        for l in model.layers[config.frozen_top_layers[0]:config.frozen_top_layers[-1]]:
+            l.trainable = False
+
     if config.freeze_bnorm_layers:
         for l in headless_model.layers[0:-1]:
             if 'bn' in l.name:
                 l.trainable = False
+    #region
     # model_input    = tf.keras.Input(shape=(*config.target_size, channels))
     # model          = headless_model(model_input)#, training=False)
     # model          = tf.keras.layers.GlobalAveragePooling2D()(model)
@@ -300,6 +303,7 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
     #     model     = tf.keras.layers.ReLU()(model)              
     # model_output = tf.keras.layers.Dense(config.num_classes, kernel_regularizer=tf.keras.regularizers.l2(config.kernel_l2))(model)
     # model = tf.keras.Model(model_input, model_output)
+    #endregion
     metrics = get_metrics(config.metrics, num_classes=config.num_classes)
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config.warmup_learning_rate),
                 loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
@@ -610,7 +614,7 @@ def get_callbacks(config, initial_epoch=0, train_data=None, val_data=None, test_
 
 
 
-def fit_one_cycle(config, model=None, run=None, initial_epoch=None):
+def fit_one_cycle(config, model=None, run=None, initial_epoch=None, rebuild_head=True):
 
     # WANDB_CREDENTIALS = {"entity":"jrose",
     #                      "project":"Leaves_vs_PNAS",
@@ -714,7 +718,7 @@ def fit_one_cycle(config, model=None, run=None, initial_epoch=None):
     # MODEL #
     ###########################################
     model_params = {'input_shape' : (*config.target_size, config.channels), 'include_top': False, 'weights':config.model_weights}
-    model, _ = build_model(model_params, config=config, dropout_rate=config.dropout_rate, channels=config.channels, model=model)
+    model, _ = build_model(model_params, config=config, dropout_rate=config.dropout_rate, channels=config.channels, model=model, rebuild_head=rebuild_head)
 
     histories = []
     if initial_epoch is None:
@@ -823,7 +827,7 @@ def finetune_trial(cli_args=None):
                           frozen_layers=(0,frozen_layer_sequence[1]), head_layer_units=config_1.head_layer_units,
                           num_epochs=initial_epoch+num_epochs_sequence[1], cli_args=cli_args)
     # run = init_wandb_run(config_2, group=config_2.group)
-    model = fit_one_cycle(config_2, model=model, run=run, initial_epoch=initial_epoch)
+    model = fit_one_cycle(config_2, model=model, run=run, initial_epoch=initial_epoch, rebuild_head=False)
 
     print(f'Beginning stage 3 of finetune trial')
     initial_epoch += config_2.num_epochs
@@ -831,7 +835,7 @@ def finetune_trial(cli_args=None):
                           frozen_layers=(0,frozen_layer_sequence[2]), head_layer_units=config_2.head_layer_units, 
                           num_epochs=initial_epoch+num_epochs_sequence[2], cli_args=cli_args)
     # run = init_wandb_run(config_3, group=config_3.group)
-    model = fit_one_cycle(config_3, model=model, run=run, initial_epoch=initial_epoch)
+    model = fit_one_cycle(config_3, model=model, run=run, initial_epoch=initial_epoch, rebuild_head=False)
 
     model.save(config_3.model_path+'_final')
     run.join()
