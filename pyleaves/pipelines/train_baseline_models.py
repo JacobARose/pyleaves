@@ -284,7 +284,7 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
             l.trainable = False
 
     if config.freeze_bnorm_layers:
-        for l in headless_model.layers[0,-1]:
+        for l in headless_model.layers[0:-1]:
             if 'bn' in l.name:
                 l.trainable = False
     # model_input    = tf.keras.Input(shape=(*config.target_size, channels))
