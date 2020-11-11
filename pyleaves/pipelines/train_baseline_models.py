@@ -600,7 +600,7 @@ def get_callbacks(config, initial_epoch=0, train_data=None, val_data=None, test_
 
 
 
-def fit_one_cycle(config, model=None, run=None):
+def fit_one_cycle(config, model=None, run=None, initial_epoch=None):
 
     # WANDB_CREDENTIALS = {"entity":"jrose",
     #                      "project":"Leaves_vs_PNAS",
@@ -707,15 +707,14 @@ def fit_one_cycle(config, model=None, run=None):
     model, _ = build_model(model_params, config=config, dropout_rate=config.dropout_rate, channels=config.channels, model=model)
 
     histories = []
-    initial_epoch = wandb.run.step or 0
+    if initial_epoch is None:
+        initial_epoch = wandb.run.step or 0
     # if wandb.run.resumed:
     #     print(f'Restoring model from checkpoint at epoch {initial_epoch}')
     #     model = tf.keras.models.load_model(wandb.restore("model-best.h5").name)
-
     run.config.update(OmegaConf.to_container(config, resolve=True))
-    if model.history is None:
-        initial_epoch = initial_epoch or 0
-
+    # if model.history is None:
+    #     initial_epoch = initial_epoch or 0
     callbacks = get_callbacks(config,
                               initial_epoch=initial_epoch,
                               train_data=train_data, val_data=val_data, test_data=test_data,
@@ -785,27 +784,30 @@ def finetune_trial(cli_args=None):
         frozen_layer_sequence = [-1, -4, -12]
 
     K.clear_session()
+    initial_epoch = 0
     print(f'Beginning stage 1 of finetune trial')
     default_kwargs = OmegaConf.create(dict(model_weights=model_weights, frozen_layers=(0,frozen_layer_sequence[0]), 
                                       num_epochs=40, WarmUpCosineDecayScheduler=False))
     kwargs = OmegaConf.merge(default_kwargs, cli_args)
     config_1 = get_config(**kwargs, cli_args=cli_args)
     run = init_wandb_run(config_1, group=config_1.group)
-    model = fit_one_cycle(config_1, run=run)
+    model = fit_one_cycle(config_1, run=run, initial_epoch=initial_epoch)
 
     print(f'Beginning stage 2 of finetune trial')
+    initial_epoch += config_1.num_epochs
     config_2 = get_config(warmup_learning_rate=config_1.warmup_learning_rate/2, model_weights=model_weights, 
                           frozen_layers=(0,frozen_layer_sequence[1]), head_layer_units=config_1.head_layer_units,
-                          num_epochs=75, cli_args=cli_args)
+                          num_epochs=initial_epoch+75, cli_args=cli_args)
     run = init_wandb_run(config_2, group=config_2.group)
-    model = fit_one_cycle(config_2, model=model, run=run)
+    model = fit_one_cycle(config_2, model=model, run=run, initial_epoch=initial_epoch)
 
     print(f'Beginning stage 3 of finetune trial')
+    initial_epoch += config_2.num_epochs
     config_3 = get_config(warmup_learning_rate=config_2.warmup_learning_rate/2, model_weights=model_weights,
                           frozen_layers=(0,frozen_layer_sequence[2]), head_layer_units=config_2.head_layer_units, 
-                          num_epochs=75, cli_args=cli_args)
+                          num_epochs=initial_epoch+75, cli_args=cli_args)
     run = init_wandb_run(config_3, group=config_3.group)
-    model = fit_one_cycle(config_3, model=model, run=run)
+    model = fit_one_cycle(config_3, model=model, run=run, initial_epoch=initial_epoch)
 
     model.save(config_3.model_path+'_final')
     run.join()
