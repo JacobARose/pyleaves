@@ -590,15 +590,15 @@ def get_callbacks(config, initial_epoch=0, train_data=None, val_data=None, test_
 
 
 
-def fit_one_cycle(config, model=None):
+def fit_one_cycle(config, model=None, run=None):
 
-    WANDB_CREDENTIALS = {"entity":"jrose",
-                         "project":"Leaves_vs_PNAS",
-                         "dir":"/media/data_cifs_lrs/projects/prj_fossils/users/jacob/WandB_artifacts"}
-
-    run = wandb.init(**WANDB_CREDENTIALS, id=config.run_id, tags=config.tags, resume="allow", reinit=True)
-    config.run_id = run.id
-
+    # WANDB_CREDENTIALS = {"entity":"jrose",
+    #                      "project":"Leaves_vs_PNAS",
+    #                      "dir":"/media/data_cifs_lrs/projects/prj_fossils/users/jacob/WandB_artifacts"}
+    # run = wandb.init(**WANDB_CREDENTIALS, id=config.run_id, tags=config.tags, resume="allow", reinit=True)
+    # config.run_id = run.id
+    if run is None:
+        run = init_wandb_run(config)
     ###########################################   
     #region
     # train_df, val_df, test_df = load_data_splits(config, run=run)
@@ -728,23 +728,34 @@ def fit_one_cycle(config, model=None):
     print('INITIATING MODEL EVALUATION ON TEST SET')
     test_data_info['data'] = test_data
     perform_evaluation_stage(model, test_data_info, class_encoder=train_data_info['encoder'], batch_size=config.batch_size, subset='test')
-    try:
-        run.join()
-    finally:
-        print('Finished')
+    # try:
+    #     run.join()
+    # finally:
+    #     print('Finished')
     
     return model
 
+def init_wandb_run(config):
+    WANDB_CREDENTIALS = {"entity":"jrose",
+                         "project":"Leaves_vs_PNAS",
+                         "dir":"/media/data_cifs_lrs/projects/prj_fossils/users/jacob/WandB_artifacts"}
 
-
+    run = wandb.init(**WANDB_CREDENTIALS, id=config.run_id, tags=config.tags, resume="allow", reinit=True)
+    config.run_id = run.id
+    return run
 
 def random_initialization_trial(cli_args=None):
     model_weights = None
     K.clear_session()
     print(f'Beginning training from scratch')
     config = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=None, head_layer_units=[512,256], num_epochs=100, cli_args=cli_args)
-    model = fit_one_cycle(config)
+
+
+    run = init_wandb_run(config)
+    model = fit_one_cycle(config, run=run)
     model.save(config.model_path+'_final')
+
+    run.join()
     return model
 
 
@@ -754,17 +765,19 @@ def finetune_trial(cli_args=None):
     K.clear_session()
     print(f'Beginning stage 1 of finetune trial')
     config_1 = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=(0,-1), head_layer_units=[512,256], num_epochs=40, WarmUpCosineDecayScheduler=False, cli_args=cli_args)
-    model = fit_one_cycle(config_1)
+    run = init_wandb_run(config_1)
+    model = fit_one_cycle(config_1, run=run)
 
     print(f'Beginning stage 2 of finetune trial')
     config_2 = get_config(warmup_learning_rate=1e-4, frozen_layers=(0,-4), head_layer_units=[512,256], num_epochs=75, cli_args=cli_args)
-    model = fit_one_cycle(config_2, model=model)
+    model = fit_one_cycle(config_2, model=model, run=run)
 
     print(f'Beginning stage 3 of finetune trial')
     config_3 = get_config(warmup_learning_rate=1e-4, frozen_layers=(0,-12), head_layer_units=[512,256], num_epochs=50, cli_args=cli_args)
-    model = fit_one_cycle(config_3, model=model)
+    model = fit_one_cycle(config_3, model=model, run=run)
 
     model.save(config_3.model_path+'_final')
+    run.join()
     return model
 
 if __name__=='__main__':
