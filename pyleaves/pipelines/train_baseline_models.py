@@ -257,7 +257,7 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
         headless_model     = tf.keras.applications.ResNet50V2(**model_params)
         headless_model = tf.keras.Model(headless_model.input, headless_model.layers[-2].output)
         model_input    = tf.keras.Input(shape=(*config.target_size, channels))
-        model          = headless_model(model_input)#, training=False)
+        model          = headless_model(model_input, training=False)
         model          = tf.keras.layers.GlobalAveragePooling2D()(model)
         if config.num_dropout_layers>0:
             model = tf.keras.layers.Dropout(dropout_rate)(model)
@@ -701,7 +701,6 @@ def fit_one_cycle(config, model=None, run=None):
     model, _ = build_model(model_params, config=config, dropout_rate=config.dropout_rate, channels=config.channels, model=model)
 
     histories = []
-    # model, model_name = models[0], model_names[0]
     initial_epoch = wandb.run.step or 0
     # if wandb.run.resumed:
     #     print(f'Restoring model from checkpoint at epoch {initial_epoch}')
@@ -760,7 +759,7 @@ def random_initialization_trial(cli_args=None):
     model_weights = None
     K.clear_session()
     print(f'Beginning training from scratch')
-    config = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=None, head_layer_units=[512,256], num_epochs=100, cli_args=cli_args)
+    config = get_config(model_weights=model_weights, frozen_layers=None, num_epochs=100, cli_args=cli_args)
 
     run = init_wandb_run(config)
     model = fit_one_cycle(config, run=run)
@@ -781,19 +780,24 @@ def finetune_trial(cli_args=None):
 
     K.clear_session()
     print(f'Beginning stage 1 of finetune trial')
-    default_kwargs = OmegaConf.create(dict(model_weights=model_weights, frozen_layers=(0,frozen_layer_sequence[0]), num_epochs=40, WarmUpCosineDecayScheduler=False))
+    default_kwargs = OmegaConf.create(dict(model_weights=model_weights, frozen_layers=(0,frozen_layer_sequence[0]), 
+                                      num_epochs=40, WarmUpCosineDecayScheduler=False))
     kwargs = OmegaConf.merge(default_kwargs, cli_args)
     config_1 = get_config(**kwargs, cli_args=cli_args)
     run = init_wandb_run(config_1, group=config_1.group)
     model = fit_one_cycle(config_1, run=run)
 
     print(f'Beginning stage 2 of finetune trial')
-    config_2 = get_config(warmup_learning_rate=config_1.warmup_learning_rate/2, model_weights=model_weights, frozen_layers=(0,frozen_layer_sequence[1]), head_layer_units=config_1.head_layer_units, num_epochs=75, cli_args=cli_args)
+    config_2 = get_config(warmup_learning_rate=config_1.warmup_learning_rate/2, model_weights=model_weights, 
+                          frozen_layers=(0,frozen_layer_sequence[1]), head_layer_units=config_1.head_layer_units,
+                          num_epochs=75, cli_args=cli_args)
     run = init_wandb_run(config_2, group=config_2.group)
     model = fit_one_cycle(config_2, model=model, run=run)
 
     print(f'Beginning stage 3 of finetune trial')
-    config_3 = get_config(warmup_learning_rate=config_2.warmup_learning_rate/2, model_weights=model_weights, frozen_layers=(0,frozen_layer_sequence[2]), head_layer_units=config_2.head_layer_units, num_epochs=75, cli_args=cli_args)
+    config_3 = get_config(warmup_learning_rate=config_2.warmup_learning_rate/2, model_weights=model_weights,
+                          frozen_layers=(0,frozen_layer_sequence[2]), head_layer_units=config_2.head_layer_units, 
+                          num_epochs=75, cli_args=cli_args)
     run = init_wandb_run(config_3, group=config_3.group)
     model = fit_one_cycle(config_3, model=model, run=run)
 
