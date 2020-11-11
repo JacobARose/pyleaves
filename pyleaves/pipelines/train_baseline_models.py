@@ -281,7 +281,11 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
     headless_model.trainable = True #
     if config.frozen_layers:
         for l in headless_model.layers[config.frozen_layers[0]:config.frozen_layers[-1]]:
-            if not 'bn' in l.name:
+            l.trainable = False
+
+    if config.freeze_bnorm_layers:
+        for l in headless_model.layers[0,-1]:
+            if 'bn' in l.name:
                 l.trainable = False
     # model_input    = tf.keras.Input(shape=(*config.target_size, channels))
     # model          = headless_model(model_input)#, training=False)
@@ -402,6 +406,7 @@ def get_config(cli_args=None, **kwargs):
                                     'model_weights':None, #'imagenet',
                                     'frozen_layers':None, #(0,-1)
                                     'frozen_top_layers':None, #(0,-3),
+                                    'freeze_bnorm_layers':True,
                                     'label_type':'family',
                                     'seed':49, #237,
                                     'target_size':(768,768), #(1024,1024),#(512,512),
