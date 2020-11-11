@@ -756,7 +756,7 @@ def init_wandb_run(config, group=None, resume="allow", reinit=True):
                          "project":"Leaves_vs_PNAS",
                          "dir":"/media/data_cifs_lrs/projects/prj_fossils/users/jacob/WandB_artifacts"}
 
-    run = wandb.init(**WANDB_CREDENTIALS, group=group, id=config.run_id, tags=config.tags, resume=resume, reinit=reinit)
+    run = wandb.init(**WANDB_CREDENTIALS, group=group, id=config.run_id, tags=config.tags, resume=resume, reinit=reinit, allow_val_change=True)
     config.run_id = run.id
     return run
 
