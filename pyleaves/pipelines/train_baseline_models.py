@@ -712,7 +712,7 @@ def fit_one_cycle(config, model=None, run=None, initial_epoch=None):
     # if wandb.run.resumed:
     #     print(f'Restoring model from checkpoint at epoch {initial_epoch}')
     #     model = tf.keras.models.load_model(wandb.restore("model-best.h5").name)
-    run.config.update(OmegaConf.to_container(config, resolve=True))
+    run.config.update(OmegaConf.to_container(config, resolve=True), allow_val_change=True)
     # if model.history is None:
     #     initial_epoch = initial_epoch or 0
     callbacks = get_callbacks(config,
