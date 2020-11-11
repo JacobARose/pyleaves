@@ -421,6 +421,7 @@ def get_config(cli_args=None, **kwargs):
                                     'num_dropout_layers':1,
                                     'head_layer_units':[1024,512], #[512,256],
                                     'target_class_population':False, #100,
+                                    'threshold':None,
                                     'set_class_floor':None,
                                     'set_class_ceil':None,
                                     'use_tfrecords':True,
@@ -445,12 +446,22 @@ def get_config(cli_args=None, **kwargs):
         config.threshold = 4
         config.test_size = 0.3
         config.validation_split = 0.0
-    if config['dataset_name'] == 'PNAS':
+    elif config['dataset_name'] == 'PNAS':
         config.dataset_name = config['dataset_name']
         config.threshold = 100
         config.test_size = 0.5
         config.validation_split = 0.1
         config.augmentations = {'flip':1.0}
+    elif config['dataset_name'] == 'Fossil':
+        config.dataset_name = config['dataset_name']
+        config.threshold = config.threshold or 100
+        config.test_size = 0.3
+        config.validation_split = 0.1
+    elif config['dataset_name'] == 'Leaves':
+        config.dataset_name = config['dataset_name']
+        config.threshold = config.threshold or 100
+        config.test_size = 0.3
+        config.validation_split = 0.1
         
     print(OmegaConf.to_yaml(config))
 
@@ -749,7 +760,7 @@ def random_initialization_trial(cli_args=None):
     model_weights = None
     K.clear_session()
     print(f'Beginning training from scratch')
-    config = get_config(dataset_name='Leaves-PNAS', warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=None, head_layer_units=[512,256], num_epochs=100, cli_args=cli_args)
+    config = get_config(warmup_learning_rate=1e-3, model_weights=model_weights, frozen_layers=None, head_layer_units=[512,256], num_epochs=100, cli_args=cli_args)
 
     run = init_wandb_run(config)
     model = fit_one_cycle(config, run=run)
