@@ -1117,7 +1117,7 @@ def plot_per_class_metrics(cm):
 
     plt.tight_layout()
     
-    return fig
+    return fig, ax
 
 
 

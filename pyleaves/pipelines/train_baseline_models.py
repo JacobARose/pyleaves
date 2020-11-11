@@ -751,6 +751,11 @@ def fit_one_cycle(config, model=None, run=None, initial_epoch=None):
     
     return model
 
+
+# model = load_model_artifact(config_1.load_model_artifact)
+
+
+
 def init_wandb_run(config, group=None, resume="allow", reinit=True):
     WANDB_CREDENTIALS = {"entity":"jrose",
                          "project":"Leaves_vs_PNAS",
@@ -795,6 +800,10 @@ def finetune_trial(cli_args=None):
                                       num_epochs=num_epochs_sequence[0], WarmUpCosineDecayScheduler=False))
     kwargs = OmegaConf.merge(default_kwargs, cli_args)
     config_1 = get_config(**kwargs, cli_args=cli_args)
+
+    # if config_1.load_model_artifact:
+    #     model = load_model_artifact(config_1.load_model_artifact)
+
     run = init_wandb_run(config_1, group=config_1.group)
     model = fit_one_cycle(config_1, run=run, initial_epoch=initial_epoch)
 
