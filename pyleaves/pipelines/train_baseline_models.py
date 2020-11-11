@@ -783,11 +783,16 @@ def finetune_trial(cli_args=None):
     else:
         frozen_layer_sequence = [-1, -4, -12]
 
+    if 'num_epochs_sequence' in cli_args:
+        num_epochs_sequence = cli_args.pop('num_epochs_sequence')
+    else:
+        num_epochs_sequence = [75,75,75]
+
     K.clear_session()
     initial_epoch = 0
     print(f'Beginning stage 1 of finetune trial')
     default_kwargs = OmegaConf.create(dict(model_weights=model_weights, frozen_layers=(0,frozen_layer_sequence[0]), 
-                                      num_epochs=40, WarmUpCosineDecayScheduler=False))
+                                      num_epochs=num_epochs_sequence[0], WarmUpCosineDecayScheduler=False))
     kwargs = OmegaConf.merge(default_kwargs, cli_args)
     config_1 = get_config(**kwargs, cli_args=cli_args)
     run = init_wandb_run(config_1, group=config_1.group)
@@ -797,7 +802,7 @@ def finetune_trial(cli_args=None):
     initial_epoch += config_1.num_epochs
     config_2 = get_config(warmup_learning_rate=config_1.warmup_learning_rate/2, model_weights=model_weights, 
                           frozen_layers=(0,frozen_layer_sequence[1]), head_layer_units=config_1.head_layer_units,
-                          num_epochs=initial_epoch+75, cli_args=cli_args)
+                          num_epochs=initial_epoch+num_epochs_sequence[1], cli_args=cli_args)
     run = init_wandb_run(config_2, group=config_2.group)
     model = fit_one_cycle(config_2, model=model, run=run, initial_epoch=initial_epoch)
 
@@ -805,7 +810,7 @@ def finetune_trial(cli_args=None):
     initial_epoch += config_2.num_epochs
     config_3 = get_config(warmup_learning_rate=config_2.warmup_learning_rate/2, model_weights=model_weights,
                           frozen_layers=(0,frozen_layer_sequence[2]), head_layer_units=config_2.head_layer_units, 
-                          num_epochs=initial_epoch+75, cli_args=cli_args)
+                          num_epochs=initial_epoch+num_epochs_sequence[2], cli_args=cli_args)
     run = init_wandb_run(config_3, group=config_3.group)
     model = fit_one_cycle(config_3, model=model, run=run, initial_epoch=initial_epoch)
 
