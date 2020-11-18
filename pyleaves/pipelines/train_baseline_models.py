@@ -411,6 +411,7 @@ def load_data_splits(config, run=None):
 def get_config(cli_args=None, **kwargs):
 
     base_config = OmegaConf.create({'model_name':'resnet50v2',
+                                    'model_index':0,
                                     'model_weights':None, #'imagenet',
                                     'frozen_layers':None, #(0,-1)
                                     'frozen_top_layers':None, #(0,-3),
@@ -505,7 +506,7 @@ def get_config(cli_args=None, **kwargs):
     trial_id = hash_config(config)
     config.trial_id = trial_id
 
-    config.model_path = f'{config.model_name}-weights_{config.model_weights}-{config.dataset_name}_{config.target_size[0]}'
+    config.model_path = f'{config.model_name}-weights_{config.model_weights}-{config.dataset_name}_{config.target_size[0]}_{config.model_index}'
     config.class_label_path = f'{config.dataset_name}-class_labels.csv'
     return config
 
@@ -822,7 +823,7 @@ def finetune_trial(cli_args=None):
     initial_epoch = 0
     print(f'Beginning stage 1 of finetune trial')
     default_kwargs = OmegaConf.create(dict(model_weights=model_weights, frozen_layers=(0,frozen_layer_sequence[0]), 
-                                      num_epochs=num_epochs_sequence[0], WarmUpCosineDecayScheduler=False))
+                                      num_epochs=num_epochs_sequence[0], WarmUpCosineDecayScheduler=False, model_index=0))
     kwargs = OmegaConf.merge(default_kwargs, cli_args)
     config_1 = get_config(**kwargs, cli_args=cli_args)
 
@@ -836,7 +837,7 @@ def finetune_trial(cli_args=None):
     initial_epoch = model.history.params['epochs']+1 #config_1.num_epochs
     config_2 = get_config(warmup_learning_rate=config_1.warmup_learning_rate/2, model_weights=model_weights, 
                           frozen_layers=(0,frozen_layer_sequence[1]), head_layer_units=config_1.head_layer_units,
-                          num_epochs=initial_epoch+num_epochs_sequence[1], cli_args=cli_args)
+                          num_epochs=initial_epoch+num_epochs_sequence[1], model_index=1, cli_args=cli_args)
     # run = init_wandb_run(config_2, group=config_2.group)
     model = fit_one_cycle(config_2, model=model, run=run, initial_epoch=initial_epoch, rebuild_head=False)
 
@@ -844,7 +845,7 @@ def finetune_trial(cli_args=None):
     initial_epoch = model.history.params['epochs']+1 #config_2.num_epochs
     config_3 = get_config(warmup_learning_rate=config_2.warmup_learning_rate/2, model_weights=model_weights,
                           frozen_layers=(0,frozen_layer_sequence[2]), head_layer_units=config_2.head_layer_units, 
-                          num_epochs=initial_epoch+num_epochs_sequence[2], cli_args=cli_args)
+                          num_epochs=initial_epoch+num_epochs_sequence[2], model_index=2, cli_args=cli_args)
     # run = init_wandb_run(config_3, group=config_3.group)
     model = fit_one_cycle(config_3, model=model, run=run, initial_epoch=initial_epoch, rebuild_head=False)
 
@@ -871,7 +872,7 @@ def Leaves_finetune_trials(cli_args=None):
     initial_epoch = 0
     print(f'Beginning stage 1 of finetune trial on Leaves-PNAS')
     default_kwargs = OmegaConf.create(dict(dataset_name="Leaves-PNAS", model_weights=model_weights, frozen_layers=(0,frozen_layer_sequence[0]), 
-                                      num_epochs=num_epochs_sequence[0], WarmUpCosineDecayScheduler=False))
+                                      num_epochs=num_epochs_sequence[0], WarmUpCosineDecayScheduler=False, model_index=0))
     kwargs = OmegaConf.merge(default_kwargs, cli_args)
     config_1 = get_config(**kwargs, cli_args=cli_args)
 
@@ -882,7 +883,7 @@ def Leaves_finetune_trials(cli_args=None):
     initial_epoch += model.history.params['epochs']+1 
     config_2 = get_config(dataset_name="PNAS", warmup_learning_rate=config_1.warmup_learning_rate/2, model_weights=model_weights, 
                           frozen_layers=(0,frozen_layer_sequence[1]), head_layer_units=config_1.head_layer_units,
-                          num_epochs=initial_epoch+num_epochs_sequence[1], cli_args=cli_args)
+                          num_epochs=initial_epoch+num_epochs_sequence[1], model_index=1, cli_args=cli_args)
     model = fit_one_cycle(config_2, model=model, run=run, initial_epoch=initial_epoch, rebuild_head=True)
 
     model.save(config_2.model_path+'_final')
