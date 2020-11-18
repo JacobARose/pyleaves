@@ -28,6 +28,7 @@ from scipy.stats import norm, spearmanr, wasserstein_distance
 from skimage.metrics import structural_similarity
 from omegaconf import OmegaConf
 from pyleaves.utils import save_class_labels
+from pyleaves.utils.visualization_utils import print_trainable_layers
 from pyleaves.utils.WandB_artifact_utils import load_Leaves_Minus_PNAS_dataset, load_dataset_from_artifact
 import wandb
 from wandb.keras import WandbCallback
@@ -725,6 +726,8 @@ def fit_one_cycle(config, model=None, run=None, initial_epoch=None, rebuild_head
     ###########################################
     model_params = {'input_shape' : (*config.target_size, config.channels), 'include_top': False, 'weights':config.model_weights}
     model, _ = build_model(model_params, config=config, dropout_rate=config.dropout_rate, channels=config.channels, model=model, rebuild_head=rebuild_head)
+
+    print_trainable_layers(model)
 
     histories = []
     if initial_epoch is None:

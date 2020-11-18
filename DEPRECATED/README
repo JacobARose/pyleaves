@@ -1,0 +1,17 @@
+DEPRECATED directory created 11/15/20 by Jacob A Rose
+
+
+This is meant to be a temporary (lol) location for old scripts to be placed prior to deletion, in order to avoid accidentally deleting any necessary or useful bits of code contained inside.
+
+
+Ideally, scripts will be placed in a location within a similar directory structure as their original location, to preserve logical context.
+
+e.g.
+
+We moved
+
+pyleaves/pyleaves/pipelines/testing_pipeline_1.ipynb
+
+to
+
+pyleaves/pyleaves/DEPRECATED/pipelines/testing_pipeline_1.ipynb
