@@ -248,25 +248,41 @@ def encode_str2int(labels: List[str], class_encoder: Dict[str, int]) -> List[int
 def class_counts(y: np.ndarray) -> Dict[int,int]:
     return dict(zip(*np.unique(y, return_counts=True)))#.shape
 
-def calc_class_weights(y: np.ndarray, balanced: bool=False) -> Dict[int,int]:    
+def calc_class_weights(y: np.ndarray, weights_type: str=None, balanced: bool=False, mu: float=0.15) -> Dict[int,int]:    
     """
 
     Args:
         y (np.ndarray): sequence of all labels as ints
-        balanced (bool, optional): Defaults to False.
+        weights_type (str, optional): Defaults to None.
+            Options are [None, 'balanced', 'smoothed_balanced']
+            if None:
+                Class weights are all equal to 1.0
+            if 'balanced':
+                class weights are all == total samples / (count[class j] * num_classes)
+            if 'smoothed_balanced':
+                class weights are all == (mu*total samples / count[class j]
+        DEPRECATED balanced (bool, optional): Defaults to False.
             if False, returns all weights as 1's. Else, weight each class by its sample population
 
     Returns:
         Dict[int,int]: Maps {integer labels: label weight}
-    """    
+    """
+    if balanced==True: weights_type='balanced'
+    print(f'Using weights : {weights_type}')
     counts = class_counts(y)
     total_samples = np.sum(list(counts.values()))
     total_classes = len(counts)
     class_weights = {}
-    for class_i,count_i in counts.items():
-        class_weights[class_i] = total_samples/(count_i*total_classes)
+    if weights_type == 'balanced':
+        for class_i,count_i in counts.items():
+            class_weights[class_i] = total_samples/(count_i*total_classes)
+    
+    elif weights_type == 'smoothed_balanced':
+        for class_i,count_i in counts.items():
+            score = np.log(mu*total_samples/(count_i)) #*total_classes))
+            class_weights[class_i] = score if score > 1.0 else 1.0
         
-    if not balanced:
+    else: #'unbalanced' i.e. all == 1
         class_weights = {i:w for i,w in zip(list(class_weights.keys()),list(np.ones_like(list(class_weights.values()))))}
 
     return class_weights
@@ -287,7 +303,9 @@ def data_df_2_tf_data(data,
                       cache=False,
                       class_encodings: Dict[str,int]=None,
                       shuffle_first: bool=False,
-                      fit_class_weights=False,
+                      fit_class_weights=False, #DEPRECATED
+                      class_weights_type: str=None,
+                      class_weights_mu: float=0.15,
                       subset_key='train',
                       repeat=True,
                       use_tfrecords=False,
@@ -357,7 +375,8 @@ def data_df_2_tf_data(data,
         labels = encode_str2int(labels=text_labels, class_encoder=class_encodings)
 
     # class_weights = compute_class_weight('balanced', classes=np.unique(labels), y=labels)
-    class_weights = calc_class_weights(labels, balanced=fit_class_weights)
+    class_weights = calc_class_weights(labels, weights_type=class_weights_type,  mu=class_weights_mu)
+
     # class_weights = {i:w for i,w in class_weights.items() if i in class_encodings.inv}
     ####################
     prepped_data = pd.DataFrame.from_records([{'path':path, 'label':label, 'text_label':text_label} for path, label, text_label in zip(paths, labels, text_labels)])
