@@ -16,6 +16,15 @@ import tensorflow as tf
 
 # - Both would allow calculating micro and macro averaged metrics, but (a) would provide more flexibility for post-eval error analysis, both quantitative (e.g. match each sample image used to predict a single label to a wider, previously unused set of additional labels with potential for exploiting variation in independence/interdependence) and qualitative (e.g. load randomly sampled images from subsets defined by being above or below a particular metric, like load 5 images that were false positive, 5 that were false negative).
 
+
+def get_or_create_global_step():
+    return tf.compat.v1.train.get_or_create_global_step()
+
+
+
+
+
+
 class BalancedAccuracyMetric(tf.keras.metrics.Metric):
     '''
     Accuracy metric that returns the macro-averaged accuracy metric.
