@@ -54,6 +54,9 @@ from tensorflow.keras.callbacks import EarlyStopping, CSVLogger, LambdaCallback
 import wandb
 
 import importlib
+from paleoai_data.utils.logging_utils import get_logger
+logger = get_logger(filename=__file__)
+
 
 def load_img(image_path):
     img = tf.io.read_file(image_path)
@@ -636,8 +639,11 @@ def build_head(base, num_classes=10, head_layers: List[int]=None, pool_size=(2,2
 
 
 
-def build_lightweight_nets(model_name="mobile_net_v2", weights="imagenet", input_shape=(224,224,3), frozen_layers: Tuple[int]=None):
-
+def build_base_model(model_name="mobile_net_v2", 
+                     weights="imagenet",
+                     input_shape=(224,224,3),
+                     frozen_layers: Tuple[int]=None,
+                     freeze_batchnorm=False):
 
     if model_name=="mobile_net_v2":
         model = tf.keras.applications.MobileNetV2(input_shape=input_shape, include_top=False, weights=weights)
@@ -657,13 +663,59 @@ def build_lightweight_nets(model_name="mobile_net_v2", weights="imagenet", input
         model = tf.keras.applications.EfficientNetB4(input_shape=input_shape, include_top=False, weights=weights)
     elif model_name=="efficient_net_B5":
         model = tf.keras.applications.EfficientNetB5(input_shape=input_shape, include_top=False, weights=weights)
-
-
+    elif model_name=="efficient_net_B6":
+        model = tf.keras.applications.EfficientNetB6(input_shape=input_shape, include_top=False, weights=weights)
+    elif model_name=="efficient_net_B7":
+        model = tf.keras.applications.EfficientNetB7(input_shape=input_shape, include_top=False, weights=weights)
+    elif model_name=="resnet50_v2":
+        model = tf.keras.applications.ResNet50V2(input_shape=input_shape, include_top=False, weights=weights)
+        
+    model.trainable = True
     if type(frozen_layers) is tuple:
         for layer in model.layers[frozen_layers[0]:frozen_layers[1]]:
             layer.trainable = False
+    
+    for layer in model.layers:
+        if isinstance(layer, tf.keras.layers.BatchNormalization):
+            if freeze_batchnorm:
+                layer.trainable = False
+            else:
+                layer.trainable = True
 
     return model
+
+def get_preprocessing_func(model_name="mobile_net_v2", 
+                           weights="imagenet"):
+
+    if model_name=="mobile_net_v2":
+        preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
+    elif model_name=="inception_v3":
+        preprocess_input = tf.keras.applications.inception_v3.preprocess_input
+    elif model_name=="xception":
+        preprocess_input = tf.keras.applications.xception.preprocess_input
+    elif model_name=="efficient_net_B0":
+        preprocess_input = tf.keras.applications.efficientnet.preprocess_input
+    elif model_name=="efficient_net_B1":
+        preprocess_input = tf.keras.applications.efficientnet.preprocess_input
+    elif model_name=="efficient_net_B2":
+        preprocess_input = tf.keras.applications.efficientnet.preprocess_input
+    elif model_name=="efficient_net_B3":
+        preprocess_input = tf.keras.applications.efficientnet.preprocess_input
+    elif model_name=="efficient_net_B4":
+        preprocess_input = tf.keras.applications.efficientnet.preprocess_input
+    elif model_name=="efficient_net_B5":
+        preprocess_input = tf.keras.applications.efficientnet.preprocess_input
+    elif model_name=="efficient_net_B6":
+        preprocess_input = tf.keras.applications.efficientnet.preprocess_input
+    elif model_name=="efficient_net_B7":
+        preprocess_input = tf.keras.applications.efficientnet.preprocess_input
+    elif model_name=="resnet50_v2":
+        preprocess_input = tf.keras.applications.resnet_v2.preprocess_input
+    else:
+        logger.info('Passing input without preprocessing')
+        preprocess_input = lambda x: x
+
+    return preprocess_input
 
 
 
@@ -750,9 +802,12 @@ def build_model(model_config, load_saved_model=False, model=None):
                 else:
                     build_base = partial(build_base_vgg16_RGB, weights=model_config.weights, input_shape=model_config.input_shape, frozen_layers=model_config.frozen_layers)
 
+                base = build_base()
+
             elif model_config['model_name'].startswith('resnet'):
                 model_builder = resnet.ResNet(model_config)
                 build_base = partial(model_builder.build_base, weights=model_config.weights, input_shape=model_config.input_shape)
+                base = build_base()
 
             elif model_config['model_name'] in ["mobile_net_v2",
                                                 "inception_v3",
@@ -763,13 +818,14 @@ def build_model(model_config, load_saved_model=False, model=None):
                                 #   "efficient_net_B3",
                                 #   "efficient_net_B4",
                                 #   "efficient_net_B5"]:
-                build_base = partial(build_lightweight_nets,
+                build_base = partial(build_base_model,
                                     model_name=model_config.model_name,
                                     weights=model_config.weights,
                                     input_shape=model_config.input_shape,
                                     frozen_layers=model_config.frozen_layers)
+                base = build_base()
 
-            base = build_base()
+            
             model = build_head(base, num_classes=model_config.num_classes, head_layers=model_config.head_layers, pool_size=model_config.pool_size, kernel_l2=model_config.kernel_l2)
 
 

@@ -27,9 +27,11 @@ import seaborn as sns
 from scipy.stats import norm, spearmanr, wasserstein_distance
 from skimage.metrics import structural_similarity
 from omegaconf import OmegaConf
+from pyleaves.utils.pipeline_utils import get_preprocessing_func, build_base_model
 from pyleaves.utils import save_class_labels
 from pyleaves.utils.visualization_utils import print_trainable_layers
 from pyleaves.utils.WandB_artifact_utils import load_Leaves_Minus_PNAS_dataset, load_dataset_from_artifact
+import pyleaves
 import wandb
 from wandb.keras import WandbCallback
     
@@ -252,17 +254,29 @@ def cosine_decay_with_warmup(global_step,
 
 from tensorflow.python.keras.layers import Dropout, Input, Conv2D, MaxPooling2D
 
+from pyleaves.utils.pipeline_utils import build_base_nets
+
+def get_optimizer(model_config):
+    if model_config.optimizer == "RMSprop":
+        optimizer = tf.keras.optimizers.RMSprop(learning_rate=model_config.lr, momentum=model_config.lr_momentum)#, decay=model_config.lr_decay)
+    elif model_config.optimizer == "SGD":
+        optimizer = tf.keras.optimizers.SGD(learning_rate=model_config.lr, momentum=model_config.lr_momentum)
+    elif model_config.optimizer == "Adam":
+        optimizer = tf.keras.optimizers.Adam(learning_rate=model_config.lr)
+    return optimizer
+
 def build_model(model_params, config: DictConfig, dropout_rate: float, channels: int, model=None, rebuild_head=True):
     if model is None:
         print('Building model')
-        headless_model     = tf.keras.applications.ResNet50V2(**model_params)
+        base_model = build_base_model(**model_params)
+        # base_model     = tf.keras.applications.ResNet50V2(**model_params)
     else:
-        headless_model = model.layers[1]
+        base_model = model.layers[1]
 
     if rebuild_head or model is None:
-        headless_model = tf.keras.Model(headless_model.input, headless_model.layers[-2].output)
+        base_model = tf.keras.Model(base_model.input, base_model.layers[-2].output)
         model_input    = tf.keras.Input(shape=(*config.target_size, channels))
-        model          = headless_model(model_input, training=False)
+        model          = base_model(model_input, training=False)
         model          = tf.keras.layers.GlobalAveragePooling2D()(model)
         if config.num_dropout_layers>0:
             model = tf.keras.layers.Dropout(dropout_rate)(model)
@@ -274,22 +288,10 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
             model     = tf.keras.layers.ReLU()(model)              
         model_output = tf.keras.layers.Dense(config.num_classes, kernel_regularizer=tf.keras.regularizers.l2(config.kernel_l2))(model)
         model = tf.keras.Model(model_input, model_output)
-
-
-    model_name     = 'ResNet50_pretrained'
-    headless_model.trainable = True #
-    if config.frozen_layers:
-        for l in headless_model.layers[config.frozen_layers[0]:config.frozen_layers[-1]]:
-            l.trainable = False
-
     if config.frozen_top_layers:
         for l in model.layers[config.frozen_top_layers[0]:config.frozen_top_layers[-1]]:
             l.trainable = False
 
-    if config.freeze_bnorm_layers:
-        for l in headless_model.layers[0:-1]:
-            if 'bn' in l.name:
-                l.trainable = False
     #region
     # model_input    = tf.keras.Input(shape=(*config.target_size, channels))
     # model          = headless_model(model_input)#, training=False)
@@ -306,13 +308,14 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
     # model = tf.keras.Model(model_input, model_output)
     #endregion
     metrics = get_metrics(config.metrics, num_classes=config.num_classes)
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=config.warmup_learning_rate),
+    optimizer = get_optimizer(config)
+    model.compile(optimizer=optimizer,
                 loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
                 metrics=metrics)
     # models.append(model)
     model.summary()
     
-    return model, model_name
+    return model
 
 #region
 # config = OmegaConf.create({'seed':49, #237,
@@ -415,7 +418,7 @@ def get_config(cli_args=None, **kwargs):
                                     'model_weights':None, #'imagenet',
                                     'frozen_layers':None, #(0,-1)
                                     'frozen_top_layers':None, #(0,-3),
-                                    'freeze_bnorm_layers':True,
+                                    'freeze_batchnorm':False,
                                     'label_type':'family',
                                     'seed':49, #237,
                                     'target_size':(768,768), #(1024,1024),#(512,512),
@@ -511,10 +514,11 @@ def get_config(cli_args=None, **kwargs):
     return config
 
 
-from tensorflow.keras.applications.resnet_v2 import preprocess_input
+# from tensorflow.keras.applications.resnet_v2 import preprocess_input
 
 def load_trainvaltest_data(config, run=None):
     train_df, val_df, test_df = load_data_splits(config, run=run)
+    preprocess_input = get_preprocessing_func
     train_data_info = data_df_2_tf_data(train_df,
                                         x_col='archive_path',
                                         y_col=config.label_type,
@@ -727,14 +731,19 @@ def fit_one_cycle(config, model=None, run=None, initial_epoch=None, rebuild_head
     ###########################################
     # MODEL #
     ###########################################
-    model_params = {'input_shape' : (*config.target_size, config.channels), 'include_top': False, 'weights':config.model_weights}
-    model, _ = build_model(model_params, config=config, dropout_rate=config.dropout_rate, channels=config.channels, model=model, rebuild_head=rebuild_head)
+    model_params = {'input_shape' : (*config.target_size, config.channels),
+                    'include_top': False,
+                    'weights':config.model_weights,
+                    'frozen_layers':config.frozen_layers, 
+                    'freeze_batchnorm':config.freeze_batchnorm}
+    model = build_model(model_params, config=config, dropout_rate=config.dropout_rate, channels=config.channels, model=model, rebuild_head=rebuild_head)
 
     print_trainable_layers(model)
 
-    histories = []
+    # histories = []
     if initial_epoch is None:
-        initial_epoch = wandb.run.step or 0
+        initial_epoch = pyleaves.utils.tf_utils.get_or_create_global_step() or 0
+        # initial_epoch = wandb.run.step or 0
     # if wandb.run.resumed:
     #     print(f'Restoring model from checkpoint at epoch {initial_epoch}')
     #     model = tf.keras.models.load_model(wandb.restore("model-best.h5").name)
@@ -754,11 +763,9 @@ def fit_one_cycle(config, model=None, run=None, initial_epoch=None, rebuild_head
                         class_weight=class_weights,
                         callbacks=callbacks)
 
-    histories.append(history)
+    # histories.append(history)
     model.save(config.model_path)
     save_class_labels(class_labels=encoder, label_path=config.class_label_path)
-
-
     artifact = wandb.Artifact(type='model', name=config.model_path)
     if os.path.isfile(config.model_path):
         artifact.add_file(config.model_path, name=config.model_path)
