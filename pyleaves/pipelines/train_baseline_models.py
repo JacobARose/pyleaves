@@ -274,7 +274,8 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
         base_model = model.layers[1]
 
     if rebuild_head or model is None:
-        base_model = tf.keras.Model(base_model.input, base_model.layers[-2].output)
+        base_model = tf.keras.Model(base_model.input, base_model.layers[-1].output)
+        # base_model = tf.keras.Model(base_model.input, base_model.layers[-2].output)
         model_input    = tf.keras.Input(shape=(*config.target_size, channels))
         model          = base_model(model_input, training=False)
         model          = tf.keras.layers.GlobalAveragePooling2D()(model)
