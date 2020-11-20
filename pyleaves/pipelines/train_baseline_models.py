@@ -415,6 +415,7 @@ def load_data_splits(config, run=None):
 def get_config(cli_args=None, **kwargs):
 
     base_config = OmegaConf.create({'model_name':'resnet50v2',
+                                    'optimizer':'Adam',
                                     'model_index':0,
                                     'model_weights':None, #'imagenet',
                                     'frozen_layers':None, #(0,-1)
