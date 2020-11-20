@@ -649,8 +649,8 @@ def build_base_model(model_name="mobile_net_v2",
         model = tf.keras.applications.MobileNetV2(input_shape=input_shape, include_top=False, weights=weights)
     elif model_name=="resnet50_v2":
         model = tf.keras.applications.ResNet50V2(input_shape=input_shape, include_top=False, weights=weights)
-    elif model_name=="resnet50_v2":
-        model = tf.keras.applications.ResNet50V2(input_shape=input_shape, include_top=False, weights=weights)
+    elif model_name=="inception_resnet_v2":
+        model = tf.keras.applications.InceptionResNetV2(input_shape=input_shape, include_top=False, weights=weights)
     elif model_name=="inception_v3":
         model = tf.keras.applications.InceptionV3(input_shape=input_shape, include_top=False, weights=weights)
     elif model_name=="xception":
@@ -693,6 +693,8 @@ def get_preprocessing_func(model_name="mobile_net_v2",
         preprocess_input = tf.keras.applications.mobilenet_v2.preprocess_input
     elif model_name=="inception_v3":
         preprocess_input = tf.keras.applications.inception_v3.preprocess_input
+    elif model_name=="inception_resnet_v2":
+        preprocess_input = tf.keras.applications.inception_resnet_v2.preprocess_input
     elif model_name=="xception":
         preprocess_input = tf.keras.applications.xception.preprocess_input
     elif model_name=="efficient_net_B0":
