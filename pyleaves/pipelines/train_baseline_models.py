@@ -465,6 +465,7 @@ def get_config(cli_args=None, **kwargs):
             config.lr_attack = config.num_epochs - 1 - config.lr_sustain
             if not config.lr_attack+config.lr_sustain > config.num_epochs:
                 config.lr_sustain=0
+    config.lr = config.warmup_learning_rate
 
     if 'dataset_name' not in config:
         config['dataset_name'] = 'Leaves-PNAS'
