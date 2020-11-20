@@ -647,6 +647,10 @@ def build_base_model(model_name="mobile_net_v2",
 
     if model_name=="mobile_net_v2":
         model = tf.keras.applications.MobileNetV2(input_shape=input_shape, include_top=False, weights=weights)
+    elif model_name=="resnet50_v2":
+        model = tf.keras.applications.ResNet50V2(input_shape=input_shape, include_top=False, weights=weights)
+    elif model_name=="resnet50_v2":
+        model = tf.keras.applications.ResNet50V2(input_shape=input_shape, include_top=False, weights=weights)
     elif model_name=="inception_v3":
         model = tf.keras.applications.InceptionV3(input_shape=input_shape, include_top=False, weights=weights)
     elif model_name=="xception":
@@ -667,8 +671,6 @@ def build_base_model(model_name="mobile_net_v2",
         model = tf.keras.applications.EfficientNetB6(input_shape=input_shape, include_top=False, weights=weights)
     elif model_name=="efficient_net_B7":
         model = tf.keras.applications.EfficientNetB7(input_shape=input_shape, include_top=False, weights=weights)
-    elif model_name=="resnet50_v2":
-        model = tf.keras.applications.ResNet50V2(input_shape=input_shape, include_top=False, weights=weights)
         
     model.trainable = True
     if type(frozen_layers) is tuple:
@@ -714,6 +716,8 @@ def get_preprocessing_func(model_name="mobile_net_v2",
     else:
         logger.info('Passing input without preprocessing')
         preprocess_input = lambda x: x
+
+    preprocess_input(tf.zeros([4, 224, 224, 3]))
 
     return preprocess_input
 
