@@ -732,8 +732,8 @@ def fit_one_cycle(config, model=None, run=None, initial_epoch=None, rebuild_head
     ###########################################
     # MODEL #
     ###########################################
-    model_params = {'input_shape' : (*config.target_size, config.channels),
-                    'include_top': False,
+    model_params = {'model_name':config.model_name,
+                    'input_shape' : (*config.target_size, config.channels),
                     'weights':config.model_weights,
                     'frozen_layers':config.frozen_layers, 
                     'freeze_batchnorm':config.freeze_batchnorm}
