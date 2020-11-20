@@ -519,7 +519,7 @@ def get_config(cli_args=None, **kwargs):
 
 def load_trainvaltest_data(config, run=None):
     train_df, val_df, test_df = load_data_splits(config, run=run)
-    preprocess_input = get_preprocessing_func
+    preprocess_input = get_preprocessing_func(model_name=config.model_name)
     train_data_info = data_df_2_tf_data(train_df,
                                         x_col='archive_path',
                                         y_col=config.label_type,
