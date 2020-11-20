@@ -381,7 +381,7 @@ def build_model(model_params, config: DictConfig, dropout_rate: float, channels:
 from omegaconf import OmegaConf
 from sklearn.model_selection import train_test_split
 from pyleaves.pipelines.WandB_Leaves_vs_PNAS import *
-from tensorflow.keras.applications.resnet_v2 import preprocess_input
+# from tensorflow.keras.applications.resnet_v2 import preprocess_input
 
 
 def hash_config(config: DictConfig) -> str:
@@ -414,7 +414,7 @@ def load_data_splits(config, run=None):
 
 def get_config(cli_args=None, **kwargs):
 
-    base_config = OmegaConf.create({'model_name':'resnet50v2',
+    base_config = OmegaConf.create({'model_name':'resnet50_v2',
                                     'optimizer':'Adam',
                                     'model_index':0,
                                     'model_weights':None, #'imagenet',
